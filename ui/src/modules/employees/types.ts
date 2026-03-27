@@ -11,6 +11,8 @@ export interface Employee {
   end_date: string | null
   status: string
   avatar_url: string | null
+  address: string | null
+  emergency_contact: string | null
   department_name: string | null
   position_title: string | null
   manager_name: string | null

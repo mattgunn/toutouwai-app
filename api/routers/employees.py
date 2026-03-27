@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from ..db import new_id, now_iso
 from ..deps import get_db, get_current_user
+from ..audit_helpers import log_audit
 
 router = APIRouter()
 
@@ -85,12 +86,17 @@ def create_employee(body: dict, conn=Depends(get_db), _user=Depends(get_current_
         body.get("avatar_url"), body.get("address"), body.get("date_of_birth"),
         body.get("emergency_contact"), body.get("notes"), ts, ts,
     ))
+    log_audit(conn, "employee", eid, "create", _user)
     conn.commit()
     return get_employee(eid, conn=conn, _user=_user)
 
 
 @router.put("/employees/{employee_id}")
 def update_employee(employee_id: str, body: dict, conn=Depends(get_db), _user=Depends(get_current_user)):
+    # Fetch old values for audit
+    old_row = conn.execute("SELECT * FROM employees WHERE id = ?", (employee_id,)).fetchone()
+    old_data = dict(old_row) if old_row else {}
+
     fields = ["first_name", "last_name", "email", "phone", "department_id", "position_id",
               "manager_id", "start_date", "end_date", "status", "avatar_url", "address",
               "date_of_birth", "emergency_contact", "notes"]
@@ -106,5 +112,12 @@ def update_employee(employee_id: str, body: dict, conn=Depends(get_db), _user=De
     values.append(now_iso())
     values.append(employee_id)
     conn.execute(f"UPDATE employees SET {', '.join(updates)} WHERE id = ?", values)
+
+    # Log audit for each changed field
+    for f in fields:
+        if f in body and body[f] != old_data.get(f):
+            log_audit(conn, "employee", employee_id, "update", _user,
+                      field_name=f, old_value=old_data.get(f), new_value=body[f])
+
     conn.commit()
     return get_employee(employee_id, conn=conn, _user=_user)

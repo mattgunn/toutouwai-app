@@ -24,6 +24,19 @@ const statusColors: Record<string, string> = {
   not_started: 'bg-gray-700 text-gray-300',
   in_progress: 'bg-blue-600/20 text-blue-400',
   completed: 'bg-emerald-600/20 text-emerald-400',
+  // Benefits / Onboarding
+  expired: 'bg-red-600/20 text-red-400',
+  skipped: 'bg-gray-600/20 text-gray-400',
+  // Succession readiness
+  ready_now: 'bg-emerald-600/20 text-emerald-400',
+  ready_1_year: 'bg-blue-600/20 text-blue-400',
+  ready_2_years: 'bg-amber-600/20 text-amber-400',
+  not_ready: 'bg-gray-700 text-gray-300',
+  // Risk levels
+  low: 'bg-emerald-600/20 text-emerald-400',
+  medium: 'bg-amber-600/20 text-amber-400',
+  high: 'bg-red-600/20 text-red-400',
+  critical: 'bg-red-600/20 text-red-400',
 }
 
 export default function StatusBadge({ status }: { status: string }) {

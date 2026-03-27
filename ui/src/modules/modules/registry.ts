@@ -31,8 +31,15 @@ export const MODULES: ModuleDef[] = [
   {
     key: 'performance',
     label: 'Performance',
-    description: 'Review cycles, reviews, and goals',
+    description: 'Review cycles, reviews, goals, and surveys',
     enabledKey: 'modules_performance_enabled',
     navGroups: ['Performance'],
+  },
+  {
+    key: 'compensation',
+    label: 'Compensation',
+    description: 'Salary management, benefits, and succession planning',
+    enabledKey: 'modules_compensation_enabled',
+    navGroups: ['Compensation'],
   },
 ]

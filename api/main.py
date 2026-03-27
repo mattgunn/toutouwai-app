@@ -4,7 +4,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-from .routers import auth, dashboard, employees, departments, positions, leave, time_entries, recruitment, performance, settings, integrations
+from .routers import (
+    auth, dashboard, employees, departments, positions, leave, time_entries,
+    recruitment, performance, settings, integrations,
+    compensation, benefits, succession, onboarding, documents, self_service,
+    reports, audit, workflows, surveys,
+)
 
 app = FastAPI(title="HRIS API", version="0.1.0")
 
@@ -28,6 +33,16 @@ app.include_router(recruitment.router, prefix="/api", tags=["recruitment"])
 app.include_router(performance.router, prefix="/api", tags=["performance"])
 app.include_router(settings.router, prefix="/api", tags=["settings"])
 app.include_router(integrations.router, prefix="/api", tags=["integrations"])
+app.include_router(compensation.router, prefix="/api", tags=["compensation"])
+app.include_router(benefits.router, prefix="/api", tags=["benefits"])
+app.include_router(succession.router, prefix="/api", tags=["succession"])
+app.include_router(onboarding.router, prefix="/api", tags=["onboarding"])
+app.include_router(documents.router, prefix="/api", tags=["documents"])
+app.include_router(self_service.router, prefix="/api", tags=["self_service"])
+app.include_router(reports.router, prefix="/api", tags=["reports"])
+app.include_router(audit.router, prefix="/api", tags=["audit"])
+app.include_router(workflows.router, prefix="/api", tags=["workflows"])
+app.include_router(surveys.router, prefix="/api", tags=["surveys"])
 
 
 @app.get("/api/health")

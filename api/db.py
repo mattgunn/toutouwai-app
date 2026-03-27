@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS employees (
     notes         TEXT,
     payhero_employee_key TEXT,
     azure_ad_id   TEXT,
+    user_id       TEXT REFERENCES users(id) ON DELETE SET NULL,
     created_at    TEXT NOT NULL,
     updated_at    TEXT NOT NULL
 );
@@ -188,6 +189,252 @@ CREATE TABLE IF NOT EXISTS settings (
     key   TEXT PRIMARY KEY,
     value TEXT
 );
+
+-- Compensation
+CREATE TABLE IF NOT EXISTS compensation (
+    id TEXT PRIMARY KEY,
+    employee_id TEXT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    effective_date TEXT NOT NULL,
+    salary REAL NOT NULL,
+    currency TEXT NOT NULL DEFAULT 'NZD',
+    pay_frequency TEXT NOT NULL DEFAULT 'annual',
+    reason TEXT,
+    notes TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_compensation_employee ON compensation(employee_id);
+
+-- Benefits
+CREATE TABLE IF NOT EXISTS benefit_plans (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    provider TEXT,
+    description TEXT,
+    is_active INTEGER DEFAULT 1,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS benefit_enrollments (
+    id TEXT PRIMARY KEY,
+    employee_id TEXT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    plan_id TEXT NOT NULL REFERENCES benefit_plans(id) ON DELETE CASCADE,
+    status TEXT NOT NULL DEFAULT 'active',
+    start_date TEXT NOT NULL,
+    end_date TEXT,
+    coverage_level TEXT DEFAULT 'employee',
+    employee_contribution REAL DEFAULT 0,
+    employer_contribution REAL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_enrollments_employee ON benefit_enrollments(employee_id);
+CREATE INDEX IF NOT EXISTS idx_enrollments_plan ON benefit_enrollments(plan_id);
+
+-- Succession Planning
+CREATE TABLE IF NOT EXISTS succession_plans (
+    id TEXT PRIMARY KEY,
+    position_id TEXT NOT NULL REFERENCES positions(id) ON DELETE CASCADE,
+    incumbent_id TEXT REFERENCES employees(id) ON DELETE SET NULL,
+    risk_of_loss TEXT DEFAULT 'low',
+    impact_of_loss TEXT DEFAULT 'low',
+    notes TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_succession_position ON succession_plans(position_id);
+
+CREATE TABLE IF NOT EXISTS succession_candidates (
+    id TEXT PRIMARY KEY,
+    plan_id TEXT NOT NULL REFERENCES succession_plans(id) ON DELETE CASCADE,
+    employee_id TEXT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    readiness TEXT NOT NULL DEFAULT 'not_ready',
+    notes TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_candidates_plan ON succession_candidates(plan_id);
+
+-- Onboarding
+CREATE TABLE IF NOT EXISTS onboarding_templates (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    department_id TEXT REFERENCES departments(id) ON DELETE SET NULL,
+    is_active INTEGER DEFAULT 1,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS onboarding_template_tasks (
+    id TEXT PRIMARY KEY,
+    template_id TEXT NOT NULL REFERENCES onboarding_templates(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    description TEXT,
+    assigned_to_role TEXT DEFAULT 'hr',
+    due_days INTEGER DEFAULT 0,
+    sort_order INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_template_tasks_template ON onboarding_template_tasks(template_id);
+
+CREATE TABLE IF NOT EXISTS onboarding_checklists (
+    id TEXT PRIMARY KEY,
+    employee_id TEXT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    template_id TEXT REFERENCES onboarding_templates(id) ON DELETE SET NULL,
+    status TEXT NOT NULL DEFAULT 'in_progress',
+    started_at TEXT NOT NULL,
+    completed_at TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_checklists_employee ON onboarding_checklists(employee_id);
+
+CREATE TABLE IF NOT EXISTS onboarding_tasks (
+    id TEXT PRIMARY KEY,
+    checklist_id TEXT NOT NULL REFERENCES onboarding_checklists(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    description TEXT,
+    assigned_to_role TEXT DEFAULT 'hr',
+    assigned_to_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+    due_date TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    completed_at TEXT,
+    completed_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+    sort_order INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_onboarding_tasks_checklist ON onboarding_tasks(checklist_id);
+
+-- Documents
+CREATE TABLE IF NOT EXISTS documents (
+    id TEXT PRIMARY KEY,
+    employee_id TEXT REFERENCES employees(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    file_path TEXT,
+    file_size INTEGER,
+    mime_type TEXT,
+    category TEXT DEFAULT 'general',
+    description TEXT,
+    uploaded_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+    expiry_date TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_documents_employee ON documents(employee_id);
+CREATE INDEX IF NOT EXISTS idx_documents_category ON documents(category);
+
+-- Audit Trail
+CREATE TABLE IF NOT EXISTS audit_log (
+    id TEXT PRIMARY KEY,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    action TEXT NOT NULL,
+    field_name TEXT,
+    old_value TEXT,
+    new_value TEXT,
+    user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+    user_name TEXT,
+    user_email TEXT,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_log(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_log(created_at);
+
+-- Workflow Engine
+CREATE TABLE IF NOT EXISTS workflow_definitions (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    trigger_entity TEXT NOT NULL,
+    trigger_action TEXT NOT NULL,
+    description TEXT,
+    is_active INTEGER DEFAULT 1,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS workflow_steps (
+    id TEXT PRIMARY KEY,
+    definition_id TEXT NOT NULL REFERENCES workflow_definitions(id) ON DELETE CASCADE,
+    step_order INTEGER NOT NULL DEFAULT 1,
+    approver_type TEXT NOT NULL DEFAULT 'manager',
+    approver_role TEXT,
+    approver_user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_workflow_steps_def ON workflow_steps(definition_id);
+
+CREATE TABLE IF NOT EXISTS workflow_instances (
+    id TEXT PRIMARY KEY,
+    definition_id TEXT NOT NULL REFERENCES workflow_definitions(id) ON DELETE CASCADE,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    initiated_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    current_step INTEGER DEFAULT 1,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_workflow_instances_status ON workflow_instances(status);
+CREATE INDEX IF NOT EXISTS idx_workflow_instances_entity ON workflow_instances(entity_type, entity_id);
+
+CREATE TABLE IF NOT EXISTS workflow_approvals (
+    id TEXT PRIMARY KEY,
+    instance_id TEXT NOT NULL REFERENCES workflow_instances(id) ON DELETE CASCADE,
+    step_id TEXT NOT NULL REFERENCES workflow_steps(id) ON DELETE CASCADE,
+    approver_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    comments TEXT,
+    decided_at TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_approvals_instance ON workflow_approvals(instance_id);
+CREATE INDEX IF NOT EXISTS idx_approvals_approver ON workflow_approvals(approver_id);
+
+-- Employee Surveys
+CREATE TABLE IF NOT EXISTS surveys (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT,
+    status TEXT NOT NULL DEFAULT 'draft',
+    anonymous INTEGER DEFAULT 1,
+    start_date TEXT,
+    end_date TEXT,
+    created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS survey_questions (
+    id TEXT PRIMARY KEY,
+    survey_id TEXT NOT NULL REFERENCES surveys(id) ON DELETE CASCADE,
+    question_text TEXT NOT NULL,
+    question_type TEXT NOT NULL DEFAULT 'rating',
+    options TEXT,
+    sort_order INTEGER DEFAULT 0,
+    required INTEGER DEFAULT 1,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_survey_questions_survey ON survey_questions(survey_id);
+
+CREATE TABLE IF NOT EXISTS survey_responses (
+    id TEXT PRIMARY KEY,
+    survey_id TEXT NOT NULL REFERENCES surveys(id) ON DELETE CASCADE,
+    question_id TEXT NOT NULL REFERENCES survey_questions(id) ON DELETE CASCADE,
+    employee_id TEXT REFERENCES employees(id) ON DELETE SET NULL,
+    response_value TEXT,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_responses_survey ON survey_responses(survey_id);
+CREATE INDEX IF NOT EXISTS idx_responses_question ON survey_responses(question_id);
 """
 
 
@@ -232,7 +479,7 @@ def init_db():
         all_modules = [
             "dashboard", "employees", "departments", "positions",
             "leave", "timesheets", "recruitment", "performance",
-            "reports", "settings",
+            "reports", "settings", "compensation", "benefits", "succession",
         ]
         name = default_admin.split("@")[0].replace(".", " ").title()
         conn.execute(

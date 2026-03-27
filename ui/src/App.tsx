@@ -19,6 +19,15 @@ import Reviews from './pages/Reviews'
 import Goals from './pages/Goals'
 import Settings from './pages/Settings'
 import Reports from './pages/Reports'
+import Compensation from './pages/Compensation'
+import Benefits from './pages/Benefits'
+import Succession from './pages/Succession'
+import Onboarding from './pages/Onboarding'
+import Documents from './pages/Documents'
+import MyProfile from './pages/MyProfile'
+import AuditLog from './pages/AuditLog'
+import Workflows from './pages/Workflows'
+import Surveys from './pages/Surveys'
 
 export default function App() {
   return (
@@ -39,16 +48,25 @@ export default function App() {
               <Route path="/org-chart" element={<ModuleGuard module="employees"><OrgChart /></ModuleGuard>} />
               <Route path="/departments" element={<ModuleGuard module="departments"><Departments /></ModuleGuard>} />
               <Route path="/positions" element={<ModuleGuard module="positions"><Positions /></ModuleGuard>} />
+              <Route path="/onboarding" element={<ModuleGuard module="employees"><Onboarding /></ModuleGuard>} />
+              <Route path="/documents" element={<ModuleGuard module="employees"><Documents /></ModuleGuard>} />
               <Route path="/timesheets" element={<ModuleGuard module="timesheets"><Timesheets /></ModuleGuard>} />
               <Route path="/leave-requests" element={<ModuleGuard module="leave"><LeaveRequests /></ModuleGuard>} />
               <Route path="/leave-balances" element={<ModuleGuard module="leave"><LeaveBalances /></ModuleGuard>} />
+              <Route path="/compensation" element={<ModuleGuard module="compensation"><Compensation /></ModuleGuard>} />
+              <Route path="/benefits" element={<ModuleGuard module="benefits"><Benefits /></ModuleGuard>} />
+              <Route path="/succession" element={<ModuleGuard module="succession"><Succession /></ModuleGuard>} />
               <Route path="/job-postings" element={<ModuleGuard module="recruitment"><JobPostings /></ModuleGuard>} />
               <Route path="/applicants" element={<ModuleGuard module="recruitment"><Applicants /></ModuleGuard>} />
               <Route path="/pipeline" element={<ModuleGuard module="recruitment"><Pipeline /></ModuleGuard>} />
               <Route path="/reviews" element={<ModuleGuard module="performance"><Reviews /></ModuleGuard>} />
               <Route path="/goals" element={<ModuleGuard module="performance"><Goals /></ModuleGuard>} />
+              <Route path="/surveys" element={<ModuleGuard module="performance"><Surveys /></ModuleGuard>} />
               <Route path="/reports" element={<ModuleGuard module="reports"><Reports /></ModuleGuard>} />
+              <Route path="/audit" element={<ModuleGuard module="settings"><AuditLog /></ModuleGuard>} />
+              <Route path="/workflows" element={<ModuleGuard module="settings"><Workflows /></ModuleGuard>} />
               <Route path="/settings" element={<ModuleGuard module="settings"><Settings /></ModuleGuard>} />
+              <Route path="/my-profile" element={<MyProfile />} />
             </Routes>
           </Layout>
         </ProtectedRoute>

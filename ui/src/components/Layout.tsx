@@ -17,6 +17,8 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/org-chart',   label: 'Org Chart',   icon: '\u{1F3E2}', module: 'employees' },
       { to: '/departments', label: 'Departments', icon: '\u{1F3EC}', module: 'departments' },
       { to: '/positions',   label: 'Positions',   icon: '\u{1F4BC}', module: 'positions' },
+      { to: '/onboarding',  label: 'Onboarding',  icon: '\u{1F91D}', module: 'employees' },
+      { to: '/documents',   label: 'Documents',   icon: '\u{1F4C1}', module: 'employees' },
     ],
   },
   {
@@ -25,6 +27,14 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/timesheets',     label: 'Timesheets',     icon: '\u{23F1}\u{FE0F}', module: 'timesheets' },
       { to: '/leave-requests', label: 'Leave Requests', icon: '\u{1F4CB}',         module: 'leave' },
       { to: '/leave-balances', label: 'Leave Balances', icon: '\u{1F4CA}',         module: 'leave' },
+    ],
+  },
+  {
+    heading: 'Compensation',
+    items: [
+      { to: '/compensation', label: 'Compensation', icon: '\u{1F4B0}', module: 'compensation' },
+      { to: '/benefits',     label: 'Benefits',     icon: '\u{1F3E5}', module: 'benefits' },
+      { to: '/succession',   label: 'Succession',   icon: '\u{1F451}', module: 'succession' },
     ],
   },
   {
@@ -40,11 +50,20 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: '/reviews', label: 'Reviews', icon: '\u{2B50}', module: 'performance' },
       { to: '/goals',   label: 'Goals',   icon: '\u{1F3AF}', module: 'performance' },
+      { to: '/surveys', label: 'Surveys', icon: '\u{1F4DD}', module: 'performance' },
+    ],
+  },
+  {
+    heading: 'Admin',
+    items: [
+      { to: '/audit',     label: 'Audit Log',  icon: '\u{1F4DC}', module: 'settings' },
+      { to: '/workflows', label: 'Workflows',  icon: '\u{1F504}', module: 'settings' },
     ],
   },
 ]
 
 const GLOBAL_ITEMS: NavItem[] = [
+  { to: '/my-profile', label: 'My Profile', icon: '\u{1F464}', module: '' },
   { to: '/reports',  label: 'Reports',  icon: '\u{1F4CA}', module: 'reports' },
   { to: '/settings', label: 'Settings', icon: '\u{2699}\u{FE0F}', module: 'settings' },
 ]

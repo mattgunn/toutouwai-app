@@ -10,7 +10,7 @@ JWT_ALGORITHM = "HS256"
 ALL_MODULES = [
     "dashboard", "employees", "departments", "positions",
     "leave", "timesheets", "recruitment", "performance",
-    "reports", "settings",
+    "reports", "settings", "compensation", "benefits", "succession",
 ]
 
 
