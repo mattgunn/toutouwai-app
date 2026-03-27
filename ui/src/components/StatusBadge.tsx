@@ -1,0 +1,36 @@
+const statusColors: Record<string, string> = {
+  // Employee
+  active: 'bg-emerald-600/20 text-emerald-400',
+  inactive: 'bg-gray-600/20 text-gray-400',
+  on_leave: 'bg-amber-600/20 text-amber-400',
+  terminated: 'bg-red-600/20 text-red-400',
+  // Leave
+  pending: 'bg-amber-600/20 text-amber-400',
+  approved: 'bg-emerald-600/20 text-emerald-400',
+  rejected: 'bg-red-600/20 text-red-400',
+  cancelled: 'bg-gray-600/20 text-gray-400',
+  // Recruitment
+  open: 'bg-emerald-600/20 text-emerald-400',
+  closed: 'bg-gray-600/20 text-gray-400',
+  draft: 'bg-gray-700 text-gray-300',
+  filled: 'bg-blue-600/20 text-blue-400',
+  // Applicant stages
+  applied: 'bg-blue-600/20 text-blue-400',
+  screening: 'bg-purple-600/20 text-purple-400',
+  interview: 'bg-amber-600/20 text-amber-400',
+  offer: 'bg-emerald-600/20 text-emerald-400',
+  hired: 'bg-emerald-600/20 text-emerald-400',
+  // Performance
+  not_started: 'bg-gray-700 text-gray-300',
+  in_progress: 'bg-blue-600/20 text-blue-400',
+  completed: 'bg-emerald-600/20 text-emerald-400',
+}
+
+export default function StatusBadge({ status }: { status: string }) {
+  const classes = statusColors[status] || 'bg-gray-700 text-gray-300'
+  return (
+    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${classes}`}>
+      {status.replace(/_/g, ' ')}
+    </span>
+  )
+}

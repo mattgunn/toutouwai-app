@@ -1,0 +1,153 @@
+/* ── Light mode ──────────────────────────────────────────────────────── */
+/*
+ * The app is built dark-first with Tailwind utility classes.
+ * Light mode inverts the palette via nested selectors under html.light.
+ * Organised by layer so it's easy to tune.
+ */
+
+html.light {
+  /* ─── Page / surface backgrounds ──────────────────────────────────── */
+  .bg-gray-950       { background-color: #f8fafc !important; }
+  .bg-gray-950\/40   { background-color: rgba(248,250,252,.4) !important; }
+  .bg-gray-900       { background-color: #ffffff !important; }
+  .bg-gray-900\/80   { background-color: rgba(255,255,255,.8) !important; }
+  .bg-gray-800       { background-color: #f1f5f9 !important; }
+  .bg-gray-800\/20   { background-color: rgba(241,245,249,.3) !important; }
+  .bg-gray-800\/30   { background-color: rgba(241,245,249,.45) !important; }
+  .bg-gray-800\/50   { background-color: rgba(241,245,249,.5) !important; }
+  .bg-gray-700       { background-color: #e2e8f0 !important; }
+  .bg-gray-700\/50   { background-color: rgba(226,232,240,.5) !important; }
+  .bg-gray-500       { background-color: #d1d5db !important; }
+
+  /* ─── Semantic backgrounds (keep tinted, just lighter) ────────────── */
+  .bg-blue-600\/20     { background-color: rgba(59,130,246,.08) !important; }
+  .bg-emerald-600\/20  { background-color: rgba(16,185,129,.08) !important; }
+  .bg-red-600\/20      { background-color: rgba(239,68,68,.08) !important; }
+  .bg-purple-600\/20   { background-color: rgba(139,92,246,.08) !important; }
+  .bg-amber-600\/20    { background-color: rgba(245,158,11,.08) !important; }
+  .bg-gray-600\/20     { background-color: rgba(107,114,128,.08) !important; }
+
+  .bg-red-950\/30      { background-color: rgba(239,68,68,.06) !important; }
+  .bg-emerald-950\/30  { background-color: rgba(16,185,129,.06) !important; }
+  .bg-blue-950\/30     { background-color: rgba(59,130,246,.06) !important; }
+  .bg-green-900\/30    { background-color: rgba(22,163,74,.08) !important; }
+  .bg-emerald-900\/40  { background-color: rgba(209, 250, 229, 0.6) !important; }
+
+  /* Primary button stays vivid */
+  .bg-blue-600   { background-color: #2563eb !important; }
+  .hover\:bg-blue-500:hover { background-color: #3b82f6 !important; }
+  .hover\:bg-blue-600\/30:hover { background-color: rgba(59, 130, 246, 0.15) !important; }
+
+  /* Secondary button */
+  .hover\:bg-gray-600:hover { background-color: #cbd5e1 !important; }
+  .hover\:bg-gray-700:hover     { background-color: #e2e8f0 !important; }
+  .hover\:bg-gray-700\/50:hover { background-color: rgba(226, 232, 240, 0.5) !important; }
+  .hover\:bg-gray-800\/30:hover { background-color: rgba(241, 245, 249, 0.5) !important; }
+  .hover\:bg-gray-800\/50:hover { background-color: rgba(241, 245, 249, 0.6) !important; }
+
+  /* ─── Text colours ────────────────────────────────────────────────── */
+  .text-white    { color: #0f172a !important; }
+  .text-gray-100 { color: #1e293b !important; }
+  .text-gray-200 { color: #334155 !important; }
+  .text-gray-300 { color: #475569 !important; }
+  .text-gray-400 { color: #64748b !important; }
+  .text-gray-500 { color: #94a3b8 !important; }
+  .text-gray-600 { color: #94a3b8 !important; }
+  .text-gray-700 { color: #9ca3af !important; }
+
+  /* Semantic text */
+  .text-blue-400    { color: #2563eb !important; }
+  .text-blue-300    { color: #3b82f6 !important; }
+  .text-emerald-400 { color: #059669 !important; }
+  .text-emerald-300 { color: #10b981 !important; }
+  .text-red-400     { color: #dc2626 !important; }
+  .text-red-300     { color: #ef4444 !important; }
+  .text-amber-400   { color: #d97706 !important; }
+  .text-amber-300   { color: #f59e0b !important; }
+  .text-purple-400  { color: #7c3aed !important; }
+  .text-purple-300  { color: #8b5cf6 !important; }
+  .text-green-400   { color: #16a34a !important; }
+  .text-green-500   { color: #16a34a !important; }
+
+  /* Hover text */
+  .hover\:text-white:hover       { color: #0f172a !important; }
+  .hover\:text-gray-200:hover    { color: #334155 !important; }
+  .hover\:text-gray-300:hover    { color: #475569 !important; }
+  .hover\:text-gray-400:hover    { color: #6b7280 !important; }
+  .hover\:text-blue-300:hover    { color: #3b82f6 !important; }
+  .hover\:text-blue-400:hover    { color: #2563eb !important; }
+  .hover\:text-emerald-300:hover { color: #10b981 !important; }
+  .hover\:text-red-300:hover     { color: #ef4444 !important; }
+  .hover\:text-red-400:hover     { color: #dc2626 !important; }
+  .hover\:text-amber-300:hover   { color: #f59e0b !important; }
+  .hover\:text-purple-300:hover  { color: #8b5cf6 !important; }
+
+  /* Placeholder */
+  .placeholder-gray-500::placeholder { color: #94a3b8 !important; }
+  .placeholder-gray-600::placeholder { color: #94a3b8 !important; }
+
+  /* ─── Borders ─────────────────────────────────────────────────────── */
+  .border-gray-800       { border-color: #e2e8f0 !important; }
+  .border-gray-800\/50   { border-color: rgba(226,232,240,.5) !important; }
+  .border-gray-800\/30   { border-color: rgba(226,232,240,.3) !important; }
+  .border-gray-700       { border-color: #cbd5e1 !important; }
+  .border-gray-700\/50   { border-color: rgba(203,213,225,.5) !important; }
+  .border-gray-600       { border-color: #94a3b8 !important; }
+  .border-gray-500       { border-color: #d1d5db !important; }
+  .border-gray-400       { border-color: #e5e7eb !important; }
+  .border-red-800        { border-color: #fca5a5 !important; }
+  .border-emerald-700    { border-color: #6ee7b7 !important; }
+  .border-emerald-800    { border-color: #6ee7b7 !important; }
+  .border-green-800\/30  { border-color: rgba(134,239,172,.3) !important; }
+
+  .hover\:border-gray-600:hover { border-color: #94a3b8 !important; }
+  .hover\:border-gray-400:hover { border-color: #64748b !important; }
+  .focus\:border-blue-500:focus { border-color: #3b82f6 !important; }
+
+  /* ─── Inputs & form elements ──────────────────────────────────────── */
+  input, textarea, select {
+    background-color: #f8fafc !important;
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+  }
+  input::placeholder, textarea::placeholder {
+    color: #94a3b8 !important;
+  }
+  input:focus, textarea:focus, select:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 1px rgba(59,130,246,.15);
+  }
+
+  /* ─── Tables ──────────────────────────────────────────────────────── */
+  table th {
+    background-color: #f1f5f9 !important;
+    color: #475569 !important;
+    border-color: #e2e8f0 !important;
+  }
+  table td {
+    border-color: #e2e8f0 !important;
+    color: #334155 !important;
+  }
+  table tr:hover td {
+    background-color: #f8fafc !important;
+  }
+
+  /* ─── Shadows (softer for light) ──────────────────────────────────── */
+  .shadow-xl { box-shadow: 0 4px 24px rgba(0,0,0,.08) !important; }
+  .shadow-lg { box-shadow: 0 2px 12px rgba(0,0,0,.06) !important; }
+
+  /* ─── Backdrop / overlay ──────────────────────────────────────────── */
+  .bg-black\/50 { background-color: rgba(0,0,0,.15) !important; }
+
+  /* ─── Scrollbar ───────────────────────────────────────────────────── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #f1f5f9; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+  /* ─── AdminSettings dropdown (stays dark) ─────────────────────────── */
+  .admin-settings-dropdown {
+    background-color: #1e293b !important;
+    border-color: #334155 !important;
+  }
+}

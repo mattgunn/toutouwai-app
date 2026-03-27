@@ -1,0 +1,126 @@
+/* ── Katana theme ───────────────────────────────────────────────────── */
+/*
+ * Inspired by Katana MRP's app UI: very dark nav bar, clean white/light
+ * gray content area, green primary CTA, teal active-nav highlight.
+ * Inherits all html.light overrides (since katana also sets .light),
+ * then overrides what differs.
+ */
+
+html.katana {
+  /* ─── Content area — clean white/light gray like the real app ──── */
+  .bg-gray-950       { background-color: #f7f8fa !important; }
+  .bg-gray-950\/40   { background-color: rgba(247,248,250,.4) !important; }
+  .bg-gray-800       { background-color: #eef0f4 !important; }
+  .bg-gray-800\/20   { background-color: rgba(238,240,244,.3) !important; }
+  .bg-gray-800\/30   { background-color: rgba(238,240,244,.45) !important; }
+  .bg-gray-800\/50   { background-color: rgba(238,240,244,.5) !important; }
+  .bg-gray-700       { background-color: #e3e5ea !important; }
+  .bg-gray-700\/50   { background-color: rgba(227,229,234,.5) !important; }
+
+  /* ─── Green primary accent (Katana uses green CTAs) ────────────── */
+  .bg-blue-600       { background-color: #16a34a !important; }
+  .hover\:bg-blue-500:hover { background-color: #22c55e !important; }
+  .hover\:bg-blue-600\/30:hover { background-color: rgba(22,163,74,.15) !important; }
+  .bg-blue-600\/20   { background-color: rgba(22,163,74,.08) !important; }
+
+  /* Active nav + links → teal accent */
+  .text-blue-400     { color: #0d9488 !important; }
+  .text-blue-300     { color: #14b8a6 !important; }
+  .hover\:text-blue-300:hover  { color: #14b8a6 !important; }
+  .hover\:text-blue-400:hover  { color: #0d9488 !important; }
+
+  .border-blue-400   { border-color: #0d9488 !important; }
+  .focus\:border-blue-500:focus { border-color: #14b8a6 !important; }
+
+  /* Input focus ring → teal */
+  input:focus, textarea:focus, select:focus {
+    border-color: #14b8a6 !important;
+    box-shadow: 0 0 0 1px rgba(20,184,166,.15);
+  }
+
+  /* Table headers — very light gray */
+  table th {
+    background-color: #f1f3f6 !important;
+  }
+
+  /* Hover rows */
+  table tr:hover td {
+    background-color: #f7f8fa !important;
+  }
+  .hover\:bg-gray-700:hover     { background-color: #e3e5ea !important; }
+  .hover\:bg-gray-700\/50:hover { background-color: rgba(227,229,234,.5) !important; }
+  .hover\:bg-gray-800\/30:hover { background-color: rgba(238,240,244,.5) !important; }
+  .hover\:bg-gray-800\/50:hover { background-color: rgba(238,240,244,.6) !important; }
+
+  /* ─── Card elevation — subtle shadows like the real Katana app ──── */
+  .bg-gray-900 {
+    box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04) !important;
+  }
+  .border-gray-800 {
+    border-color: #e2e5eb !important;
+  }
+
+  /* Table rows — clean hairline separators */
+  table td {
+    border-color: #eef0f4 !important;
+  }
+  table th {
+    border-bottom: 2px solid #dde0e6 !important;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  /* Softer shadow on cards */
+  .shadow-xl { box-shadow: 0 4px 20px rgba(0,0,0,.06) !important; }
+  .shadow-lg { box-shadow: 0 2px 10px rgba(0,0,0,.05) !important; }
+
+  /* ─── Rounded CTA buttons — Katana uses pill-shaped buttons ────── */
+  .rounded-md { border-radius: 6px !important; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar-track { background: #eef0f4; }
+  ::-webkit-scrollbar-thumb { background: #cdd1d9; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #a8adb8; }
+
+  /* ─── Katana nav — shared between sidebar & topbar ────────────── */
+  .katana-sidebar, .katana-topbar {
+    background-color: #191a2c !important;
+    border-color: #2a2b42 !important;
+  }
+
+  /* Brand area — subtle teal accent line (sidebar only) */
+  .katana-sidebar > div:first-child {
+    background: linear-gradient(180deg, #1e1f34 0%, #191a2c 100%) !important;
+    border-bottom: 1px solid #2a2b42 !important;
+    box-shadow: inset 0 -2px 0 rgba(20, 184, 166, 0.25);
+  }
+  .katana-sidebar > div:first-child h1 {
+    letter-spacing: 0.04em;
+  }
+
+  .katana-sidebar .text-gray-400, .katana-topbar .text-gray-400 { color: #9ca3b4 !important; }
+  .katana-sidebar .text-gray-600, .katana-topbar .text-gray-600 { color: #5c6378 !important; }
+  .katana-sidebar .text-gray-500, .katana-topbar .text-gray-500 { color: #7b8295 !important; }
+  .katana-sidebar .text-gray-200, .katana-topbar .text-gray-200 { color: #e2e4ea !important; }
+  .katana-sidebar .text-white,    .katana-topbar .text-white    { color: #ffffff !important; }
+  .katana-sidebar .hover\:text-gray-200:hover, .katana-topbar .hover\:text-gray-200:hover { color: #e2e4ea !important; }
+  .katana-sidebar .hover\:text-gray-300:hover, .katana-topbar .hover\:text-gray-300:hover { color: #cdd1d9 !important; }
+  .katana-sidebar .hover\:text-white:hover,    .katana-topbar .hover\:text-white:hover    { color: #ffffff !important; }
+  .katana-sidebar .hover\:bg-gray-800\/50:hover, .katana-topbar .hover\:bg-gray-800\/50:hover { background-color: rgba(42,43,66,.6) !important; }
+  .katana-sidebar .bg-blue-600\/20, .katana-topbar .bg-blue-600\/20 { background-color: rgba(20,184,166,.15) !important; }
+  .katana-sidebar .text-blue-400,   .katana-topbar .text-blue-400   { color: #5eead4 !important; }
+  .katana-sidebar .border-blue-400, .katana-topbar .border-blue-400 { border-color: #5eead4 !important; }
+  .katana-sidebar .border-gray-800, .katana-topbar .border-gray-800 { border-color: #2a2b42 !important; }
+  .katana-topbar .bg-gray-700 { background-color: #2a2b42 !important; }
+
+  /* ─── Katana sub-nav — lighter stripe below the dark topbar ──── */
+  .katana-subnav {
+    background-color: #f0f2f6 !important;
+    border-color: #dde0e6 !important;
+  }
+  .katana-subnav .text-gray-400 { color: #6b7280 !important; }
+  .katana-subnav .text-white    { color: #111827 !important; }
+  .katana-subnav .border-blue-400 { border-color: #0d9488 !important; }
+  .katana-subnav .hover\:text-gray-200:hover { color: #374151 !important; }
+  .katana-subnav .hover\:bg-gray-800\/50:hover { background-color: rgba(0,0,0,.05) !important; }
+}
