@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS departments (
     name        TEXT NOT NULL,
     description TEXT,
     head_id     TEXT,
+    azure_ad_group_id TEXT,
     created_at  TEXT NOT NULL,
     updated_at  TEXT NOT NULL
 );
@@ -56,12 +57,16 @@ CREATE TABLE IF NOT EXISTS employees (
     date_of_birth TEXT,
     emergency_contact TEXT,
     notes         TEXT,
+    payhero_employee_key TEXT,
+    azure_ad_id   TEXT,
     created_at    TEXT NOT NULL,
     updated_at    TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_employees_department ON employees(department_id);
 CREATE INDEX IF NOT EXISTS idx_employees_manager ON employees(manager_id);
 CREATE INDEX IF NOT EXISTS idx_employees_status ON employees(status);
+CREATE INDEX IF NOT EXISTS idx_employees_payhero ON employees(payhero_employee_key);
+CREATE INDEX IF NOT EXISTS idx_employees_azure_ad ON employees(azure_ad_id);
 
 CREATE TABLE IF NOT EXISTS leave_types (
     id            TEXT PRIMARY KEY,

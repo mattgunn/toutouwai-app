@@ -1,0 +1,4 @@
+{
+  "payhero": { "enabled": false },
+  "azure_ad": { "enabled": false, "tenant_id": "", "sync_groups_as_departments": true }
+}

@@ -9,3 +9,4 @@ export { fetchLeaveTypes, fetchLeaveRequests, createLeaveRequest, updateLeaveReq
 export { fetchTimeEntries, createTimeEntry, updateTimeEntry, deleteTimeEntry } from './modules/time/api'
 export { fetchJobPostings, fetchJobPosting, createJobPosting, updateJobPosting, fetchApplicants, fetchApplicant, createApplicant, updateApplicant, updateApplicantStage } from './modules/recruitment/api'
 export { fetchReviewCycles, createReviewCycle, fetchReviews, createReview, updateReview, fetchGoals, createGoal, updateGoal, deleteGoal } from './modules/performance/api'
+export { fetchPayHeroStatus, testPayHeroConnection, syncPayHero, importPayHero, fetchAzureADStatus, disconnectAzureAD, syncAzureAD, importAzureAD, pushToAzureAD, microsoftSSOLogin } from './modules/integrations/api'

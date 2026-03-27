@@ -4,13 +4,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-from .routers import auth, dashboard, employees, departments, positions, leave, time_entries, recruitment, performance, settings
+from .routers import auth, dashboard, employees, departments, positions, leave, time_entries, recruitment, performance, settings, integrations
 
 app = FastAPI(title="HRIS API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=["http://localhost:5183", "http://localhost:5173", "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -27,6 +27,7 @@ app.include_router(time_entries.router, prefix="/api", tags=["time"])
 app.include_router(recruitment.router, prefix="/api", tags=["recruitment"])
 app.include_router(performance.router, prefix="/api", tags=["performance"])
 app.include_router(settings.router, prefix="/api", tags=["settings"])
+app.include_router(integrations.router, prefix="/api", tags=["integrations"])
 
 
 @app.get("/api/health")
