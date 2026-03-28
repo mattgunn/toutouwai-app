@@ -39,6 +39,12 @@ export default function Departments() {
   // Set head state
   const [settingHead, setSettingHead] = useState(false)
 
+  // Add employee to department state
+  const [showAddEmployee, setShowAddEmployee] = useState(false)
+  const [allEmployees, setAllEmployees] = useState<Employee[]>([])
+  const [addEmployeeId, setAddEmployeeId] = useState('')
+  const [addingEmployee, setAddingEmployee] = useState(false)
+
   const loadData = () => {
     setLoading(true)
     fetchDepartments()
@@ -154,6 +160,32 @@ export default function Departments() {
     }
   }
 
+  const openAddEmployee = () => {
+    fetchEmployees({ per_page: '1000' })
+      .then(r => setAllEmployees(r.employees.filter(e => e.department_id !== selectedDept?.id)))
+      .catch(() => {})
+    setShowAddEmployee(true)
+    setAddEmployeeId('')
+  }
+
+  const handleAddEmployee = async () => {
+    if (!addEmployeeId || !selectedDept) return
+    setAddingEmployee(true)
+    try {
+      await updateEmployee(addEmployeeId, { department_id: selectedDept.id })
+      toast.success('Employee added to department')
+      setShowAddEmployee(false)
+      loadData()
+      fetchEmployees({ department: selectedDept.id })
+        .then(r => setDeptEmployees(r.employees))
+        .catch(() => {})
+    } catch {
+      toast.error('Failed to add employee')
+    } finally {
+      setAddingEmployee(false)
+    }
+  }
+
   const employeeColumns = [
     { key: 'name', header: 'Name', render: (emp: Employee) => <EmployeeLink employeeId={emp.id} name={`${emp.first_name} ${emp.last_name}`} className="font-medium" /> },
     { key: 'position_title', header: 'Position', render: (emp: Employee) => <span className="text-gray-400">{emp.position_title || '\u2014'}</span>, className: 'hidden md:table-cell' },
@@ -240,7 +272,10 @@ export default function Departments() {
             {selectedDept.head_name && <span>Head: {selectedDept.head_name}</span>}
           </div>
 
-          <h3 className="text-sm font-semibold text-gray-300 mb-3">Employees in this department</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-300">Employees in this department</h3>
+            <Button size="sm" onClick={openAddEmployee}>Add Employee</Button>
+          </div>
           {detailLoading ? (
             <SkeletonTable rows={3} cols={4} />
           ) : (
@@ -306,6 +341,29 @@ export default function Departments() {
         confirmLabel="Delete"
         loading={deleting}
       />
+
+      {/* Add employee to department modal */}
+      <Modal
+        open={showAddEmployee}
+        onClose={() => setShowAddEmployee(false)}
+        title={`Add Employee to ${selectedDept?.name || 'Department'}`}
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowAddEmployee(false)} disabled={addingEmployee}>Cancel</Button>
+            <Button onClick={handleAddEmployee} loading={addingEmployee} disabled={!addEmployeeId}>Add to Department</Button>
+          </>
+        }
+      >
+        <FormField label="Employee" required>
+          <Select
+            value={addEmployeeId}
+            onChange={e => setAddEmployeeId(e.target.value)}
+            placeholder="Select employee"
+            options={allEmployees.map(e => ({ value: e.id, label: `${e.first_name} ${e.last_name}${e.department_name ? ` (${e.department_name})` : ' (Unassigned)'}` }))}
+          />
+        </FormField>
+      </Modal>
 
       {/* Reassign employee modal */}
       <Modal

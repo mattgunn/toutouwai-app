@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { fetchApplicants, updateApplicantStage } from '../api'
-import type { Applicant } from '../types'
+import { fetchApplicants, fetchJobPostings, updateApplicantStage } from '../api'
+import type { Applicant, JobPosting } from '../types'
 import PageHeader from '../components/PageHeader'
 import { Skeleton } from '../components/Skeleton'
 import { useToast } from '../components/Toast'
@@ -10,6 +10,8 @@ const STAGES = ['applied', 'screening', 'interview', 'offer', 'hired', 'rejected
 
 export default function Pipeline() {
   const [applicants, setApplicants] = useState<Applicant[]>([])
+  const [jobPostings, setJobPostings] = useState<JobPosting[]>([])
+  const [selectedJob, setSelectedJob] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const toast = useToast()
 
@@ -22,7 +24,13 @@ export default function Pipeline() {
 
   useEffect(() => {
     loadApplicants()
+    fetchJobPostings().then(setJobPostings).catch(() => {})
   }, [])
+
+  const filteredApplicants = useMemo(() => {
+    if (!selectedJob) return applicants
+    return applicants.filter(a => a.job_posting_id === selectedJob)
+  }, [applicants, selectedJob])
 
   const handleStageChange = async (applicantId: string, newStage: string) => {
     try {
@@ -36,7 +44,7 @@ export default function Pipeline() {
 
   const byStage = STAGES.map(stage => ({
     stage,
-    applicants: applicants.filter(a => a.stage === stage),
+    applicants: filteredApplicants.filter(a => a.stage === stage),
   }))
 
   if (loading) {
@@ -61,6 +69,30 @@ export default function Pipeline() {
   return (
     <div>
       <PageHeader title="Recruitment Pipeline" />
+
+      {jobPostings.length > 0 && (
+        <div className="mb-4 flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setSelectedJob('')}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              !selectedJob ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+            }`}
+          >All Jobs ({applicants.length})</button>
+          {jobPostings.map(job => {
+            const count = applicants.filter(a => a.job_posting_id === job.id).length
+            if (count === 0) return null
+            return (
+              <button
+                key={job.id}
+                onClick={() => setSelectedJob(job.id)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                  selectedJob === job.id ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                }`}
+              >{job.title} ({count})</button>
+            )
+          })}
+        </div>
+      )}
 
       <div className="flex gap-4 overflow-x-auto pb-4">
         {byStage.map(({ stage, applicants: stageApplicants }) => (
