@@ -9,6 +9,7 @@ import type { OnboardingTemplate, OnboardingTemplateTask, OnboardingChecklist } 
 import type { Employee } from '../types'
 import StatusBadge from '../components/StatusBadge'
 import EmptyState from '../components/EmptyState'
+import DataTable from '../components/DataTable'
 import Tabs from '../components/Tabs'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
@@ -321,41 +322,19 @@ export default function Onboarding() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Template List */}
             <div>
-              {templates.length === 0 ? (
-                <EmptyState
-                  icon="📝"
-                  message="No onboarding templates"
-                  action="New Template"
-                  onAction={() => setShowTemplateForm(true)}
-                />
-              ) : (
-                <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-left text-gray-500 text-xs uppercase">
-                        <th className="px-4 py-3">Name</th>
-                        <th className="px-4 py-3">Department</th>
-                        <th className="px-4 py-3">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {templates.map(t => (
-                        <tr
-                          key={t.id}
-                          onClick={() => loadTemplateTasks(t)}
-                          className={`border-t border-gray-800 cursor-pointer transition-colors ${
-                            selectedTemplate?.id === t.id ? 'bg-gray-800' : 'hover:bg-gray-800/50'
-                          }`}
-                        >
-                          <td className="px-4 py-3 text-white font-medium">{t.name}</td>
-                          <td className="px-4 py-3 text-gray-400">{t.department_name || '\u2014'}</td>
-                          <td className="px-4 py-3"><StatusBadge status={t.is_active ? 'active' : 'inactive'} /></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              <DataTable
+                columns={[
+                  { key: 'name', header: 'Name', render: (t: OnboardingTemplate) => <span className="text-white font-medium">{t.name}</span> },
+                  { key: 'department_name', header: 'Department', render: (t: OnboardingTemplate) => <span className="text-gray-400">{t.department_name || '\u2014'}</span> },
+                  { key: 'is_active', header: 'Status', render: (t: OnboardingTemplate) => <StatusBadge status={t.is_active ? 'active' : 'inactive'} /> },
+                ]}
+                data={templates}
+                onRowClick={(t) => loadTemplateTasks(t)}
+                emptyIcon="📝"
+                emptyMessage="No onboarding templates"
+                emptyAction="New Template"
+                onEmptyAction={() => setShowTemplateForm(true)}
+              />
             </div>
 
             {/* Template Tasks Panel */}

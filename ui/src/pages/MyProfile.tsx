@@ -10,6 +10,7 @@ import type { Document } from '../modules/documents/types'
 import type { OnboardingChecklist } from '../modules/onboarding/types'
 import StatusBadge from '../components/StatusBadge'
 import EmptyState from '../components/EmptyState'
+import DataTable from '../components/DataTable'
 import Tabs from '../components/Tabs'
 import Button from '../components/Button'
 import { FormField, Input } from '../components/FormField'
@@ -214,98 +215,52 @@ export default function MyProfile() {
 
           {/* Recent requests */}
           <h3 className="text-sm font-semibold text-white">Recent Leave Requests</h3>
-          {leaveRequests.length === 0 ? (
-            <EmptyState icon="🏖️" message="No leave requests" />
-          ) : (
-            <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-gray-500 text-xs uppercase">
-                    <th className="px-4 py-3">Type</th>
-                    <th className="px-4 py-3">Start</th>
-                    <th className="px-4 py-3">End</th>
-                    <th className="px-4 py-3">Days</th>
-                    <th className="px-4 py-3">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {leaveRequests.map(lr => (
-                    <tr key={lr.id} className="border-t border-gray-800 hover:bg-gray-800/50 transition-colors">
-                      <td className="px-4 py-3 text-white">{lr.leave_type_name || '\u2014'}</td>
-                      <td className="px-4 py-3 text-gray-400">{lr.start_date}</td>
-                      <td className="px-4 py-3 text-gray-400">{lr.end_date}</td>
-                      <td className="px-4 py-3 text-white">{lr.days}</td>
-                      <td className="px-4 py-3"><StatusBadge status={lr.status} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <DataTable
+            columns={[
+              { key: 'leave_type_name', header: 'Type', render: (lr: LeaveRequest) => <span className="text-white">{lr.leave_type_name || '\u2014'}</span> },
+              { key: 'start_date', header: 'Start', render: (lr: LeaveRequest) => <span className="text-gray-400">{lr.start_date}</span> },
+              { key: 'end_date', header: 'End', render: (lr: LeaveRequest) => <span className="text-gray-400">{lr.end_date}</span> },
+              { key: 'days', header: 'Days', render: (lr: LeaveRequest) => <span className="text-white">{lr.days}</span> },
+              { key: 'status', header: 'Status', render: (lr: LeaveRequest) => <StatusBadge status={lr.status} /> },
+            ]}
+            data={leaveRequests}
+            emptyIcon="🏖️"
+            emptyMessage="No leave requests"
+          />
         </div>
       )}
 
       {/* ── Time ──────────────────────────────────────────────── */}
       {section === 'time' && (
         <div>
-          {timeEntries.length === 0 ? (
-            <EmptyState icon="⏱️" message="No time entries" />
-          ) : (
-            <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-gray-500 text-xs uppercase">
-                    <th className="px-4 py-3">Date</th>
-                    <th className="px-4 py-3">Hours</th>
-                    <th className="px-4 py-3">Project</th>
-                    <th className="px-4 py-3 hidden md:table-cell">Description</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {timeEntries.map(te => (
-                    <tr key={te.id} className="border-t border-gray-800 hover:bg-gray-800/50 transition-colors">
-                      <td className="px-4 py-3 text-white">{te.date}</td>
-                      <td className="px-4 py-3 text-white">{te.hours}</td>
-                      <td className="px-4 py-3 text-gray-400">{te.project || '\u2014'}</td>
-                      <td className="px-4 py-3 text-gray-400 hidden md:table-cell">{te.description || '\u2014'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <DataTable
+            columns={[
+              { key: 'date', header: 'Date', render: (te: TimeEntry) => <span className="text-white">{te.date}</span> },
+              { key: 'hours', header: 'Hours', render: (te: TimeEntry) => <span className="text-white">{te.hours}</span> },
+              { key: 'project', header: 'Project', render: (te: TimeEntry) => <span className="text-gray-400">{te.project || '\u2014'}</span> },
+              { key: 'description', header: 'Description', render: (te: TimeEntry) => <span className="text-gray-400">{te.description || '\u2014'}</span>, className: 'hidden md:table-cell' },
+            ]}
+            data={timeEntries}
+            emptyIcon="⏱️"
+            emptyMessage="No time entries"
+          />
         </div>
       )}
 
       {/* ── Documents ─────────────────────────────────────────── */}
       {section === 'documents' && (
         <div>
-          {documents.length === 0 ? (
-            <EmptyState icon="📄" message="No documents" />
-          ) : (
-            <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-gray-500 text-xs uppercase">
-                    <th className="px-4 py-3">Name</th>
-                    <th className="px-4 py-3">Category</th>
-                    <th className="px-4 py-3 hidden md:table-cell">Expiry</th>
-                    <th className="px-4 py-3 hidden md:table-cell">Uploaded</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {documents.map(doc => (
-                    <tr key={doc.id} className="border-t border-gray-800 hover:bg-gray-800/50 transition-colors">
-                      <td className="px-4 py-3 text-white">{doc.name}</td>
-                      <td className="px-4 py-3 text-gray-400">{doc.category}</td>
-                      <td className="px-4 py-3 text-gray-400 hidden md:table-cell">{doc.expiry_date || '\u2014'}</td>
-                      <td className="px-4 py-3 text-gray-400 hidden md:table-cell">{doc.created_at?.split('T')[0]}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <DataTable
+            columns={[
+              { key: 'name', header: 'Name', render: (doc: Document) => <span className="text-white">{doc.name}</span> },
+              { key: 'category', header: 'Category', render: (doc: Document) => <span className="text-gray-400">{doc.category}</span> },
+              { key: 'expiry_date', header: 'Expiry', render: (doc: Document) => <span className="text-gray-400">{doc.expiry_date || '\u2014'}</span>, className: 'hidden md:table-cell' },
+              { key: 'created_at', header: 'Uploaded', render: (doc: Document) => <span className="text-gray-400">{doc.created_at?.split('T')[0]}</span>, className: 'hidden md:table-cell' },
+            ]}
+            data={documents}
+            emptyIcon="📄"
+            emptyMessage="No documents"
+          />
         </div>
       )}
 

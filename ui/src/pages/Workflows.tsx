@@ -9,6 +9,7 @@ import {
 import type { WorkflowDefinition, WorkflowApproval } from '../modules/workflows/types'
 import StatusBadge from '../components/StatusBadge'
 import EmptyState from '../components/EmptyState'
+import DataTable from '../components/DataTable'
 import Tabs from '../components/Tabs'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
@@ -288,36 +289,18 @@ function DefinitionsView({
         </div>
       </Modal>
 
-      {definitions.length === 0 ? (
-        <EmptyState icon="🔄" message="No workflow definitions" />
-      ) : (
-        <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-gray-500 text-xs uppercase">
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Trigger</th>
-                <th className="px-4 py-3 hidden md:table-cell">Action</th>
-                <th className="px-4 py-3 hidden md:table-cell">Steps</th>
-                <th className="px-4 py-3">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {definitions.map(def => (
-                <tr key={def.id} className="border-t border-gray-800 hover:bg-gray-800/50 transition-colors">
-                  <td className="px-4 py-3 text-white font-medium">{def.name}</td>
-                  <td className="px-4 py-3 text-gray-400 capitalize">{(def.trigger_entity || '').replace(/_/g, ' ')}</td>
-                  <td className="px-4 py-3 text-gray-400 capitalize hidden md:table-cell">{(def.trigger_action || '').replace(/_/g, ' ')}</td>
-                  <td className="px-4 py-3 text-gray-400 hidden md:table-cell">{def.step_count || 0}</td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={def.is_active ? 'active' : 'inactive'} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <DataTable
+        columns={[
+          { key: 'name', header: 'Name', render: (def: WorkflowDefinition) => <span className="text-white font-medium">{def.name}</span> },
+          { key: 'trigger_entity', header: 'Trigger', render: (def: WorkflowDefinition) => <span className="text-gray-400 capitalize">{(def.trigger_entity || '').replace(/_/g, ' ')}</span> },
+          { key: 'trigger_action', header: 'Action', render: (def: WorkflowDefinition) => <span className="text-gray-400 capitalize">{(def.trigger_action || '').replace(/_/g, ' ')}</span>, className: 'hidden md:table-cell' },
+          { key: 'step_count', header: 'Steps', render: (def: WorkflowDefinition) => <span className="text-gray-400">{def.step_count || 0}</span>, className: 'hidden md:table-cell' },
+          { key: 'is_active', header: 'Status', render: (def: WorkflowDefinition) => <StatusBadge status={def.is_active ? 'active' : 'inactive'} /> },
+        ]}
+        data={definitions}
+        emptyIcon="🔄"
+        emptyMessage="No workflow definitions"
+      />
     </>
   )
 }

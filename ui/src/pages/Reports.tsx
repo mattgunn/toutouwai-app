@@ -16,9 +16,9 @@ import type {
   RecruitmentReport,
 } from '../modules/reports/types'
 import StatCard from '../components/StatCard'
-import EmptyState from '../components/EmptyState'
 import PageHeader from '../components/PageHeader'
 import Tabs from '../components/Tabs'
+import DataTable from '../components/DataTable'
 
 type Tab = 'headcount' | 'turnover' | 'leave' | 'time' | 'compensation' | 'recruitment'
 
@@ -73,6 +73,25 @@ function HeadcountTab() {
     deptMap.get(dept)![row.status] = row.count
   }
 
+  const deptRows = Array.from(deptMap.entries()).map(([dept, counts]) => ({
+    department: dept,
+    active: counts.active || 0,
+    on_leave: counts.on_leave || 0,
+    terminated: counts.terminated || 0,
+  }))
+
+  const deptColumns = [
+    { key: 'department', header: 'Department', render: (row: typeof deptRows[number]) => <span className="text-white">{row.department}</span> },
+    { key: 'active', header: 'Active', render: (row: typeof deptRows[number]) => <span className="text-emerald-400">{row.active}</span> },
+    { key: 'on_leave', header: 'On Leave', render: (row: typeof deptRows[number]) => <span className="text-amber-400">{row.on_leave}</span> },
+    { key: 'terminated', header: 'Terminated', render: (row: typeof deptRows[number]) => <span className="text-red-400">{row.terminated}</span> },
+  ]
+
+  const positionColumns = [
+    { key: 'position', header: 'Position', render: (row: typeof data.by_position[number]) => <span className="text-white">{row.position || 'Unassigned'}</span> },
+    { key: 'count', header: 'Count', render: (row: typeof data.by_position[number]) => <span className="text-gray-400">{row.count}</span> },
+  ]
+
   return (
     <>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -83,52 +102,24 @@ function HeadcountTab() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+        <div>
           <h2 className="text-sm font-semibold text-white mb-3">By Department</h2>
-          {deptMap.size === 0 ? <EmptyState message="No data" /> : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 text-xs uppercase">
-                  <th className="pb-2">Department</th>
-                  <th className="pb-2">Active</th>
-                  <th className="pb-2">On Leave</th>
-                  <th className="pb-2">Terminated</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Array.from(deptMap.entries()).map(([dept, counts]) => (
-                  <tr key={dept} className="border-t border-gray-800">
-                    <td className="py-2 text-white">{dept}</td>
-                    <td className="py-2 text-emerald-400">{counts.active || 0}</td>
-                    <td className="py-2 text-amber-400">{counts.on_leave || 0}</td>
-                    <td className="py-2 text-red-400">{counts.terminated || 0}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          <DataTable
+            columns={deptColumns}
+            data={deptRows}
+            keyField="department"
+            emptyMessage="No data"
+          />
         </div>
 
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+        <div>
           <h2 className="text-sm font-semibold text-white mb-3">By Position</h2>
-          {data.by_position.length === 0 ? <EmptyState message="No data" /> : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 text-xs uppercase">
-                  <th className="pb-2">Position</th>
-                  <th className="pb-2">Count</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.by_position.map((row, i) => (
-                  <tr key={i} className="border-t border-gray-800">
-                    <td className="py-2 text-white">{row.position || 'Unassigned'}</td>
-                    <td className="py-2 text-gray-400">{row.count}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          <DataTable
+            columns={positionColumns}
+            data={data.by_position}
+            keyField="position"
+            emptyMessage="No data"
+          />
         </div>
       </div>
     </>
@@ -140,6 +131,11 @@ function TurnoverTab() {
   useEffect(() => { fetchTurnoverReport().then(setData).catch(() => {}) }, [])
   if (!data) return <div className="text-gray-500 text-sm">Loading...</div>
 
+  const periodColumns = [
+    { key: 'period', header: 'Period', render: (row: typeof data.by_period[number]) => <span className="text-white">{row.period || 'Unknown'}</span> },
+    { key: 'terminations', header: 'Terminations', render: (row: typeof data.by_period[number]) => <span className="text-red-400">{row.terminations}</span> },
+  ]
+
   return (
     <>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -149,26 +145,14 @@ function TurnoverTab() {
         <StatCard label="Periods Tracked" value={data.by_period.length} />
       </div>
 
-      <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+      <div>
         <h2 className="text-sm font-semibold text-white mb-3">Terminations by Period</h2>
-        {data.by_period.length === 0 ? <EmptyState message="No termination data" /> : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-gray-500 text-xs uppercase">
-                <th className="pb-2">Period</th>
-                <th className="pb-2">Terminations</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.by_period.map((row, i) => (
-                <tr key={i} className="border-t border-gray-800">
-                  <td className="py-2 text-white">{row.period || 'Unknown'}</td>
-                  <td className="py-2 text-red-400">{row.terminations}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <DataTable
+          columns={periodColumns}
+          data={data.by_period}
+          keyField="period"
+          emptyMessage="No termination data"
+        />
       </div>
     </>
   )
@@ -181,6 +165,19 @@ function LeaveTab() {
 
   const approvedByType = data.by_type.filter(r => r.status === 'approved')
   const totalDaysUsed = approvedByType.reduce((s, r) => s + r.total_days, 0)
+  const deptRows = data.by_department.filter(r => r.days_used > 0)
+
+  const typeColumns = [
+    { key: 'leave_type', header: 'Type', render: (row: typeof approvedByType[number]) => <span className="text-white">{row.leave_type}</span> },
+    { key: 'request_count', header: 'Requests', render: (row: typeof approvedByType[number]) => <span className="text-gray-400">{row.request_count}</span> },
+    { key: 'total_days', header: 'Days', render: (row: typeof approvedByType[number]) => <span className="text-blue-400">{row.total_days}</span> },
+  ]
+
+  const deptColumns = [
+    { key: 'department', header: 'Department', render: (row: typeof deptRows[number]) => <span className="text-white">{row.department || 'Unassigned'}</span> },
+    { key: 'leave_type', header: 'Leave Type', render: (row: typeof deptRows[number]) => <span className="text-gray-400">{row.leave_type}</span> },
+    { key: 'days_used', header: 'Days Used', render: (row: typeof deptRows[number]) => <span className="text-blue-400">{row.days_used}</span> },
+  ]
 
   return (
     <>
@@ -191,52 +188,23 @@ function LeaveTab() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+        <div>
           <h2 className="text-sm font-semibold text-white mb-3">Usage by Type</h2>
-          {approvedByType.length === 0 ? <EmptyState message="No leave data" /> : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 text-xs uppercase">
-                  <th className="pb-2">Type</th>
-                  <th className="pb-2">Requests</th>
-                  <th className="pb-2">Days</th>
-                </tr>
-              </thead>
-              <tbody>
-                {approvedByType.map((row, i) => (
-                  <tr key={i} className="border-t border-gray-800">
-                    <td className="py-2 text-white">{row.leave_type}</td>
-                    <td className="py-2 text-gray-400">{row.request_count}</td>
-                    <td className="py-2 text-blue-400">{row.total_days}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          <DataTable
+            columns={typeColumns}
+            data={approvedByType}
+            keyField="leave_type"
+            emptyMessage="No leave data"
+          />
         </div>
 
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+        <div>
           <h2 className="text-sm font-semibold text-white mb-3">Usage by Department</h2>
-          {data.by_department.length === 0 ? <EmptyState message="No data" /> : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 text-xs uppercase">
-                  <th className="pb-2">Department</th>
-                  <th className="pb-2">Leave Type</th>
-                  <th className="pb-2">Days Used</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.by_department.filter(r => r.days_used > 0).map((row, i) => (
-                  <tr key={i} className="border-t border-gray-800">
-                    <td className="py-2 text-white">{row.department || 'Unassigned'}</td>
-                    <td className="py-2 text-gray-400">{row.leave_type}</td>
-                    <td className="py-2 text-blue-400">{row.days_used}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          <DataTable
+            columns={deptColumns}
+            data={deptRows}
+            emptyMessage="No data"
+          />
         </div>
       </div>
     </>
@@ -248,6 +216,20 @@ function TimeTab() {
   useEffect(() => { fetchTimeSummaryReport().then(setData).catch(() => {}) }, [])
   if (!data) return <div className="text-gray-500 text-sm">Loading...</div>
 
+  const employeeRows = data.by_employee.filter(r => r.total_hours > 0)
+
+  const employeeColumns = [
+    { key: 'employee_name', header: 'Employee', render: (row: typeof employeeRows[number]) => <span className="text-white">{row.employee_name}</span> },
+    { key: 'total_hours', header: 'Hours', render: (row: typeof employeeRows[number]) => <span className="text-blue-400">{row.total_hours}</span> },
+    { key: 'entry_count', header: 'Entries', render: (row: typeof employeeRows[number]) => <span className="text-gray-400">{row.entry_count}</span> },
+  ]
+
+  const projectColumns = [
+    { key: 'project', header: 'Project', render: (row: typeof data.by_project[number]) => <span className="text-white">{row.project}</span> },
+    { key: 'total_hours', header: 'Hours', render: (row: typeof data.by_project[number]) => <span className="text-blue-400">{row.total_hours}</span> },
+    { key: 'entry_count', header: 'Entries', render: (row: typeof data.by_project[number]) => <span className="text-gray-400">{row.entry_count}</span> },
+  ]
+
   return (
     <>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
@@ -257,52 +239,24 @@ function TimeTab() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+        <div>
           <h2 className="text-sm font-semibold text-white mb-3">Hours by Employee</h2>
-          {data.by_employee.length === 0 ? <EmptyState message="No time entries" /> : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 text-xs uppercase">
-                  <th className="pb-2">Employee</th>
-                  <th className="pb-2">Hours</th>
-                  <th className="pb-2">Entries</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.by_employee.filter(r => r.total_hours > 0).map((row, i) => (
-                  <tr key={i} className="border-t border-gray-800">
-                    <td className="py-2 text-white">{row.employee_name}</td>
-                    <td className="py-2 text-blue-400">{row.total_hours}</td>
-                    <td className="py-2 text-gray-400">{row.entry_count}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          <DataTable
+            columns={employeeColumns}
+            data={employeeRows}
+            keyField="employee_name"
+            emptyMessage="No time entries"
+          />
         </div>
 
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+        <div>
           <h2 className="text-sm font-semibold text-white mb-3">Hours by Project</h2>
-          {data.by_project.length === 0 ? <EmptyState message="No project data" /> : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 text-xs uppercase">
-                  <th className="pb-2">Project</th>
-                  <th className="pb-2">Hours</th>
-                  <th className="pb-2">Entries</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.by_project.map((row, i) => (
-                  <tr key={i} className="border-t border-gray-800">
-                    <td className="py-2 text-white">{row.project}</td>
-                    <td className="py-2 text-blue-400">{row.total_hours}</td>
-                    <td className="py-2 text-gray-400">{row.entry_count}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          <DataTable
+            columns={projectColumns}
+            data={data.by_project}
+            keyField="project"
+            emptyMessage="No project data"
+          />
         </div>
       </div>
     </>
@@ -316,6 +270,18 @@ function CompensationTab() {
 
   const totalEmployees = data.by_position.reduce((s, r) => s + r.employee_count, 0)
 
+  const deptColumns = [
+    { key: 'department', header: 'Department', render: (row: typeof data.by_department[number]) => <span className="text-white">{row.department || 'Unassigned'}</span> },
+    { key: 'position_level', header: 'Level', render: (row: typeof data.by_department[number]) => <span className="text-gray-400">{row.position_level || '\u2014'}</span> },
+    { key: 'employee_count', header: 'Count', render: (row: typeof data.by_department[number]) => <span className="text-gray-400">{row.employee_count}</span> },
+  ]
+
+  const posColumns = [
+    { key: 'position', header: 'Position', render: (row: typeof data.by_position[number]) => <span className="text-white">{row.position || 'Unassigned'}</span> },
+    { key: 'level', header: 'Level', render: (row: typeof data.by_position[number]) => <span className="text-gray-400">{row.level || '\u2014'}</span> },
+    { key: 'employee_count', header: 'Count', render: (row: typeof data.by_position[number]) => <span className="text-gray-400">{row.employee_count}</span> },
+  ]
+
   return (
     <>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
@@ -325,52 +291,22 @@ function CompensationTab() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+        <div>
           <h2 className="text-sm font-semibold text-white mb-3">By Department &amp; Level</h2>
-          {data.by_department.length === 0 ? <EmptyState message="No data" /> : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 text-xs uppercase">
-                  <th className="pb-2">Department</th>
-                  <th className="pb-2">Level</th>
-                  <th className="pb-2">Count</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.by_department.map((row, i) => (
-                  <tr key={i} className="border-t border-gray-800">
-                    <td className="py-2 text-white">{row.department || 'Unassigned'}</td>
-                    <td className="py-2 text-gray-400">{row.position_level || '\u2014'}</td>
-                    <td className="py-2 text-gray-400">{row.employee_count}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          <DataTable
+            columns={deptColumns}
+            data={data.by_department}
+            emptyMessage="No data"
+          />
         </div>
 
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+        <div>
           <h2 className="text-sm font-semibold text-white mb-3">By Position</h2>
-          {data.by_position.length === 0 ? <EmptyState message="No data" /> : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 text-xs uppercase">
-                  <th className="pb-2">Position</th>
-                  <th className="pb-2">Level</th>
-                  <th className="pb-2">Count</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.by_position.map((row, i) => (
-                  <tr key={i} className="border-t border-gray-800">
-                    <td className="py-2 text-white">{row.position || 'Unassigned'}</td>
-                    <td className="py-2 text-gray-400">{row.level || '\u2014'}</td>
-                    <td className="py-2 text-gray-400">{row.employee_count}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          <DataTable
+            columns={posColumns}
+            data={data.by_position}
+            emptyMessage="No data"
+          />
         </div>
       </div>
     </>
@@ -382,6 +318,16 @@ function RecruitmentTab() {
   useEffect(() => { fetchRecruitmentReport().then(setData).catch(() => {}) }, [])
   if (!data) return <div className="text-gray-500 text-sm">Loading...</div>
 
+  const statusColumns = [
+    { key: 'status', header: 'Status', render: (row: typeof data.postings_by_status[number]) => <span className="text-white capitalize">{row.status}</span> },
+    { key: 'count', header: 'Count', render: (row: typeof data.postings_by_status[number]) => <span className="text-gray-400">{row.count}</span> },
+  ]
+
+  const stageColumns = [
+    { key: 'stage', header: 'Stage', render: (row: typeof data.applicants_by_stage[number]) => <span className="text-white capitalize">{row.stage}</span> },
+    { key: 'count', header: 'Count', render: (row: typeof data.applicants_by_stage[number]) => <span className="text-gray-400">{row.count}</span> },
+  ]
+
   return (
     <>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -392,48 +338,24 @@ function RecruitmentTab() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+        <div>
           <h2 className="text-sm font-semibold text-white mb-3">Postings by Status</h2>
-          {data.postings_by_status.length === 0 ? <EmptyState message="No postings" /> : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 text-xs uppercase">
-                  <th className="pb-2">Status</th>
-                  <th className="pb-2">Count</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.postings_by_status.map((row, i) => (
-                  <tr key={i} className="border-t border-gray-800">
-                    <td className="py-2 text-white capitalize">{row.status}</td>
-                    <td className="py-2 text-gray-400">{row.count}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          <DataTable
+            columns={statusColumns}
+            data={data.postings_by_status}
+            keyField="status"
+            emptyMessage="No postings"
+          />
         </div>
 
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+        <div>
           <h2 className="text-sm font-semibold text-white mb-3">Applicants by Stage</h2>
-          {data.applicants_by_stage.length === 0 ? <EmptyState message="No applicants" /> : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 text-xs uppercase">
-                  <th className="pb-2">Stage</th>
-                  <th className="pb-2">Count</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.applicants_by_stage.map((row, i) => (
-                  <tr key={i} className="border-t border-gray-800">
-                    <td className="py-2 text-white capitalize">{row.stage}</td>
-                    <td className="py-2 text-gray-400">{row.count}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          <DataTable
+            columns={stageColumns}
+            data={data.applicants_by_stage}
+            keyField="stage"
+            emptyMessage="No applicants"
+          />
         </div>
       </div>
     </>

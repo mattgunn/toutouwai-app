@@ -40,6 +40,7 @@ export default function LeaveBalances() {
       <DataTable
         columns={columns}
         data={balances}
+        keyField="employee_id"
         emptyIcon="📊"
         emptyMessage="No leave balance data"
         striped
