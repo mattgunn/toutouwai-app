@@ -15,7 +15,7 @@ import {
   MegaphoneIcon, DocumentTextIcon, FunnelIcon,
   StarIcon, FlagIcon, PencilSquareIcon,
   ShieldCheckIcon, ArrowPathRoundedSquareIcon,
-  UserCircleIcon, ChartPieIcon, Cog6ToothIcon,
+  UserCircleIcon, ChartPieIcon, Cog6ToothIcon, QuestionMarkCircleIcon,
 } from './NavIcons'
 
 type NavItem = { to: string; label: string; icon: ReactNode; module: string }
@@ -77,6 +77,7 @@ const NAV_GROUPS: NavGroup[] = [
 const GLOBAL_ITEMS: NavItem[] = [
   { to: '/my-profile', label: 'My Profile', icon: <UserCircleIcon className="w-4 h-4" />, module: '' },
   { to: '/reports',  label: 'Reports',  icon: <ChartPieIcon className="w-4 h-4" />, module: 'reports' },
+  { to: '/help',     label: 'Help',     icon: <QuestionMarkCircleIcon className="w-4 h-4" />, module: '' },
   { to: '/settings', label: 'Settings', icon: <Cog6ToothIcon className="w-4 h-4" />, module: 'settings' },
 ]
 

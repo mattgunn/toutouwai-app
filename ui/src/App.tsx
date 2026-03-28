@@ -29,6 +29,7 @@ import MyProfile from './pages/MyProfile'
 import AuditLog from './pages/AuditLog'
 import Workflows from './pages/Workflows'
 import Surveys from './pages/Surveys'
+import Help from './pages/Help'
 
 export default function App() {
   return (
@@ -69,6 +70,7 @@ export default function App() {
               <Route path="/workflows" element={<ModuleGuard module="settings"><Workflows /></ModuleGuard>} />
               <Route path="/settings" element={<ModuleGuard module="settings"><Settings /></ModuleGuard>} />
               <Route path="/my-profile" element={<MyProfile />} />
+              <Route path="/help" element={<Help />} />
             </Routes>
             </PageTransition>
           </Layout>
