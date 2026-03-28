@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { formatDate } from '../utils/format'
 import { fetchDocuments, createDocument, deleteDocument, fetchExpiringDocuments } from '../modules/documents/api'
 import { fetchEmployees } from '../api'
 import type { Document } from '../modules/documents/types'
@@ -154,7 +155,7 @@ export default function Documents() {
           </p>
           <div className="text-xs text-amber-400/70">
             {expiringDocs.slice(0, 3).map(d => (
-              <span key={d.id} className="mr-3">{d.name} ({d.expiry_date})</span>
+              <span key={d.id} className="mr-3">{d.name} ({formatDate(d.expiry_date)})</span>
             ))}
             {expiringDocs.length > 3 && <span>and {expiringDocs.length - 3} more...</span>}
           </div>
@@ -240,7 +241,7 @@ export default function Documents() {
               const doc = row as unknown as Document
               return doc.expiry_date ? (
                 <span className={`text-sm ${isExpired(doc.expiry_date) ? 'text-red-400' : isExpiringSoon(doc.expiry_date) ? 'text-amber-400' : 'text-gray-400'}`}>
-                  {doc.expiry_date}
+                  {formatDate(doc.expiry_date)}
                 </span>
               ) : (
                 <span className="text-gray-600">{'\u2014'}</span>

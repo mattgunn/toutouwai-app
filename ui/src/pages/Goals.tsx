@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { fetchGoals } from '../api'
+import { formatDate } from '../utils/format'
 import type { Goal } from '../types'
 import StatusBadge from '../components/StatusBadge'
 import PageHeader from '../components/PageHeader'
@@ -30,7 +31,7 @@ export default function Goals() {
         <span className="text-xs text-gray-400 w-8">{goal.progress}%</span>
       </div>
     )},
-    { key: 'due_date', header: 'Due', className: 'hidden lg:table-cell', render: (goal: Goal) => <span className="text-gray-500">{goal.due_date || '\u2014'}</span> },
+    { key: 'due_date', header: 'Due', className: 'hidden lg:table-cell', render: (goal: Goal) => <span className="text-gray-400">{formatDate(goal.due_date)}</span> },
     { key: 'status', header: 'Status', render: (goal: Goal) => <StatusBadge status={goal.status} /> },
   ]
 

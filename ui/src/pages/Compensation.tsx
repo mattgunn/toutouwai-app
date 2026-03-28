@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { formatDate } from '../utils/format'
 import { fetchCurrentCompensation, fetchCompensation, createCompensation } from '../modules/compensation/api'
 import { fetchEmployees } from '../api'
 import type { CurrentCompensation, CompensationRecord } from '../modules/compensation/types'
@@ -102,7 +103,7 @@ export default function Compensation() {
     { key: 'position_title', header: 'Position', className: 'hidden lg:table-cell', render: (comp: CurrentCompensation) => <span className="text-gray-400">{comp.position_title || '\u2014'}</span> },
     { key: 'salary', header: 'Salary', render: (comp: CurrentCompensation) => <span className="text-emerald-400 font-medium">{formatCurrency(comp.salary, comp.currency)}</span> },
     { key: 'pay_frequency', header: 'Frequency', className: 'hidden md:table-cell', render: (comp: CurrentCompensation) => <span className="text-gray-400">{frequencyLabel[comp.pay_frequency] || comp.pay_frequency}</span> },
-    { key: 'effective_date', header: 'Effective', className: 'hidden lg:table-cell', render: (comp: CurrentCompensation) => <span className="text-gray-500">{comp.effective_date}</span> },
+    { key: 'effective_date', header: 'Effective', className: 'hidden lg:table-cell', render: (comp: CurrentCompensation) => <span className="text-gray-400">{formatDate(comp.effective_date)}</span> },
     { key: 'actions', header: '', render: (comp: CurrentCompensation) => <Button variant="ghost" size="sm" onClick={() => setSelectedEmployee(comp.employee_id)}>History</Button> },
   ]
 
@@ -230,7 +231,7 @@ export default function Compensation() {
                     {formatCurrency(record.salary, record.currency)}
                     <span className="text-gray-500 text-xs ml-1">/ {frequencyLabel[record.pay_frequency] || record.pay_frequency}</span>
                   </span>
-                  <span className="text-xs text-gray-500">{record.effective_date}</span>
+                  <span className="text-xs text-gray-500">{formatDate(record.effective_date)}</span>
                 </div>
                 {record.reason && (
                   <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-blue-600/20 text-blue-400 mr-2">

@@ -4,6 +4,7 @@ import { updateSettings, authFetch } from '../api'
 import { INTEGRATIONS } from '../modules/integrations/registry'
 import { useToast } from '../components/Toast'
 import Button from '../components/Button'
+import ConfirmDialog from '../components/ConfirmDialog'
 import PageHeader from '../components/PageHeader'
 import Tabs from '../components/Tabs'
 
@@ -16,6 +17,7 @@ export default function Settings() {
   const [integrationSettings, setIntegrationSettings] = useState<Record<string, unknown>>({})
   const [seeding, setSeeding] = useState(false)
   const [clearing, setClearing] = useState(false)
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [seedResult, setSeedResult] = useState<Record<string, number> | null>(null)
 
   const handleIntegrationChange = (updates: Record<string, unknown>) => {
@@ -41,7 +43,7 @@ export default function Settings() {
   }
 
   const handleClear = async () => {
-    if (!confirm('This will DELETE all employees, leave, recruitment, and other data. Users and settings will be kept. Continue?')) return
+    setShowClearConfirm(false)
     setClearing(true)
     setSeedResult(null)
     try {
@@ -217,7 +219,7 @@ export default function Settings() {
               <Button variant="primary" loading={seeding} onClick={handleSeed}>
                 {seeding ? 'Seeding...' : 'Seed Database'}
               </Button>
-              <Button variant="danger" loading={clearing} onClick={handleClear}>
+              <Button variant="danger" loading={clearing} onClick={() => setShowClearConfirm(true)}>
                 {clearing ? 'Clearing...' : 'Clear All Data'}
               </Button>
             </div>
@@ -256,6 +258,16 @@ export default function Settings() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={showClearConfirm}
+        onClose={() => setShowClearConfirm(false)}
+        onConfirm={handleClear}
+        title="Clear All Data"
+        message="This will DELETE all employees, leave, recruitment, and other data. Users and settings will be kept. This action cannot be undone."
+        confirmLabel="Clear All Data"
+        loading={clearing}
+      />
     </div>
   )
 }

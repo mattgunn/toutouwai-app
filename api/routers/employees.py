@@ -72,6 +72,12 @@ def get_employee(employee_id: str, conn=Depends(get_db), _user=Depends(get_curre
 
 @router.post("/employees")
 def create_employee(body: dict, conn=Depends(get_db), _user=Depends(get_current_user)):
+    if not body.get("first_name"):
+        raise HTTPException(status_code=400, detail="first_name is required")
+    if not body.get("last_name"):
+        raise HTTPException(status_code=400, detail="last_name is required")
+    if not body.get("email"):
+        raise HTTPException(status_code=400, detail="email is required")
     ts = now_iso()
     eid = new_id()
     conn.execute("""

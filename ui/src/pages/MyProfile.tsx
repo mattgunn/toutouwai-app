@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { formatDate } from '../utils/format'
 import {
   fetchMyProfile, updateMyProfile, fetchMyLeave,
   fetchMyLeaveBalances, fetchMyTime, fetchMyDocuments, fetchMyOnboarding,
@@ -185,7 +186,7 @@ export default function MyProfile() {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Start Date</p>
-                    <p className="text-sm text-white">{profile.start_date || '\u2014'}</p>
+                    <p className="text-sm text-white">{formatDate(profile.start_date)}</p>
                   </div>
                 </div>
               </div>
@@ -218,8 +219,8 @@ export default function MyProfile() {
           <DataTable
             columns={[
               { key: 'leave_type_name', header: 'Type', render: (lr: LeaveRequest) => <span className="text-white">{lr.leave_type_name || '\u2014'}</span> },
-              { key: 'start_date', header: 'Start', render: (lr: LeaveRequest) => <span className="text-gray-400">{lr.start_date}</span> },
-              { key: 'end_date', header: 'End', render: (lr: LeaveRequest) => <span className="text-gray-400">{lr.end_date}</span> },
+              { key: 'start_date', header: 'Start', render: (lr: LeaveRequest) => <span className="text-gray-400">{formatDate(lr.start_date)}</span> },
+              { key: 'end_date', header: 'End', render: (lr: LeaveRequest) => <span className="text-gray-400">{formatDate(lr.end_date)}</span> },
               { key: 'days', header: 'Days', render: (lr: LeaveRequest) => <span className="text-white">{lr.days}</span> },
               { key: 'status', header: 'Status', render: (lr: LeaveRequest) => <StatusBadge status={lr.status} /> },
             ]}
@@ -235,7 +236,7 @@ export default function MyProfile() {
         <div>
           <DataTable
             columns={[
-              { key: 'date', header: 'Date', render: (te: TimeEntry) => <span className="text-white">{te.date}</span> },
+              { key: 'date', header: 'Date', render: (te: TimeEntry) => <span className="text-white">{formatDate(te.date)}</span> },
               { key: 'hours', header: 'Hours', render: (te: TimeEntry) => <span className="text-white">{te.hours}</span> },
               { key: 'project', header: 'Project', render: (te: TimeEntry) => <span className="text-gray-400">{te.project || '\u2014'}</span> },
               { key: 'description', header: 'Description', render: (te: TimeEntry) => <span className="text-gray-400">{te.description || '\u2014'}</span>, className: 'hidden md:table-cell' },
@@ -254,8 +255,8 @@ export default function MyProfile() {
             columns={[
               { key: 'name', header: 'Name', render: (doc: Document) => <span className="text-white">{doc.name}</span> },
               { key: 'category', header: 'Category', render: (doc: Document) => <span className="text-gray-400">{doc.category}</span> },
-              { key: 'expiry_date', header: 'Expiry', render: (doc: Document) => <span className="text-gray-400">{doc.expiry_date || '\u2014'}</span>, className: 'hidden md:table-cell' },
-              { key: 'created_at', header: 'Uploaded', render: (doc: Document) => <span className="text-gray-400">{doc.created_at?.split('T')[0]}</span>, className: 'hidden md:table-cell' },
+              { key: 'expiry_date', header: 'Expiry', render: (doc: Document) => <span className="text-gray-400">{formatDate(doc.expiry_date)}</span>, className: 'hidden md:table-cell' },
+              { key: 'created_at', header: 'Uploaded', render: (doc: Document) => <span className="text-gray-400">{formatDate(doc.created_at)}</span>, className: 'hidden md:table-cell' },
             ]}
             data={documents}
             emptyIcon="📄"
@@ -276,7 +277,7 @@ export default function MyProfile() {
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <h3 className="text-sm font-semibold text-white">{cl.template_name || 'Onboarding Checklist'}</h3>
-                      <p className="text-xs text-gray-500">Started {cl.started_at?.split('T')[0]}</p>
+                      <p className="text-xs text-gray-500">Started {formatDate(cl.started_at)}</p>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-xs text-gray-400">{cl.completed_tasks}/{cl.total_tasks}</span>
@@ -304,7 +305,7 @@ export default function MyProfile() {
                         <span className={`text-sm flex-1 ${task.status === 'completed' ? 'text-gray-500 line-through' : 'text-white'}`}>
                           {task.title}
                         </span>
-                        {task.due_date && <span className="text-xs text-gray-500">Due {task.due_date}</span>}
+                        {task.due_date && <span className="text-xs text-gray-500">Due {formatDate(task.due_date)}</span>}
                       </div>
                     ))}
                   </div>

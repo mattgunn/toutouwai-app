@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { formatDate } from '../utils/format'
 import {
   fetchWorkflowDefinitions,
   createWorkflowDefinition,
@@ -136,7 +137,7 @@ function ApprovalsView({ approvals, onAction }: { approvals: WorkflowApproval[];
               <p className="text-xs text-gray-500 mt-1">
                 <span className="capitalize">{(approval.entity_type || '').replace(/_/g, ' ')}</span>
                 {' \u2022 '}Initiated by {approval.initiated_by_name || 'Unknown'}
-                {' \u2022 '}{new Date(approval.created_at).toLocaleDateString()}
+                {' \u2022 '}{formatDate(approval.created_at)}
               </p>
             </div>
             <StatusBadge status={approval.status} />

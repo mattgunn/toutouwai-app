@@ -1,20 +1,91 @@
 import { useState, useEffect } from 'react'
-import { fetchDepartments } from '../api'
+import { fetchDepartments, createDepartment, updateDepartment, deleteDepartment } from '../api'
 import type { Department } from '../types'
 import EmptyState from '../components/EmptyState'
 import { SkeletonCards } from '../components/Skeleton'
 import PageHeader from '../components/PageHeader'
+import Modal from '../components/Modal'
+import Button from '../components/Button'
+import { FormField, Input, Textarea } from '../components/FormField'
+import ConfirmDialog from '../components/ConfirmDialog'
+import { useToast } from '../components/Toast'
+
+const EMPTY_FORM = { name: '', description: '' }
 
 export default function Departments() {
   const [departments, setDepartments] = useState<Department[]>([])
   const [loading, setLoading] = useState(true)
+  const [showModal, setShowModal] = useState(false)
+  const [editing, setEditing] = useState<Department | null>(null)
+  const [form, setForm] = useState(EMPTY_FORM)
+  const [submitting, setSubmitting] = useState(false)
+  const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const toast = useToast()
 
-  useEffect(() => {
+  const loadData = () => {
+    setLoading(true)
     fetchDepartments()
       .then(setDepartments)
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [])
+  }
+
+  useEffect(() => { loadData() }, [])
+
+  const openCreate = () => {
+    setEditing(null)
+    setForm(EMPTY_FORM)
+    setShowModal(true)
+  }
+
+  const openEdit = (dept: Department) => {
+    setEditing(dept)
+    setForm({ name: dept.name, description: dept.description || '' })
+    setShowModal(true)
+  }
+
+  const closeModal = () => {
+    setShowModal(false)
+    setEditing(null)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmitting(true)
+    try {
+      const body = { name: form.name, description: form.description || null }
+      if (editing) {
+        await updateDepartment(editing.id, body)
+        toast.success('Department updated')
+      } else {
+        await createDepartment(body)
+        toast.success('Department created')
+      }
+      closeModal()
+      loadData()
+    } catch {
+      toast.error(editing ? 'Failed to update department' : 'Failed to create department')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deleteId) return
+    setDeleting(true)
+    try {
+      await deleteDepartment(deleteId)
+      toast.success('Department deleted')
+      closeModal()
+      loadData()
+    } catch {
+      toast.error('Failed to delete department')
+    } finally {
+      setDeleting(false)
+      setDeleteId(null)
+    }
+  }
 
   if (loading) {
     return (
@@ -27,14 +98,21 @@ export default function Departments() {
 
   return (
     <div>
-      <PageHeader title="Departments" />
+      <PageHeader
+        title="Departments"
+        actions={<Button onClick={openCreate}>Add Department</Button>}
+      />
 
       {departments.length === 0 ? (
-        <EmptyState message="No departments yet" icon="🏢" />
+        <EmptyState message="No departments yet" icon="🏢" action="Add Department" onAction={openCreate} />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {departments.map(dept => (
-            <div key={dept.id} className="bg-gray-900 border border-gray-800 rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+            <div
+              key={dept.id}
+              onClick={() => openEdit(dept)}
+              className="bg-gray-900 border border-gray-800 rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+            >
               <h3 className="text-white font-semibold mb-1">{dept.name}</h3>
               {dept.description && (
                 <p className="text-gray-400 text-sm mb-2">{dept.description}</p>
@@ -47,6 +125,58 @@ export default function Departments() {
           ))}
         </div>
       )}
+
+      <Modal
+        open={showModal}
+        onClose={closeModal}
+        title={editing ? 'Edit Department' : 'Add Department'}
+        size="md"
+        footer={
+          <div className="flex items-center justify-between w-full">
+            <div>
+              {editing && (
+                <Button variant="danger" size="sm" onClick={() => setDeleteId(editing.id)} disabled={submitting}>
+                  Delete
+                </Button>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <Button variant="secondary" onClick={closeModal} disabled={submitting}>Cancel</Button>
+              <Button type="submit" form="dept-form" loading={submitting}>
+                {editing ? 'Save Changes' : 'Add Department'}
+              </Button>
+            </div>
+          </div>
+        }
+      >
+        <form id="dept-form" onSubmit={handleSubmit} className="space-y-4">
+          <FormField label="Name" required>
+            <Input
+              value={form.name}
+              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+              required
+              placeholder="Department name"
+            />
+          </FormField>
+          <FormField label="Description">
+            <Textarea
+              value={form.description}
+              onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+              placeholder="Optional description"
+            />
+          </FormField>
+        </form>
+      </Modal>
+
+      <ConfirmDialog
+        open={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        onConfirm={handleDelete}
+        title="Delete Department"
+        message="Are you sure you want to delete this department? This action cannot be undone."
+        confirmLabel="Delete"
+        loading={deleting}
+      />
     </div>
   )
 }

@@ -1,3 +1,4 @@
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from ..db import new_id, now_iso
 from ..deps import get_db, get_current_user
@@ -37,6 +38,32 @@ def list_time_entries(
 
 @router.post("/time-entries")
 def create_time_entry(body: dict, conn=Depends(get_db), _user=Depends(get_current_user)):
+    # Validate employee_id exists
+    if not body.get("employee_id"):
+        raise HTTPException(status_code=400, detail="employee_id is required")
+    emp = conn.execute("SELECT id FROM employees WHERE id = ?", (body["employee_id"],)).fetchone()
+    if not emp:
+        raise HTTPException(status_code=400, detail="employee_id does not exist")
+
+    # Validate date is a valid date string
+    if not body.get("date"):
+        raise HTTPException(status_code=400, detail="date is required")
+    try:
+        datetime.strptime(body["date"], "%Y-%m-%d")
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=400, detail="date must be a valid date in YYYY-MM-DD format")
+
+    # Validate hours
+    hours = body.get("hours")
+    if hours is None:
+        raise HTTPException(status_code=400, detail="hours is required")
+    try:
+        hours_val = float(hours)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=400, detail="hours must be a number")
+    if hours_val < 0 or hours_val > 24:
+        raise HTTPException(status_code=400, detail="hours must be between 0 and 24")
+
     ts = now_iso()
     tid = new_id()
     conn.execute("""

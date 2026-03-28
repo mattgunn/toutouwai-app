@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { formatDate } from '../utils/format'
 import {
   fetchOnboardingTemplates, fetchOnboardingChecklists,
   fetchTemplateTasks, createOnboardingTemplate, createTemplateTask,
@@ -225,7 +226,7 @@ export default function Onboarding() {
                       <h3 className="text-sm font-semibold text-white">{cl.employee_name}</h3>
                       <p className="text-xs text-gray-500">
                         {cl.template_name ? `Template: ${cl.template_name}` : 'Custom checklist'}
-                        {' \u00B7 '}Started {cl.started_at?.split('T')[0]}
+                        {' \u00B7 '}Started {formatDate(cl.started_at)}
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -275,7 +276,7 @@ export default function Onboarding() {
                           </span>
                           <span className="text-xs text-gray-500">{task.assigned_to_role}</span>
                           {task.due_date && (
-                            <span className="text-xs text-gray-500">Due {task.due_date}</span>
+                            <span className="text-xs text-gray-500">Due {formatDate(task.due_date)}</span>
                           )}
                         </div>
                       ))}

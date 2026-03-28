@@ -1,6 +1,7 @@
 import { useState, useEffect, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchDashboard } from '../api'
+import { formatDate } from '../utils/format'
 import type { DashboardData } from '../types'
 import { useAuth } from '../auth'
 import StatusBadge from '../components/StatusBadge'
@@ -9,6 +10,7 @@ import {
   UsersIcon,
   HeartIcon,
   BanknotesIcon,
+  BriefcaseIcon,
   CalendarDaysIcon,
   ChartBarSquareIcon,
   MegaphoneIcon,
@@ -26,7 +28,7 @@ const WORKLETS: { to: string; icon: ReactNode; label: string }[] = [
   { to: '/reviews',        icon: <StarIcon className="w-7 h-7" />,            label: 'Performance' },
 ]
 
-function formatDate(date: Date): string {
+function formatBannerDate(date: Date): string {
   return date.toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -90,7 +92,7 @@ export default function Dashboard() {
 
       {/* ── Welcome Banner ── */}
       <div className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-700 p-6 text-white shadow-lg">
-        <p className="text-sm opacity-80">{formatDate(new Date())}</p>
+        <p className="text-sm opacity-80">{formatBannerDate(new Date())}</p>
         <h1 className="text-2xl font-bold mt-1">
           {getGreeting()}, {displayName}
         </h1>
@@ -160,7 +162,7 @@ export default function Dashboard() {
             { label: 'Total Employees', value: data.total_employees, icon: <UsersIcon className="w-6 h-6" />, color: 'text-white' },
             { label: 'Active',          value: data.active_employees, icon: <span className="text-2xl">✅</span>, color: 'text-emerald-400' },
             { label: 'Pending Leave',   value: data.pending_leave_requests, icon: <CalendarDaysIcon className="w-6 h-6" />, color: 'text-blue-400' },
-            { label: 'Open Positions',  value: data.open_positions, icon: <BanknotesIcon className="w-6 h-6" />, color: 'text-amber-400' },
+            { label: 'Open Positions',  value: data.open_positions, icon: <BriefcaseIcon className="w-6 h-6" />, color: 'text-amber-400' },
           ].map(stat => (
             <div
               key={stat.label}
@@ -199,7 +201,7 @@ export default function Dashboard() {
                       {emp.first_name} {emp.last_name}
                     </p>
                     <p className="text-xs text-gray-500 truncate">
-                      {emp.department_name || 'No department'} &middot; Started {emp.start_date || '\u2014'}
+                      {emp.department_name || 'No department'} &middot; Started {formatDate(emp.start_date)}
                     </p>
                   </div>
                 </li>
@@ -228,7 +230,7 @@ export default function Dashboard() {
                       {req.employee_name}
                     </p>
                     <p className="text-xs text-gray-500 truncate">
-                      {req.leave_type_name} &middot; {req.start_date} &ndash; {req.end_date}
+                      {req.leave_type_name} &middot; {formatDate(req.start_date)} &ndash; {formatDate(req.end_date)}
                     </p>
                   </div>
                   <StatusBadge status={req.status} />

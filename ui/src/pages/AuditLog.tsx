@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { formatDate } from '../utils/format'
 import { fetchAuditLog } from '../modules/audit/api'
 import type { AuditEntry } from '../modules/audit/types'
 import EmptyState from '../components/EmptyState'
@@ -33,14 +34,6 @@ export default function AuditLog() {
   }, [page, entityType, fromDate, toDate])
 
   const totalPages = Math.ceil(total / perPage)
-
-  function formatDate(iso: string) {
-    try {
-      return new Date(iso).toLocaleString()
-    } catch {
-      return iso
-    }
-  }
 
   function actionBadge(action: string) {
     const colors: Record<string, string> = {

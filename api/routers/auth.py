@@ -1,6 +1,7 @@
 import json
 import os
 import smtplib
+from datetime import datetime, timedelta, timezone
 from email.mime.text import MIMEText
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -76,7 +77,7 @@ def request_link(body: RequestLinkBody, request: Request, conn=Depends(get_db)):
         row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
 
     # Generate token and send via email (or console fallback)
-    token = jwt.encode({"sub": row["id"], "type": "login"}, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    token = jwt.encode({"sub": row["id"], "type": "login", "exp": datetime.now(timezone.utc) + timedelta(minutes=15)}, JWT_SECRET, algorithm=JWT_ALGORITHM)
     base_url = os.environ.get("APP_BASE_URL", "")
     if not base_url:
         origin = request.headers.get("origin", "")
@@ -94,8 +95,8 @@ def verify(token: str):
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=400, detail="Invalid or expired token")
 
-    # Issue a session JWT
-    session_jwt = jwt.encode({"sub": payload["sub"]}, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    # Issue a session JWT (7 day expiry)
+    session_jwt = jwt.encode({"sub": payload["sub"], "exp": datetime.now(timezone.utc) + timedelta(days=7)}, JWT_SECRET, algorithm=JWT_ALGORITHM)
     return {"jwt": session_jwt}
 
 

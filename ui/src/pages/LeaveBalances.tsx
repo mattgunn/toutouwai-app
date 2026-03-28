@@ -39,8 +39,8 @@ export default function LeaveBalances() {
 
       <DataTable
         columns={columns}
-        data={balances}
-        keyField="employee_id"
+        data={balances.map((b) => ({ ...b, _key: `${b.employee_id}-${b.leave_type_id}` }))}
+        keyField="_key"
         emptyIcon="📊"
         emptyMessage="No leave balance data"
         striped

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { formatDate } from '../utils/format'
 import {
   fetchSurveys,
   createSurvey,
@@ -91,7 +92,7 @@ export default function Surveys() {
             { key: 'question_count', header: 'Questions', render: (row) => <span className="text-gray-400">{String(row.question_count)}</span>, className: 'hidden md:table-cell' },
             { key: 'response_count', header: 'Responses', render: (row) => <span className="text-gray-400">{String(row.response_count)}</span>, className: 'hidden md:table-cell' },
             { key: 'status', header: 'Status', render: (row) => <StatusBadge status={String(row.status)} /> },
-            { key: 'created_at', header: 'Created', render: (row) => <span className="text-gray-500 text-xs">{new Date(String(row.created_at)).toLocaleDateString()}</span>, className: 'hidden lg:table-cell' },
+            { key: 'created_at', header: 'Created', render: (row) => <span className="text-gray-400">{formatDate(String(row.created_at))}</span>, className: 'hidden lg:table-cell' },
           ]}
           data={surveys as unknown as Record<string, unknown>[]}
           keyField="id"
