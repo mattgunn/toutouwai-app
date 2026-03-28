@@ -26,7 +26,7 @@ export function useAdminPrefs() {
   const [faviconColor, setFaviconColorState] = useState(() => get(KEYS.faviconColor))
   const [navColor, setNavColorState] = useState(() => get(KEYS.navColor))
   const [instanceLabel, setInstanceLabelState] = useState(() => get(KEYS.instanceLabel))
-  const [theme, setThemeState] = useState<'dark' | 'light' | 'katana'>(() => (get(KEYS.theme, 'dark') as 'dark' | 'light' | 'katana'))
+  const [theme, setThemeState] = useState<'dark' | 'light' | 'katana' | 'workday'>(() => (get(KEYS.theme, 'dark') as 'dark' | 'light' | 'katana' | 'workday'))
   const [navLayout, setNavLayoutState] = useState<'sidebar' | 'topbar'>(() => (get(KEYS.navLayout, 'sidebar') as 'sidebar' | 'topbar'))
   const [mode, setModeState] = useState<'live' | 'dev'>(() => (get(KEYS.mode, 'live') as 'live' | 'dev'))
 
@@ -45,7 +45,7 @@ export function useAdminPrefs() {
       if (key === KEYS.faviconColor) setFaviconColorState(value)
       if (key === KEYS.navColor) setNavColorState(value)
       if (key === KEYS.instanceLabel) setInstanceLabelState(value)
-      if (key === KEYS.theme) setThemeState((value || 'dark') as 'dark' | 'light' | 'katana')
+      if (key === KEYS.theme) setThemeState((value || 'dark') as 'dark' | 'light' | 'katana' | 'workday')
       if (key === KEYS.navLayout) setNavLayoutState((value || 'sidebar') as 'sidebar' | 'topbar')
       if (key === KEYS.mode) setModeState((value || 'live') as 'live' | 'dev')
     }
@@ -71,7 +71,7 @@ export function useAdminPrefs() {
     updateSettings({ instance_label: v }).catch(() => {})
   }, [])
 
-  const setTheme = useCallback((v: 'dark' | 'light' | 'katana') => {
+  const setTheme = useCallback((v: 'dark' | 'light' | 'katana' | 'workday') => {
     set(KEYS.theme, v)
     setThemeState(v)
     updateSettings({ theme: v }).catch(() => {})
@@ -113,10 +113,11 @@ export function useAdminPrefs() {
 
   // Apply theme class to html element
   useEffect(() => {
-    const isLight = theme === 'light' || theme === 'katana'
+    const isLight = theme === 'light' || theme === 'katana' || theme === 'workday'
     document.documentElement.classList.toggle('light', isLight)
     document.documentElement.classList.toggle('dark', theme === 'dark')
     document.documentElement.classList.toggle('katana', theme === 'katana')
+    document.documentElement.classList.toggle('workday', theme === 'workday')
   }, [theme])
 
   return {

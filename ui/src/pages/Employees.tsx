@@ -4,6 +4,7 @@ import type { Employee } from '../types'
 import StatusBadge from '../components/StatusBadge'
 import SortableHeader, { compareValues, nextSort } from '../components/SortableHeader'
 import EmptyState from '../components/EmptyState'
+import Avatar from '../components/Avatar'
 
 export default function Employees() {
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -62,7 +63,12 @@ export default function Employees() {
             <tbody>
               {sorted.map(emp => (
                 <tr key={emp.id} className="border-t border-gray-800 hover:bg-gray-800/50 transition-colors">
-                  <td className="px-4 py-3 text-white font-medium">{emp.first_name} {emp.last_name}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <Avatar name={`${emp.first_name} ${emp.last_name}`} imageUrl={emp.avatar_url} size="md" />
+                      <span className="text-white font-medium">{emp.first_name} {emp.last_name}</span>
+                    </div>
+                  </td>
                   <td className="px-4 py-3 text-gray-400">{emp.email}</td>
                   <td className="px-4 py-3 text-gray-400 hidden md:table-cell">{emp.department_name || '\u2014'}</td>
                   <td className="px-4 py-3 text-gray-400 hidden lg:table-cell">{emp.position_title || '\u2014'}</td>

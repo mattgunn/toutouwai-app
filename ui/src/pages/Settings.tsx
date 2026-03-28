@@ -52,7 +52,7 @@ export default function Settings() {
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Theme</label>
                 <div className="flex gap-2">
-                  {(['dark', 'light', 'katana'] as const).map(t => (
+                  {(['dark', 'light', 'katana', 'workday'] as const).map(t => (
                     <button
                       key={t}
                       onClick={() => prefs.setTheme(t)}

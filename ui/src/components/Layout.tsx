@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { useAuth } from '../auth'
 import { useAdminPrefs } from '../hooks/useAdminPrefs'
 import { fetchSettings } from '../api'
 import { MODULES } from '../modules/modules/registry'
+import Breadcrumbs from './Breadcrumbs'
 
 type NavItem = { to: string; label: string; icon: string; module: string }
 type NavGroup = { heading?: string; items: NavItem[] }
@@ -69,6 +70,80 @@ const GLOBAL_ITEMS: NavItem[] = [
 ]
 
 const ALL_NAV_ITEMS = NAV_GROUPS.flatMap(g => g.items)
+
+function NotificationBell({ count = 3 }: { count?: number }) {
+  return (
+    <button className="relative p-1.5 text-gray-400 hover:text-gray-200 transition-colors" aria-label="Notifications">
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+      </svg>
+      {count > 0 && (
+        <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-500 rounded-full">
+          {count > 9 ? '9+' : count}
+        </span>
+      )}
+    </button>
+  )
+}
+
+function GlobalSearch({ navItems }: { navItems: NavItem[] }) {
+  const [query, setQuery] = useState('')
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const navigate = useNavigate()
+
+  const results = query.trim()
+    ? navItems.filter(item =>
+        item.label.toLowerCase().includes(query.toLowerCase())
+      )
+    : []
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  return (
+    <div ref={containerRef} className="relative">
+      <div className="relative">
+        <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input
+          type="text"
+          placeholder="Search pages..."
+          value={query}
+          onChange={e => { setQuery(e.target.value); setOpen(true) }}
+          onFocus={() => setOpen(true)}
+          className="w-48 lg:w-64 bg-gray-800 border border-gray-700 rounded-md pl-9 pr-3 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+        />
+      </div>
+      {open && results.length > 0 && (
+        <div className="absolute top-full left-0 mt-1 w-full bg-gray-800 border border-gray-700 rounded-md shadow-lg z-50 max-h-64 overflow-y-auto">
+          {results.map(item => (
+            <button
+              key={item.to}
+              onClick={() => {
+                navigate(item.to)
+                setQuery('')
+                setOpen(false)
+              }}
+              className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors text-left"
+            >
+              <span>{item.icon}</span>
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 function MenuIcon({ open }: { open: boolean }) {
   return (
@@ -194,6 +269,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   const effectiveNavColor = isDev ? '#dc2626' : prefs.navColor
   const navBg = effectiveNavColor ? { backgroundColor: effectiveNavColor } : undefined
   const katanaNav = prefs.theme === 'katana' && !effectiveNavColor
+  const workdayNav = prefs.theme === 'workday' && !effectiveNavColor
 
   const displayName = user?.name && user.name !== 'Admin' ? user.name : user?.email
 
@@ -201,7 +277,7 @@ export default function Layout({ children }: { children: ReactNode }) {
    * TOPBAR LAYOUT
    * ============================================================= */
   if (prefs.navLayout === 'topbar') {
-    const topbarClass = katanaNav ? 'katana-topbar' : ''
+    const topbarClass = katanaNav ? 'katana-topbar' : workdayNav ? 'workday-topbar' : ''
     const activeGroup = getActiveGroup(location.pathname, hasPermission, enabledNavGroups)
     const showSubNav = activeGroup && activeGroup.heading
 
@@ -267,7 +343,8 @@ export default function Layout({ children }: { children: ReactNode }) {
             })}
           </div>
 
-          <div className="flex items-center gap-1 ml-4 shrink-0">
+          <div className="flex items-center gap-2 ml-4 shrink-0">
+            <GlobalSearch navItems={allItems} />
             {filteredGlobal.map(({ to, label, icon }) => (
               <NavLink
                 key={to}
@@ -284,6 +361,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                 <span>{label}</span>
               </NavLink>
             ))}
+            <NotificationBell />
             {user && (
               <span className="text-xs text-gray-500 truncate max-w-32 ml-2" title={user.email}>
                 {displayName}
@@ -300,7 +378,7 @@ export default function Layout({ children }: { children: ReactNode }) {
 
         {/* Sub-navigation (desktop) */}
         {showSubNav && (
-          <div className="hidden md:flex items-center gap-0.5 px-4 h-10 border-b border-gray-800 bg-gray-900 shrink-0 katana-subnav">
+          <div className={`hidden md:flex items-center gap-0.5 px-4 h-10 border-b border-gray-800 bg-gray-900 shrink-0 katana-subnav ${workdayNav ? 'workday-subnav' : ''}`}>
             {activeGroup.items.map(({ to, label, icon }) => (
               <NavLink
                 key={to}
@@ -375,6 +453,7 @@ export default function Layout({ children }: { children: ReactNode }) {
 
         {/* Main content */}
         <main className="flex-1 overflow-auto p-4 md:p-6">
+          <Breadcrumbs />
           {children}
         </main>
       </div>
@@ -384,7 +463,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   /* ================================================================
    * SIDEBAR LAYOUT (default)
    * ============================================================= */
-  const katanaSidebar = katanaNav ? 'katana-sidebar' : ''
+  const katanaSidebar = katanaNav ? 'katana-sidebar' : workdayNav ? 'workday-sidebar' : ''
 
   return (
     <div className="flex h-screen bg-gray-950">
@@ -444,10 +523,27 @@ export default function Layout({ children }: { children: ReactNode }) {
         </div>
       </nav>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-auto p-4 md:p-6 pt-16 md:pt-6">
-        {children}
-      </main>
+      {/* Main area with top utility bar + content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Utility bar (search + bell) - desktop only */}
+        <div className="hidden md:flex items-center justify-between px-6 py-2 border-b border-gray-800 bg-gray-950 shrink-0">
+          <GlobalSearch navItems={allItems} />
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            {user && (
+              <span className="text-xs text-gray-500 truncate max-w-32" title={user.email}>
+                {displayName}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Main content */}
+        <main className="flex-1 overflow-auto p-4 md:p-6 pt-16 md:pt-6">
+          <Breadcrumbs />
+          {children}
+        </main>
+      </div>
     </div>
   )
 }
