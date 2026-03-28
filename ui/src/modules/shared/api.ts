@@ -5,11 +5,11 @@ export function authHeaders(): HeadersInit {
   return jwt ? { Authorization: `Bearer ${jwt}` } : {}
 }
 
-async function fetchWithRetry(url: string, init?: RequestInit, retries = 1): Promise<Response> {
+async function fetchWithRetry(url: string, init?: RequestInit, retries = 2): Promise<Response> {
   try {
     const res = await fetch(url, init)
-    // Retry on 502/503/504 (proxy not ready, server restarting)
-    if (retries > 0 && res.status >= 502 && res.status <= 504) {
+    // Retry on 502/503/504 (proxy not ready, server restarting) or transient 401
+    if (retries > 0 && (res.status >= 502 && res.status <= 504)) {
       await new Promise(r => setTimeout(r, 1000))
       return fetchWithRetry(url, init, retries - 1)
     }
