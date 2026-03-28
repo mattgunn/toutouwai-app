@@ -12,7 +12,7 @@ def list_employees(
     department: str = "",
     status: str = "",
     page: int = Query(1, ge=1),
-    per_page: int = Query(50, ge=1, le=200),
+    per_page: int = Query(50, ge=1, le=1000),
     conn=Depends(get_db),
     _user=Depends(get_current_user),
 ):
