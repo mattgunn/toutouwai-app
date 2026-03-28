@@ -149,19 +149,17 @@ export default function Employees() {
       <PageHeader
         title="Employee Directory"
         subtitle="Manage your workforce"
-        actions={
-          <div className="flex items-center gap-2">
-            <Input
-              type="text"
-              placeholder="Search employees..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="max-w-sm"
-            />
-            <Button onClick={openCreate}>Add Employee</Button>
-          </div>
-        }
+        actions={<Button onClick={openCreate}>Add Employee</Button>}
       />
+
+      <div className="mb-4">
+        <Input
+          type="text"
+          placeholder="Search by name, email, department..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+      </div>
 
       <DataTable
         columns={columns}
