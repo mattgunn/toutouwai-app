@@ -113,11 +113,41 @@ def update_step(step_id: str, body: dict, conn=Depends(get_db), _user=Depends(ge
     return dict(row)
 
 
+@router.delete("/workflows/definitions/{def_id}")
+def delete_definition(def_id: str, conn=Depends(get_db), _user=Depends(get_current_user)):
+    conn.execute("DELETE FROM workflow_approvals WHERE instance_id IN (SELECT id FROM workflow_instances WHERE definition_id = ?)", (def_id,))
+    conn.execute("DELETE FROM workflow_instances WHERE definition_id = ?", (def_id,))
+    conn.execute("DELETE FROM workflow_steps WHERE definition_id = ?", (def_id,))
+    conn.execute("DELETE FROM workflow_definitions WHERE id = ?", (def_id,))
+    conn.commit()
+    return {"ok": True}
+
+
 @router.delete("/workflows/steps/{step_id}")
 def delete_step(step_id: str, conn=Depends(get_db), _user=Depends(get_current_user)):
     conn.execute("DELETE FROM workflow_steps WHERE id = ?", (step_id,))
     conn.commit()
     return {"ok": True}
+
+
+@router.post("/workflows/instances")
+def create_instance(body: dict, conn=Depends(get_db), user=Depends(get_current_user)):
+    ts = now_iso()
+    iid = new_id()
+    conn.execute("""
+        INSERT INTO workflow_instances (id, definition_id, entity_type, entity_id, initiated_by, status, current_step, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (iid, body["definition_id"], body["entity_type"], body["entity_id"],
+          user["id"], "pending", 1, ts, ts))
+    conn.commit()
+    row = conn.execute("""
+        SELECT wi.*, wd.name as definition_name, u.name as initiated_by_name
+        FROM workflow_instances wi
+        LEFT JOIN workflow_definitions wd ON wi.definition_id = wd.id
+        LEFT JOIN users u ON wi.initiated_by = u.id
+        WHERE wi.id = ?
+    """, (iid,)).fetchone()
+    return dict(row)
 
 
 # --- Instances ---

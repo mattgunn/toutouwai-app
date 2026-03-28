@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
-import { fetchLeaveRequests, updateLeaveRequestStatus } from '../api'
-import type { LeaveRequest } from '../types'
+import { fetchLeaveRequests, updateLeaveRequestStatus, createLeaveRequest, fetchLeaveTypes, fetchEmployees } from '../api'
+import type { LeaveRequest, LeaveType, Employee } from '../types'
 import StatusBadge from '../components/StatusBadge'
 import { SkeletonTable } from '../components/Skeleton'
 import PageHeader from '../components/PageHeader'
 import DataTable from '../components/DataTable'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
-import { FormField, Textarea } from '../components/FormField'
+import { FormField, Input, Select, Textarea } from '../components/FormField'
 import { useToast } from '../components/Toast'
 import { formatDate } from '../utils/format'
 import EmployeeLink from '../components/EmployeeLink'
@@ -24,10 +24,24 @@ export default function LeaveRequests() {
   const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null)
   const toast = useToast()
 
+  // Create request state
+  const [showCreate, setShowCreate] = useState(false)
+  const [employees, setEmployees] = useState<Employee[]>([])
+  const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([])
+  const [createForm, setCreateForm] = useState({ employee_id: '', leave_type_id: '', start_date: '', end_date: '', notes: '' })
+  const [creating, setCreating] = useState(false)
+
+  // Add notes state
+  const [editNotes, setEditNotes] = useState('')
+  const [editingNotes, setEditingNotes] = useState(false)
+
   const loadData = () => {
     setLoading(true)
-    fetchLeaveRequests()
-      .then(setRequests)
+    Promise.all([
+      fetchLeaveRequests().then(setRequests),
+      fetchEmployees({ per_page: '1000' }).then(r => setEmployees(r.employees)),
+      fetchLeaveTypes().then(setLeaveTypes),
+    ])
       .catch(() => {})
       .finally(() => setLoading(false))
   }
@@ -65,6 +79,29 @@ export default function LeaveRequests() {
     }
   }
 
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!createForm.employee_id || !createForm.leave_type_id || !createForm.start_date || !createForm.end_date) return
+    setCreating(true)
+    try {
+      await createLeaveRequest({
+        employee_id: createForm.employee_id,
+        leave_type_id: createForm.leave_type_id,
+        start_date: createForm.start_date,
+        end_date: createForm.end_date,
+        notes: createForm.notes || null,
+      })
+      toast.success('Leave request created')
+      setShowCreate(false)
+      setCreateForm({ employee_id: '', leave_type_id: '', start_date: '', end_date: '', notes: '' })
+      loadData()
+    } catch {
+      toast.error('Failed to create leave request')
+    } finally {
+      setCreating(false)
+    }
+  }
+
   const filtered = statusFilter === 'all'
     ? requests
     : requests.filter(r => r.status === statusFilter)
@@ -89,7 +126,7 @@ export default function LeaveRequests() {
 
   return (
     <div>
-      <PageHeader title="Leave Requests" />
+      <PageHeader title="Leave Requests" actions={<Button onClick={() => setShowCreate(true)}>Create Request</Button>} />
 
       {/* Status filter pills */}
       <div className="flex items-center gap-2 mb-4">
@@ -182,7 +219,35 @@ export default function LeaveRequests() {
             </div>
             <div>
               <p className="text-xs text-gray-500 mb-1">Notes</p>
-              <p className="text-sm text-gray-300">{selectedRequest.notes || '\u2014'}</p>
+              {editingNotes ? (
+                <div className="space-y-2">
+                  <Textarea
+                    value={editNotes}
+                    onChange={e => setEditNotes(e.target.value)}
+                    placeholder="Add notes..."
+                    rows={3}
+                  />
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={() => {
+                      // Notes are display-only since API doesn't support note update on status endpoint
+                      // But we show them for context
+                      setEditingNotes(false)
+                      if (selectedRequest) {
+                        setSelectedRequest({ ...selectedRequest, notes: editNotes || null })
+                      }
+                      toast.success('Notes updated locally')
+                    }}>Save</Button>
+                    <Button variant="secondary" size="sm" onClick={() => setEditingNotes(false)}>Cancel</Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-start gap-2">
+                  <p className="text-sm text-gray-300 flex-1">{selectedRequest.notes || '\u2014'}</p>
+                  <Button variant="ghost" size="sm" onClick={() => { setEditNotes(selectedRequest.notes || ''); setEditingNotes(true) }}>
+                    Edit
+                  </Button>
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -222,6 +287,66 @@ export default function LeaveRequests() {
             placeholder="Optional reason..."
           />
         </FormField>
+      </Modal>
+
+      {/* Create leave request modal */}
+      <Modal
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        title="Create Leave Request"
+        size="md"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowCreate(false)} disabled={creating}>Cancel</Button>
+            <Button type="submit" form="create-leave-form" loading={creating}>Submit</Button>
+          </>
+        }
+      >
+        <form id="create-leave-form" onSubmit={handleCreate} className="space-y-4">
+          <FormField label="Employee" required>
+            <Select
+              value={createForm.employee_id}
+              onChange={e => setCreateForm(f => ({ ...f, employee_id: e.target.value }))}
+              required
+              placeholder="Select employee"
+              options={employees.map(emp => ({ value: emp.id, label: `${emp.first_name} ${emp.last_name}` }))}
+            />
+          </FormField>
+          <FormField label="Leave Type" required>
+            <Select
+              value={createForm.leave_type_id}
+              onChange={e => setCreateForm(f => ({ ...f, leave_type_id: e.target.value }))}
+              required
+              placeholder="Select leave type"
+              options={leaveTypes.filter(lt => lt.is_active).map(lt => ({ value: lt.id, label: lt.name }))}
+            />
+          </FormField>
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="Start Date" required>
+              <Input
+                type="date"
+                value={createForm.start_date}
+                onChange={e => setCreateForm(f => ({ ...f, start_date: e.target.value }))}
+                required
+              />
+            </FormField>
+            <FormField label="End Date" required>
+              <Input
+                type="date"
+                value={createForm.end_date}
+                onChange={e => setCreateForm(f => ({ ...f, end_date: e.target.value }))}
+                required
+              />
+            </FormField>
+          </div>
+          <FormField label="Notes">
+            <Textarea
+              value={createForm.notes}
+              onChange={e => setCreateForm(f => ({ ...f, notes: e.target.value }))}
+              placeholder="Optional notes..."
+            />
+          </FormField>
+        </form>
       </Modal>
     </div>
   )

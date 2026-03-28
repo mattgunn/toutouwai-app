@@ -51,9 +51,44 @@ export default function AuditLog() {
     )
   }
 
+  const exportCSV = () => {
+    if (entries.length === 0) return
+    const headers = ['Timestamp', 'User', 'Email', 'Action', 'Entity Type', 'Entity ID', 'Field', 'Old Value', 'New Value']
+    const rows = entries.map(e => [
+      e.created_at,
+      e.user_name || '',
+      e.user_email || '',
+      e.action,
+      e.entity_type,
+      e.entity_id,
+      e.field_name || '',
+      e.old_value || '',
+      e.new_value || '',
+    ])
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `audit-log-${new Date().toISOString().slice(0, 10)}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div>
-      <PageHeader title="Audit Log" />
+      <PageHeader
+        title="Audit Log"
+        actions={
+          entries.length > 0 ? (
+            <Button variant="secondary" onClick={exportCSV}>
+              Export CSV
+            </Button>
+          ) : undefined
+        }
+      />
 
       <div className="bg-gray-900 border border-gray-800 rounded-lg p-4 mb-4 flex flex-wrap gap-3">
         <Select

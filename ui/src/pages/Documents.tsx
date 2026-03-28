@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { formatDate } from '../utils/format'
-import { fetchDocuments, createDocument, deleteDocument, fetchExpiringDocuments } from '../modules/documents/api'
+import { fetchDocuments, createDocument, updateDocument, deleteDocument, fetchExpiringDocuments } from '../modules/documents/api'
 import { fetchEmployees } from '../api'
 import type { Document } from '../modules/documents/types'
 import type { Employee } from '../types'
@@ -77,6 +77,8 @@ export default function Documents() {
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
+  const [editingDoc, setEditingDoc] = useState(false)
+  const [editSubmitting, setEditSubmitting] = useState(false)
   const toast = useToast()
 
   useEffect(() => {
@@ -134,6 +136,30 @@ export default function Documents() {
     } finally {
       setDeleting(false)
       setDeleteId(null)
+    }
+  }
+
+  const handleEditDoc = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!selectedDoc) return
+    setEditSubmitting(true)
+    try {
+      const fd = new FormData(e.currentTarget)
+      const updated = await updateDocument(selectedDoc.id, {
+        name: fd.get('name'),
+        category: fd.get('category') || 'general',
+        expiry_date: fd.get('expiry_date') || null,
+        description: fd.get('description') || null,
+      })
+      setDocuments(prev => prev.map(d => d.id === updated.id ? { ...d, ...updated } : d))
+      setSelectedDoc(null)
+      setEditingDoc(false)
+      toast.success('Document updated')
+      fetchExpiringDocuments(30).then(setExpiringDocs).catch(() => {})
+    } catch {
+      toast.error('Failed to update document')
+    } finally {
+      setEditSubmitting(false)
     }
   }
 
@@ -212,13 +238,17 @@ export default function Documents() {
 
       {/* Detail modal */}
       <Modal
-        open={!!selectedDoc}
+        open={!!selectedDoc && !editingDoc}
         onClose={() => setSelectedDoc(null)}
         title="Document Details"
         size="md"
         footer={
           selectedDoc ? (
-            <Button variant="danger" size="sm" onClick={() => { setDeleteId(selectedDoc.id); setSelectedDoc(null) }}>Delete</Button>
+            <div className="flex gap-2">
+              <Button variant="danger" size="sm" onClick={() => { setDeleteId(selectedDoc.id); setSelectedDoc(null) }}>Delete</Button>
+              <div className="flex-1" />
+              <Button size="sm" onClick={() => setEditingDoc(true)}>Edit</Button>
+            </div>
           ) : undefined
         }
       >
@@ -268,6 +298,41 @@ export default function Documents() {
               <p className="text-sm text-gray-400">{formatDate(selectedDoc.created_at)}</p>
             </div>
           </div>
+        )}
+      </Modal>
+
+      {/* Edit document metadata modal */}
+      <Modal
+        open={editingDoc && !!selectedDoc}
+        onClose={() => { setEditingDoc(false); setSelectedDoc(null) }}
+        title="Edit Document"
+        size="lg"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => { setEditingDoc(false); setSelectedDoc(null) }} disabled={editSubmitting}>Cancel</Button>
+            <Button type="submit" form="edit-doc-form" loading={editSubmitting}>Save Changes</Button>
+          </>
+        }
+      >
+        {selectedDoc && (
+          <form id="edit-doc-form" onSubmit={handleEditDoc} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField label="Name" required>
+              <Input name="name" required defaultValue={selectedDoc.name} />
+            </FormField>
+            <FormField label="Category">
+              <Select
+                name="category"
+                defaultValue={selectedDoc.category}
+                options={CATEGORIES.filter(c => c.value).map(c => ({ value: c.value, label: c.label }))}
+              />
+            </FormField>
+            <FormField label="Expiry Date">
+              <Input name="expiry_date" type="date" defaultValue={selectedDoc.expiry_date || ''} />
+            </FormField>
+            <FormField label="Description">
+              <Input name="description" defaultValue={selectedDoc.description || ''} placeholder="Optional description" />
+            </FormField>
+          </form>
         )}
       </Modal>
 

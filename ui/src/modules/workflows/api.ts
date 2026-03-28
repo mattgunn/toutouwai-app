@@ -2,6 +2,7 @@ import { BASE, authFetch, jsonPost, jsonPut, jsonDelete } from '../shared/api'
 import type {
   WorkflowDefinition,
   WorkflowStep,
+  WorkflowInstance,
   WorkflowInstancesResponse,
   WorkflowApproval,
 } from './types'
@@ -45,6 +46,17 @@ export async function updateWorkflowStep(stepId: string, body: unknown): Promise
 export async function deleteWorkflowStep(stepId: string): Promise<void> {
   const res = await jsonDelete(`${BASE}/workflows/steps/${stepId}`)
   if (!res.ok) throw new Error('Failed to delete workflow step')
+}
+
+export async function deleteWorkflowDefinition(id: string): Promise<void> {
+  const res = await jsonDelete(`${BASE}/workflows/definitions/${id}`)
+  if (!res.ok) throw new Error('Failed to delete workflow definition')
+}
+
+export async function createWorkflowInstance(body: unknown): Promise<WorkflowInstance> {
+  const res = await jsonPost(`${BASE}/workflows/instances`, body)
+  if (!res.ok) throw new Error('Failed to create workflow instance')
+  return res.json()
 }
 
 export async function fetchWorkflowInstances(params?: Record<string, string>): Promise<WorkflowInstancesResponse> {

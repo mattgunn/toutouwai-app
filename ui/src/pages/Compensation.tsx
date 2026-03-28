@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { formatDate } from '../utils/format'
-import { fetchCurrentCompensation, fetchCompensation, createCompensation } from '../modules/compensation/api'
+import { fetchCurrentCompensation, fetchCompensation, createCompensation, updateCompensation } from '../modules/compensation/api'
 import { fetchEmployees } from '../api'
 import type { CurrentCompensation, CompensationRecord } from '../modules/compensation/types'
 import type { Employee } from '../types'
@@ -43,6 +43,9 @@ export default function Compensation() {
   const [history, setHistory] = useState<CompensationRecord[]>([])
   const [showAdd, setShowAdd] = useState(false)
   const [form, setForm] = useState({ employee_id: '', effective_date: '', salary: '', currency: 'NZD', pay_frequency: 'annual', reason: '', notes: '' })
+  const [editingRecord, setEditingRecord] = useState<CompensationRecord | null>(null)
+  const [editForm, setEditForm] = useState({ effective_date: '', salary: '', currency: 'NZD', pay_frequency: 'annual', reason: '', notes: '' })
+  const [editSubmitting, setEditSubmitting] = useState(false)
   const toast = useToast()
 
   useEffect(() => {
@@ -98,6 +101,43 @@ export default function Compensation() {
     }
   }
 
+  const openAddForEmployee = () => {
+    if (selectedEmployee) {
+      setForm({ employee_id: selectedEmployee.employee_id, effective_date: '', salary: '', currency: selectedEmployee.currency || 'NZD', pay_frequency: selectedEmployee.pay_frequency || 'annual', reason: '', notes: '' })
+      setShowAdd(true)
+    }
+  }
+
+  const openEditRecord = (record: CompensationRecord) => {
+    setEditingRecord(record)
+    setEditForm({
+      effective_date: record.effective_date,
+      salary: String(record.salary),
+      currency: record.currency,
+      pay_frequency: record.pay_frequency,
+      reason: record.reason || '',
+      notes: record.notes || '',
+    })
+  }
+
+  const handleEditRecord = async () => {
+    if (!editingRecord || !editForm.salary || !editForm.effective_date) return
+    setEditSubmitting(true)
+    try {
+      await updateCompensation(editingRecord.id, { ...editForm, salary: parseFloat(editForm.salary) })
+      toast.success('Compensation record updated')
+      setEditingRecord(null)
+      fetchCurrentCompensation().then(setCurrent).catch(() => {})
+      if (selectedEmployee) {
+        fetchCompensation({ employee_id: selectedEmployee.employee_id }).then(setHistory).catch(() => {})
+      }
+    } catch {
+      toast.error('Failed to update compensation record')
+    } finally {
+      setEditSubmitting(false)
+    }
+  }
+
   const compColumns = [
     { key: 'employee_name', header: 'Employee', render: (comp: CurrentCompensation) => comp.employee_id ? <EmployeeLink employeeId={comp.employee_id} name={comp.employee_name || 'Unknown'} /> : <span className="text-white">{'\u2014'}</span> },
     { key: 'department_name', header: 'Department', className: 'hidden md:table-cell', render: (comp: CurrentCompensation) => <span className="text-gray-400">{comp.department_name || '\u2014'}</span> },
@@ -136,6 +176,7 @@ export default function Compensation() {
             <div className="text-right">
               <p className="text-2xl font-bold text-emerald-400">{formatCurrency(selectedEmployee.salary, selectedEmployee.currency)}</p>
               <p className="text-xs text-gray-500">{frequencyLabel[selectedEmployee.pay_frequency] || selectedEmployee.pay_frequency} \u00B7 Effective {formatDate(selectedEmployee.effective_date)}</p>
+              <Button size="sm" className="mt-2" onClick={openAddForEmployee}>Add Record</Button>
             </div>
           </div>
         </div>
@@ -163,7 +204,10 @@ export default function Compensation() {
                         </span>
                       )}
                     </div>
-                    <span className="text-xs text-gray-500">{formatDate(record.effective_date)}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500">{formatDate(record.effective_date)}</span>
+                      <Button variant="ghost" size="sm" onClick={() => openEditRecord(record)}>Edit</Button>
+                    </div>
                   </div>
                   {record.reason && (
                     <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-blue-600/20 text-blue-400 mr-2">
@@ -270,6 +314,85 @@ export default function Compensation() {
             <Textarea
               value={form.notes}
               onChange={e => setForm({ ...form, notes: e.target.value })}
+              placeholder="Notes (optional)"
+              rows={2}
+            />
+          </FormField>
+        </div>
+      </Modal>
+
+      {/* Edit compensation record modal */}
+      <Modal
+        open={!!editingRecord}
+        onClose={() => setEditingRecord(null)}
+        title="Edit Compensation Record"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setEditingRecord(null)} disabled={editSubmitting}>Cancel</Button>
+            <Button onClick={handleEditRecord} loading={editSubmitting}>Save Changes</Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <FormField label="Effective Date" required>
+            <Input
+              type="date"
+              value={editForm.effective_date}
+              onChange={e => setEditForm({ ...editForm, effective_date: e.target.value })}
+            />
+          </FormField>
+          <FormField label="Salary" required>
+            <Input
+              type="number"
+              value={editForm.salary}
+              onChange={e => setEditForm({ ...editForm, salary: e.target.value })}
+              placeholder="Salary"
+            />
+          </FormField>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Currency">
+              <Select
+                value={editForm.currency}
+                onChange={e => setEditForm({ ...editForm, currency: e.target.value })}
+                options={[
+                  { value: 'NZD', label: 'NZD' },
+                  { value: 'AUD', label: 'AUD' },
+                  { value: 'USD', label: 'USD' },
+                  { value: 'GBP', label: 'GBP' },
+                  { value: 'EUR', label: 'EUR' },
+                ]}
+              />
+            </FormField>
+            <FormField label="Frequency">
+              <Select
+                value={editForm.pay_frequency}
+                onChange={e => setEditForm({ ...editForm, pay_frequency: e.target.value })}
+                options={[
+                  { value: 'annual', label: 'Annual' },
+                  { value: 'monthly', label: 'Monthly' },
+                  { value: 'hourly', label: 'Hourly' },
+                ]}
+              />
+            </FormField>
+          </div>
+          <FormField label="Reason">
+            <Select
+              value={editForm.reason}
+              onChange={e => setEditForm({ ...editForm, reason: e.target.value })}
+              placeholder="Reason (optional)"
+              options={[
+                { value: 'hire', label: 'New Hire' },
+                { value: 'promotion', label: 'Promotion' },
+                { value: 'merit', label: 'Merit Increase' },
+                { value: 'adjustment', label: 'Adjustment' },
+                { value: 'market', label: 'Market Adjustment' },
+              ]}
+            />
+          </FormField>
+          <FormField label="Notes">
+            <Textarea
+              value={editForm.notes}
+              onChange={e => setEditForm({ ...editForm, notes: e.target.value })}
               placeholder="Notes (optional)"
               rows={2}
             />

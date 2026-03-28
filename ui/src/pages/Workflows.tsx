@@ -3,7 +3,12 @@ import { formatDate } from '../utils/format'
 import {
   fetchWorkflowDefinitions,
   createWorkflowDefinition,
+  updateWorkflowDefinition,
+  deleteWorkflowDefinition,
   fetchWorkflowSteps,
+  createWorkflowStep,
+  deleteWorkflowStep,
+  createWorkflowInstance,
   fetchWorkflowInstances,
   fetchMyApprovals,
   approveWorkflow,
@@ -18,6 +23,7 @@ import Modal from '../components/Modal'
 import Button from '../components/Button'
 import { FormField, Input, Select, Textarea } from '../components/FormField'
 import { SkeletonTable } from '../components/Skeleton'
+import ConfirmDialog from '../components/ConfirmDialog'
 import { useToast } from '../components/Toast'
 import PageHeader from '../components/PageHeader'
 import EmployeeLink from '../components/EmployeeLink'
@@ -276,6 +282,32 @@ function DefinitionsView({
   const [steps, setSteps] = useState<WorkflowStep[]>([])
   const [instances, setInstances] = useState<WorkflowInstance[]>([])
   const [stepsLoading, setStepsLoading] = useState(false)
+
+  // Edit definition
+  const [editingDef, setEditingDef] = useState(false)
+  const [editName, setEditName] = useState('')
+  const [editTriggerEntity, setEditTriggerEntity] = useState('')
+  const [editTriggerAction, setEditTriggerAction] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [editActive, setEditActive] = useState(true)
+  const [editSubmitting, setEditSubmitting] = useState(false)
+
+  // Delete definition
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+
+  // Add step
+  const [showAddStep, setShowAddStep] = useState(false)
+  const [stepSubmitting, setStepSubmitting] = useState(false)
+
+  // Delete step
+  const [deleteStepId, setDeleteStepId] = useState<string | null>(null)
+  const [deleteStepLoading, setDeleteStepLoading] = useState(false)
+
+  // Create instance
+  const [showInstanceForm, setShowInstanceForm] = useState(false)
+  const [instanceSubmitting, setInstanceSubmitting] = useState(false)
+
   const toast = useToast()
 
   useEffect(() => {
@@ -287,6 +319,18 @@ function DefinitionsView({
       ]).finally(() => setStepsLoading(false))
     }
   }, [selectedDef])
+
+  const reloadSteps = () => {
+    if (selectedDef) {
+      fetchWorkflowSteps(selectedDef.id).then(setSteps).catch(() => {})
+    }
+  }
+
+  const reloadInstances = () => {
+    if (selectedDef) {
+      fetchWorkflowInstances({ definition_id: selectedDef.id }).then(r => setInstances(r.instances)).catch(() => setInstances([]))
+    }
+  }
 
   const handleCreate = async () => {
     setSubmitting(true)
@@ -311,6 +355,111 @@ function DefinitionsView({
     }
   }
 
+  const openEditDef = () => {
+    if (!selectedDef) return
+    setEditName(selectedDef.name)
+    setEditTriggerEntity(selectedDef.trigger_entity)
+    setEditTriggerAction(selectedDef.trigger_action)
+    setEditDescription(selectedDef.description || '')
+    setEditActive(!!selectedDef.is_active)
+    setEditingDef(true)
+  }
+
+  const handleEditDef = async () => {
+    if (!selectedDef) return
+    setEditSubmitting(true)
+    try {
+      const updated = await updateWorkflowDefinition(selectedDef.id, {
+        name: editName,
+        trigger_entity: editTriggerEntity,
+        trigger_action: editTriggerAction,
+        description: editDescription || null,
+        is_active: editActive ? 1 : 0,
+      })
+      setSelectedDef({ ...selectedDef, ...updated })
+      setEditingDef(false)
+      toast.success('Definition updated')
+      onCreated()
+    } catch {
+      toast.error('Failed to update definition')
+    } finally {
+      setEditSubmitting(false)
+    }
+  }
+
+  const handleDeleteDef = async () => {
+    if (!selectedDef) return
+    setDeleteLoading(true)
+    try {
+      await deleteWorkflowDefinition(selectedDef.id)
+      setSelectedDef(null)
+      setShowDeleteConfirm(false)
+      toast.success('Definition deleted')
+      onCreated()
+    } catch {
+      toast.error('Failed to delete definition')
+    } finally {
+      setDeleteLoading(false)
+    }
+  }
+
+  const handleAddStep = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!selectedDef) return
+    setStepSubmitting(true)
+    try {
+      const fd = new FormData(e.currentTarget)
+      await createWorkflowStep(selectedDef.id, {
+        step_order: steps.length + 1,
+        approver_type: fd.get('approver_type') || 'manager',
+        approver_role: fd.get('approver_role') || null,
+      })
+      setShowAddStep(false)
+      reloadSteps()
+      toast.success('Step added')
+    } catch {
+      toast.error('Failed to add step')
+    } finally {
+      setStepSubmitting(false)
+    }
+  }
+
+  const handleDeleteStep = async () => {
+    if (!deleteStepId) return
+    setDeleteStepLoading(true)
+    try {
+      await deleteWorkflowStep(deleteStepId)
+      reloadSteps()
+      toast.success('Step removed')
+    } catch {
+      toast.error('Failed to remove step')
+    } finally {
+      setDeleteStepLoading(false)
+      setDeleteStepId(null)
+    }
+  }
+
+  const handleCreateInstance = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!selectedDef) return
+    setInstanceSubmitting(true)
+    try {
+      const fd = new FormData(e.currentTarget)
+      await createWorkflowInstance({
+        definition_id: selectedDef.id,
+        entity_type: fd.get('entity_type') || selectedDef.trigger_entity,
+        entity_id: fd.get('entity_id'),
+      })
+      setShowInstanceForm(false)
+      reloadInstances()
+      toast.success('Workflow instance created')
+    } catch {
+      toast.error('Failed to create workflow instance')
+    } finally {
+      setInstanceSubmitting(false)
+    }
+  }
+
   // Detail view for selected definition
   if (selectedDef) {
     return (
@@ -325,7 +474,11 @@ function DefinitionsView({
               <h2 className="text-xl font-semibold text-white">{selectedDef.name}</h2>
               {selectedDef.description && <p className="text-sm text-gray-400 mt-1">{selectedDef.description}</p>}
             </div>
-            <StatusBadge status={selectedDef.is_active ? 'active' : 'inactive'} />
+            <div className="flex items-center gap-2">
+              <StatusBadge status={selectedDef.is_active ? 'active' : 'inactive'} />
+              <Button size="sm" onClick={openEditDef}>Edit</Button>
+              <Button variant="danger" size="sm" onClick={() => setShowDeleteConfirm(true)}>Delete</Button>
+            </div>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div>
@@ -338,16 +491,124 @@ function DefinitionsView({
             </div>
             <div>
               <p className="text-xs text-gray-500 mb-1">Steps</p>
-              <p className="text-sm text-white">{selectedDef.step_count || 0}</p>
+              <p className="text-sm text-white">{steps.length}</p>
             </div>
           </div>
         </div>
+
+        {/* Edit Definition modal */}
+        <Modal
+          open={editingDef}
+          onClose={() => setEditingDef(false)}
+          title="Edit Workflow Definition"
+          size="lg"
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setEditingDef(false)} disabled={editSubmitting}>Cancel</Button>
+              <Button onClick={handleEditDef} loading={editSubmitting}>Save Changes</Button>
+            </>
+          }
+        >
+          <div className="grid md:grid-cols-2 gap-4">
+            <FormField label="Name" required>
+              <Input value={editName} onChange={e => setEditName(e.target.value)} />
+            </FormField>
+            <FormField label="Trigger Entity">
+              <Select
+                value={editTriggerEntity}
+                onChange={e => setEditTriggerEntity(e.target.value)}
+                options={[
+                  { value: 'leave_request', label: 'Leave Request' },
+                  { value: 'employee', label: 'Employee' },
+                  { value: 'compensation', label: 'Compensation' },
+                ]}
+              />
+            </FormField>
+            <FormField label="Trigger Action">
+              <Select
+                value={editTriggerAction}
+                onChange={e => setEditTriggerAction(e.target.value)}
+                options={[
+                  { value: 'create', label: 'Create' },
+                  { value: 'update', label: 'Update' },
+                  { value: 'status_change', label: 'Status Change' },
+                ]}
+              />
+            </FormField>
+            <FormField label="Description">
+              <Input value={editDescription} onChange={e => setEditDescription(e.target.value)} placeholder="Description (optional)" />
+            </FormField>
+            <FormField label="Active">
+              <label className="flex items-center gap-2 text-sm text-gray-400 mt-1">
+                <input type="checkbox" checked={editActive} onChange={e => setEditActive(e.target.checked)} className="rounded" />
+                Workflow is active
+              </label>
+            </FormField>
+          </div>
+        </Modal>
+
+        {/* Delete definition confirm */}
+        <ConfirmDialog
+          open={showDeleteConfirm}
+          onClose={() => setShowDeleteConfirm(false)}
+          onConfirm={handleDeleteDef}
+          title="Delete Workflow Definition"
+          message="Are you sure you want to delete this workflow definition? All steps and instances will be permanently removed."
+          confirmLabel="Delete"
+          loading={deleteLoading}
+        />
 
         {stepsLoading ? (
           <SkeletonTable rows={3} cols={3} />
         ) : (
           <>
-            <h3 className="text-sm font-semibold text-white mb-3">Workflow Steps</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-white">Workflow Steps</h3>
+              <Button size="sm" onClick={() => setShowAddStep(true)}>Add Step</Button>
+            </div>
+
+            {/* Add Step modal */}
+            <Modal
+              open={showAddStep}
+              onClose={() => setShowAddStep(false)}
+              title="Add Workflow Step"
+              size="md"
+              footer={
+                <>
+                  <Button variant="secondary" onClick={() => setShowAddStep(false)} disabled={stepSubmitting}>Cancel</Button>
+                  <Button type="submit" form="step-form" loading={stepSubmitting}>Add</Button>
+                </>
+              }
+            >
+              <form id="step-form" onSubmit={handleAddStep} className="space-y-4">
+                <FormField label="Approver Type" required>
+                  <Select
+                    name="approver_type"
+                    options={[
+                      { value: 'manager', label: 'Direct Manager' },
+                      { value: 'department_head', label: 'Department Head' },
+                      { value: 'role', label: 'Specific Role' },
+                      { value: 'hr', label: 'HR' },
+                    ]}
+                  />
+                </FormField>
+                <FormField label="Approver Role" hint="Only required when type is 'Specific Role'">
+                  <Input name="approver_role" placeholder="e.g. finance_manager" />
+                </FormField>
+              </form>
+            </Modal>
+
+            {/* Delete step confirm */}
+            <ConfirmDialog
+              open={!!deleteStepId}
+              onClose={() => setDeleteStepId(null)}
+              onConfirm={handleDeleteStep}
+              title="Remove Step"
+              message="Are you sure you want to remove this workflow step?"
+              confirmLabel="Remove"
+              loading={deleteStepLoading}
+            />
+
             {steps.length === 0 ? (
               <p className="text-gray-500 text-sm py-4 text-center mb-6">No steps configured</p>
             ) : (
@@ -357,7 +618,7 @@ function DefinitionsView({
                     <div className="w-8 h-8 rounded-full bg-blue-600/20 text-blue-400 flex items-center justify-center text-sm font-medium shrink-0">
                       {idx + 1}
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <p className="text-sm text-white capitalize">
                         {step.approver_type.replace(/_/g, ' ')}
                         {step.approver_role && <span className="text-gray-400"> ({step.approver_role})</span>}
@@ -366,12 +627,52 @@ function DefinitionsView({
                         <p className="text-xs text-gray-500">{step.approver_user_name}</p>
                       )}
                     </div>
+                    <Button variant="ghost" size="sm" onClick={() => setDeleteStepId(step.id)}>
+                      Remove
+                    </Button>
                   </div>
                 ))}
               </div>
             )}
 
-            <h3 className="text-sm font-semibold text-white mb-3">Recent Instances</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-white">Recent Instances</h3>
+              <Button size="sm" variant="secondary" onClick={() => setShowInstanceForm(true)}>
+                Create Instance
+              </Button>
+            </div>
+
+            {/* Create Instance modal */}
+            <Modal
+              open={showInstanceForm}
+              onClose={() => setShowInstanceForm(false)}
+              title="Create Workflow Instance"
+              size="md"
+              footer={
+                <>
+                  <Button variant="secondary" onClick={() => setShowInstanceForm(false)} disabled={instanceSubmitting}>Cancel</Button>
+                  <Button type="submit" form="instance-form" loading={instanceSubmitting}>Create</Button>
+                </>
+              }
+            >
+              <form id="instance-form" onSubmit={handleCreateInstance} className="space-y-4">
+                <FormField label="Entity Type" required>
+                  <Select
+                    name="entity_type"
+                    defaultValue={selectedDef.trigger_entity}
+                    options={[
+                      { value: 'leave_request', label: 'Leave Request' },
+                      { value: 'employee', label: 'Employee' },
+                      { value: 'compensation', label: 'Compensation' },
+                    ]}
+                  />
+                </FormField>
+                <FormField label="Entity ID" required hint="The ID of the entity this workflow applies to">
+                  <Input name="entity_id" required placeholder="Entity ID" />
+                </FormField>
+              </form>
+            </Modal>
+
             {instances.length === 0 ? (
               <p className="text-gray-500 text-sm py-4 text-center">No workflow instances</p>
             ) : (

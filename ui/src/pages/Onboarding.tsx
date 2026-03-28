@@ -138,11 +138,20 @@ export default function Onboarding() {
     try {
       const newStatus = currentStatus === 'completed' ? 'pending' : 'completed'
       await updateOnboardingTask(taskId, { status: newStatus })
-      // Refresh checklists
       fetchOnboardingChecklists().then(setChecklists).catch(() => {})
       toast.success('Task updated')
     } catch {
       toast.error('Failed to update task')
+    }
+  }
+
+  const handleSkipTask = async (taskId: string) => {
+    try {
+      await updateOnboardingTask(taskId, { status: 'skipped' })
+      fetchOnboardingChecklists().then(setChecklists).catch(() => {})
+      toast.success('Task skipped')
+    } catch {
+      toast.error('Failed to skip task')
     }
   }
 
@@ -272,12 +281,21 @@ export default function Onboarding() {
                               </svg>
                             )}
                           </button>
-                          <span className={`text-sm flex-1 ${task.status === 'completed' ? 'text-gray-500 line-through' : 'text-white'}`}>
+                          <span className={`text-sm flex-1 ${task.status === 'completed' ? 'text-gray-500 line-through' : task.status === 'skipped' ? 'text-gray-600 line-through italic' : 'text-white'}`}>
                             {task.title}
+                            {task.status === 'skipped' && <span className="text-xs text-gray-600 ml-2">(skipped)</span>}
                           </span>
                           <span className="text-xs text-gray-500">{task.assigned_to_role}</span>
                           {task.due_date && (
                             <span className="text-xs text-gray-500">Due {formatDate(task.due_date)}</span>
+                          )}
+                          {task.status !== 'completed' && task.status !== 'skipped' && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleSkipTask(task.id) }}
+                              className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                            >
+                              Skip
+                            </button>
                           )}
                         </div>
                       ))}

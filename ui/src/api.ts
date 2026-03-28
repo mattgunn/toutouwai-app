@@ -18,5 +18,5 @@ export { fetchDocuments, createDocument, updateDocument, deleteDocument, fetchEx
 export { fetchMyProfile, updateMyProfile, fetchMyLeave, submitMyLeave, fetchMyLeaveBalances, fetchMyTime, submitMyTime, fetchMyDocuments, fetchMyOnboarding } from './modules/self_service/api'
 export { fetchHeadcountReport, fetchTurnoverReport, fetchLeaveUtilizationReport, fetchTimeSummaryReport, fetchCompensationReport, fetchRecruitmentReport, fetchDiversityReport } from './modules/reports/api'
 export { fetchAuditLog } from './modules/audit/api'
-export { fetchWorkflowDefinitions, createWorkflowDefinition, updateWorkflowDefinition, fetchWorkflowSteps, createWorkflowStep, updateWorkflowStep, deleteWorkflowStep, fetchWorkflowInstances, fetchMyApprovals, approveWorkflow, rejectWorkflow } from './modules/workflows/api'
-export { fetchSurveys, createSurvey, updateSurvey, fetchSurveyQuestions, createSurveyQuestion, updateSurveyQuestion, deleteSurveyQuestion, submitSurveyResponses, fetchSurveyResults } from './modules/surveys/api'
+export { fetchWorkflowDefinitions, createWorkflowDefinition, updateWorkflowDefinition, deleteWorkflowDefinition, fetchWorkflowSteps, createWorkflowStep, updateWorkflowStep, deleteWorkflowStep, createWorkflowInstance, fetchWorkflowInstances, fetchMyApprovals, approveWorkflow, rejectWorkflow } from './modules/workflows/api'
+export { fetchSurveys, createSurvey, updateSurvey, deleteSurvey, fetchSurveyQuestions, createSurveyQuestion, updateSurveyQuestion, deleteSurveyQuestion, submitSurveyResponses, fetchSurveyResults } from './modules/surveys/api'

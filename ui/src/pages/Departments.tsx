@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { fetchDepartments, createDepartment, updateDepartment, deleteDepartment, fetchEmployees } from '../api'
+import { fetchDepartments, createDepartment, updateDepartment, deleteDepartment, fetchEmployees, updateEmployee } from '../api'
 import type { Department, Employee } from '../types'
 import EmptyState from '../components/EmptyState'
 import { SkeletonCards, SkeletonTable } from '../components/Skeleton'
@@ -8,7 +8,7 @@ import Modal from '../components/Modal'
 import Button from '../components/Button'
 import DataTable from '../components/DataTable'
 import StatusBadge from '../components/StatusBadge'
-import { FormField, Input, Textarea } from '../components/FormField'
+import { FormField, Input, Select, Textarea } from '../components/FormField'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { useToast } from '../components/Toast'
 import EmployeeLink from '../components/EmployeeLink'
@@ -30,6 +30,14 @@ export default function Departments() {
   const [selectedDept, setSelectedDept] = useState<Department | null>(null)
   const [deptEmployees, setDeptEmployees] = useState<Employee[]>([])
   const [detailLoading, setDetailLoading] = useState(false)
+
+  // Reassign employee state
+  const [reassignEmployee, setReassignEmployee] = useState<Employee | null>(null)
+  const [reassignDeptId, setReassignDeptId] = useState('')
+  const [reassigning, setReassigning] = useState(false)
+
+  // Set head state
+  const [settingHead, setSettingHead] = useState(false)
 
   const loadData = () => {
     setLoading(true)
@@ -106,11 +114,66 @@ export default function Departments() {
     }
   }
 
+  const handleSetHead = async (emp: Employee) => {
+    if (!selectedDept) return
+    setSettingHead(true)
+    try {
+      await updateDepartment(selectedDept.id, { name: selectedDept.name, head_id: emp.id })
+      toast.success(`${emp.first_name} ${emp.last_name} set as department head`)
+      loadData()
+      // Refresh selectedDept
+      const updated = await fetchDepartments()
+      const refreshed = updated.find(d => d.id === selectedDept.id)
+      if (refreshed) setSelectedDept(refreshed)
+    } catch {
+      toast.error('Failed to set department head')
+    } finally {
+      setSettingHead(false)
+    }
+  }
+
+  const handleReassign = async () => {
+    if (!reassignEmployee || !reassignDeptId) return
+    setReassigning(true)
+    try {
+      await updateEmployee(reassignEmployee.id, { department_id: reassignDeptId })
+      toast.success(`${reassignEmployee.first_name} ${reassignEmployee.last_name} reassigned`)
+      setReassignEmployee(null)
+      setReassignDeptId('')
+      loadData()
+      // Refresh employee list for the current department
+      if (selectedDept) {
+        fetchEmployees({ department: selectedDept.id })
+          .then(r => setDeptEmployees(r.employees))
+          .catch(() => {})
+      }
+    } catch {
+      toast.error('Failed to reassign employee')
+    } finally {
+      setReassigning(false)
+    }
+  }
+
   const employeeColumns = [
     { key: 'name', header: 'Name', render: (emp: Employee) => <EmployeeLink employeeId={emp.id} name={`${emp.first_name} ${emp.last_name}`} className="font-medium" /> },
     { key: 'position_title', header: 'Position', render: (emp: Employee) => <span className="text-gray-400">{emp.position_title || '\u2014'}</span>, className: 'hidden md:table-cell' },
     { key: 'email', header: 'Email', render: (emp: Employee) => <span className="text-gray-400">{emp.email}</span>, className: 'hidden lg:table-cell' },
     { key: 'status', header: 'Status', render: (emp: Employee) => <StatusBadge status={emp.status} /> },
+    { key: 'actions', header: '', render: (emp: Employee) => (
+      <div className="flex items-center gap-1">
+        {selectedDept && selectedDept.head_id !== emp.id && (
+          <Button variant="ghost" size="sm" onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleSetHead(emp) }} disabled={settingHead}>
+            Set Head
+          </Button>
+        )}
+        {selectedDept && selectedDept.head_id === emp.id && (
+          <span className="text-xs text-blue-400 font-medium px-2">Head</span>
+        )}
+        <Button variant="ghost" size="sm" onClick={(e: React.MouseEvent) => { e.stopPropagation(); setReassignEmployee(emp); setReassignDeptId('') }}>
+          Reassign
+        </Button>
+      </div>
+    )},
   ]
 
   if (loading) {
@@ -170,9 +233,7 @@ export default function Departments() {
             </div>
           </div>
 
-          {selectedDept.description && (
-            <p className="text-gray-400 text-sm mb-4">{selectedDept.description}</p>
-          )}
+          <p className="text-gray-400 text-sm mb-4">{selectedDept.description || <span className="italic text-gray-600">No description</span>}</p>
 
           <div className="flex items-center gap-6 text-sm text-gray-500 mb-4">
             <span>{selectedDept.employee_count} employee{selectedDept.employee_count !== 1 ? 's' : ''}</span>
@@ -245,6 +306,29 @@ export default function Departments() {
         confirmLabel="Delete"
         loading={deleting}
       />
+
+      {/* Reassign employee modal */}
+      <Modal
+        open={!!reassignEmployee}
+        onClose={() => { setReassignEmployee(null); setReassignDeptId('') }}
+        title={`Reassign ${reassignEmployee ? `${reassignEmployee.first_name} ${reassignEmployee.last_name}` : 'Employee'}`}
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => { setReassignEmployee(null); setReassignDeptId('') }} disabled={reassigning}>Cancel</Button>
+            <Button onClick={handleReassign} loading={reassigning} disabled={!reassignDeptId}>Reassign</Button>
+          </>
+        }
+      >
+        <FormField label="New Department" required>
+          <Select
+            value={reassignDeptId}
+            onChange={e => setReassignDeptId(e.target.value)}
+            placeholder="Select department"
+            options={departments.filter(d => d.id !== selectedDept?.id).map(d => ({ value: d.id, label: d.name }))}
+          />
+        </FormField>
+      </Modal>
     </div>
   )
 }

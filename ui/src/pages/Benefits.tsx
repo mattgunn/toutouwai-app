@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { fetchBenefitPlans, createBenefitPlan, fetchBenefitEnrollments, createBenefitEnrollment } from '../modules/benefits/api'
+import { fetchBenefitPlans, createBenefitPlan, updateBenefitPlan, fetchBenefitEnrollments, createBenefitEnrollment, updateBenefitEnrollment } from '../modules/benefits/api'
 import { fetchEmployees } from '../api'
 import type { BenefitPlan, BenefitEnrollment } from '../modules/benefits/types'
 import type { Employee } from '../types'
@@ -11,6 +11,7 @@ import Button from '../components/Button'
 import PageHeader from '../components/PageHeader'
 import DataTable from '../components/DataTable'
 import Tabs from '../components/Tabs'
+import ConfirmDialog from '../components/ConfirmDialog'
 import { FormField, Input, Select, Textarea } from '../components/FormField'
 import { PageSkeleton, SkeletonTable } from '../components/Skeleton'
 import { useToast } from '../components/Toast'
@@ -53,6 +54,24 @@ export default function Benefits() {
   const [selectedPlan, setSelectedPlan] = useState<BenefitPlan | null>(null)
   const [planEnrollments, setPlanEnrollments] = useState<BenefitEnrollment[]>([])
   const [detailLoading, setDetailLoading] = useState(false)
+
+  // Edit enrollment state
+  const [editingEnrollment, setEditingEnrollment] = useState<BenefitEnrollment | null>(null)
+  const [editEnrollForm, setEditEnrollForm] = useState({ coverage_level: 'employee', employee_contribution: '', employer_contribution: '' })
+  const [editingEnrollmentSubmitting, setEditingEnrollmentSubmitting] = useState(false)
+
+  // Unenroll (cancel enrollment) state
+  const [unenrollId, setUnenrollId] = useState<string | null>(null)
+  const [unenrolling, setUnenrolling] = useState(false)
+
+  // Deactivate plan state
+  const [deactivatePlanId, setDeactivatePlanId] = useState<string | null>(null)
+  const [deactivating, setDeactivating] = useState(false)
+
+  // Enroll from plan detail
+  const [showPlanEnroll, setShowPlanEnroll] = useState(false)
+  const [planEnrollForm, setPlanEnrollForm] = useState({ employee_id: '', start_date: '', coverage_level: 'employee', employee_contribution: '', employer_contribution: '' })
+  const [planEnrolling, setPlanEnrolling] = useState(false)
 
   useEffect(() => {
     Promise.all([
@@ -114,6 +133,100 @@ export default function Benefits() {
     }
   }
 
+  const handleEditEnrollment = async () => {
+    if (!editingEnrollment) return
+    setEditingEnrollmentSubmitting(true)
+    try {
+      await updateBenefitEnrollment(editingEnrollment.id, {
+        coverage_level: editEnrollForm.coverage_level,
+        employee_contribution: parseFloat(editEnrollForm.employee_contribution) || 0,
+        employer_contribution: parseFloat(editEnrollForm.employer_contribution) || 0,
+      })
+      toast.success('Enrollment updated')
+      setEditingEnrollment(null)
+      fetchBenefitEnrollments().then(setEnrollments).catch(() => {})
+      fetchBenefitPlans().then(setPlans).catch(() => {})
+      if (selectedPlan) {
+        fetchBenefitEnrollments({ plan_id: selectedPlan.id }).then(setPlanEnrollments).catch(() => {})
+      }
+    } catch {
+      toast.error('Failed to update enrollment')
+    } finally {
+      setEditingEnrollmentSubmitting(false)
+    }
+  }
+
+  const handleUnenroll = async () => {
+    if (!unenrollId) return
+    setUnenrolling(true)
+    try {
+      await updateBenefitEnrollment(unenrollId, { status: 'cancelled', end_date: new Date().toISOString().split('T')[0] })
+      toast.success('Employee unenrolled')
+      setUnenrollId(null)
+      fetchBenefitEnrollments().then(setEnrollments).catch(() => {})
+      fetchBenefitPlans().then(setPlans).catch(() => {})
+      if (selectedPlan) {
+        fetchBenefitEnrollments({ plan_id: selectedPlan.id }).then(setPlanEnrollments).catch(() => {})
+      }
+    } catch {
+      toast.error('Failed to unenroll employee')
+    } finally {
+      setUnenrolling(false)
+    }
+  }
+
+  const handleDeactivatePlan = async () => {
+    if (!deactivatePlanId) return
+    setDeactivating(true)
+    try {
+      await updateBenefitPlan(deactivatePlanId, { is_active: 0 })
+      toast.success('Plan deactivated')
+      setDeactivatePlanId(null)
+      fetchBenefitPlans().then(setPlans).catch(() => {})
+      if (selectedPlan?.id === deactivatePlanId) {
+        setSelectedPlan(null)
+      }
+    } catch {
+      toast.error('Failed to deactivate plan')
+    } finally {
+      setDeactivating(false)
+    }
+  }
+
+  const handlePlanEnroll = async () => {
+    if (!planEnrollForm.employee_id || !planEnrollForm.start_date || !selectedPlan) return
+    setPlanEnrolling(true)
+    try {
+      await createBenefitEnrollment({
+        employee_id: planEnrollForm.employee_id,
+        plan_id: selectedPlan.id,
+        start_date: planEnrollForm.start_date,
+        coverage_level: planEnrollForm.coverage_level,
+        employee_contribution: parseFloat(planEnrollForm.employee_contribution) || 0,
+        employer_contribution: parseFloat(planEnrollForm.employer_contribution) || 0,
+      })
+      toast.success('Employee enrolled')
+      setShowPlanEnroll(false)
+      setPlanEnrollForm({ employee_id: '', start_date: '', coverage_level: 'employee', employee_contribution: '', employer_contribution: '' })
+      fetchBenefitEnrollments().then(setEnrollments).catch(() => {})
+      fetchBenefitPlans().then(setPlans).catch(() => {})
+      fetchBenefitEnrollments({ plan_id: selectedPlan.id }).then(setPlanEnrollments).catch(() => {})
+    } catch {
+      toast.error('Failed to enroll employee')
+    } finally {
+      setPlanEnrolling(false)
+    }
+  }
+
+  const openEditEnrollment = (enrollment: BenefitEnrollment) => {
+    setEditingEnrollment(enrollment)
+    setEditEnrollForm({
+      coverage_level: enrollment.coverage_level,
+      employee_contribution: String(enrollment.employee_contribution),
+      employer_contribution: String(enrollment.employer_contribution),
+    })
+  }
+
   const enrollmentColumns = [
     { key: 'employee_name', header: 'Employee', render: (e: BenefitEnrollment) => e.employee_id ? <EmployeeLink employeeId={e.employee_id} name={e.employee_name || 'Unknown'} /> : <span className="text-white">{'\u2014'}</span> },
     { key: 'plan_name', header: 'Plan', render: (e: BenefitEnrollment) => (
@@ -130,6 +243,14 @@ export default function Benefits() {
     { key: 'employee_contribution', header: 'Employee $', className: 'hidden lg:table-cell', render: (e: BenefitEnrollment) => <span className="text-gray-400">{formatCurrency(e.employee_contribution)}</span> },
     { key: 'employer_contribution', header: 'Employer $', className: 'hidden lg:table-cell', render: (e: BenefitEnrollment) => <span className="text-gray-400">{formatCurrency(e.employer_contribution)}</span> },
     { key: 'status', header: 'Status', render: (e: BenefitEnrollment) => <StatusBadge status={e.status} /> },
+    { key: 'actions', header: '', render: (e: BenefitEnrollment) => (
+      <div className="flex items-center gap-1">
+        <Button variant="ghost" size="sm" onClick={(ev: React.MouseEvent) => { ev.stopPropagation(); openEditEnrollment(e) }}>Edit</Button>
+        {e.status === 'active' && (
+          <Button variant="ghost" size="sm" onClick={(ev: React.MouseEvent) => { ev.stopPropagation(); setUnenrollId(e.id) }} className="text-red-400">Unenroll</Button>
+        )}
+      </div>
+    )},
   ]
 
   const planEnrollmentColumns = [
@@ -138,6 +259,14 @@ export default function Benefits() {
     { key: 'employee_contribution', header: 'Employee $', className: 'hidden md:table-cell', render: (e: BenefitEnrollment) => <span className="text-gray-400">{formatCurrency(e.employee_contribution)}</span> },
     { key: 'employer_contribution', header: 'Employer $', className: 'hidden md:table-cell', render: (e: BenefitEnrollment) => <span className="text-gray-400">{formatCurrency(e.employer_contribution)}</span> },
     { key: 'status', header: 'Status', render: (e: BenefitEnrollment) => <StatusBadge status={e.status} /> },
+    { key: 'actions', header: '', render: (e: BenefitEnrollment) => (
+      <div className="flex items-center gap-1">
+        <Button variant="ghost" size="sm" onClick={(ev: React.MouseEvent) => { ev.stopPropagation(); openEditEnrollment(e) }}>Edit</Button>
+        {e.status === 'active' && (
+          <Button variant="ghost" size="sm" onClick={(ev: React.MouseEvent) => { ev.stopPropagation(); setUnenrollId(e.id) }} className="text-red-400">Unenroll</Button>
+        )}
+      </div>
+    )},
   ]
 
   if (loading) {
@@ -347,6 +476,21 @@ export default function Benefits() {
                   </span>
                   <StatusBadge status={selectedPlan.is_active ? 'active' : 'inactive'} />
                 </div>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" onClick={() => setShowPlanEnroll(true)}>Enroll Employee</Button>
+                  {selectedPlan.is_active ? (
+                    <Button variant="danger" size="sm" onClick={() => setDeactivatePlanId(selectedPlan.id)}>Deactivate</Button>
+                  ) : (
+                    <Button size="sm" onClick={async () => {
+                      try {
+                        await updateBenefitPlan(selectedPlan.id, { is_active: 1 })
+                        toast.success('Plan reactivated')
+                        fetchBenefitPlans().then(setPlans).catch(() => {})
+                        setSelectedPlan({ ...selectedPlan, is_active: 1 })
+                      } catch { toast.error('Failed to reactivate plan') }
+                    }}>Reactivate</Button>
+                  )}
+                </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-6 text-sm text-gray-400 mb-4">
@@ -389,6 +533,138 @@ export default function Benefits() {
           onEmptyAction={() => setShowAddEnrollment(true)}
         />
       )}
+
+      {/* Edit enrollment modal */}
+      <Modal
+        open={!!editingEnrollment}
+        onClose={() => setEditingEnrollment(null)}
+        title="Edit Enrollment"
+        size="md"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setEditingEnrollment(null)} disabled={editingEnrollmentSubmitting}>Cancel</Button>
+            <Button onClick={handleEditEnrollment} loading={editingEnrollmentSubmitting}>Save Changes</Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          {editingEnrollment && (
+            <div className="text-sm text-gray-400 mb-2">
+              {editingEnrollment.employee_name} &mdash; {editingEnrollment.plan_name}
+            </div>
+          )}
+          <FormField label="Coverage Level">
+            <Select
+              value={editEnrollForm.coverage_level}
+              onChange={e => setEditEnrollForm({ ...editEnrollForm, coverage_level: e.target.value })}
+              options={[
+                { value: 'employee', label: 'Employee Only' },
+                { value: 'employee_spouse', label: 'Employee + Spouse' },
+                { value: 'family', label: 'Family' },
+              ]}
+            />
+          </FormField>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Employee $/mo">
+              <Input
+                type="number"
+                value={editEnrollForm.employee_contribution}
+                onChange={e => setEditEnrollForm({ ...editEnrollForm, employee_contribution: e.target.value })}
+              />
+            </FormField>
+            <FormField label="Employer $/mo">
+              <Input
+                type="number"
+                value={editEnrollForm.employer_contribution}
+                onChange={e => setEditEnrollForm({ ...editEnrollForm, employer_contribution: e.target.value })}
+              />
+            </FormField>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Unenroll confirmation */}
+      <ConfirmDialog
+        open={!!unenrollId}
+        onClose={() => setUnenrollId(null)}
+        onConfirm={handleUnenroll}
+        title="Unenroll Employee"
+        message="Are you sure you want to cancel this enrollment? The employee will be unenrolled from the benefit plan."
+        confirmLabel="Unenroll"
+        variant="danger"
+        loading={unenrolling}
+      />
+
+      {/* Deactivate plan confirmation */}
+      <ConfirmDialog
+        open={!!deactivatePlanId}
+        onClose={() => setDeactivatePlanId(null)}
+        onConfirm={handleDeactivatePlan}
+        title="Deactivate Plan"
+        message="Are you sure you want to deactivate this benefit plan? No new enrollments will be possible."
+        confirmLabel="Deactivate"
+        variant="danger"
+        loading={deactivating}
+      />
+
+      {/* Enroll from plan detail */}
+      <Modal
+        open={showPlanEnroll}
+        onClose={() => setShowPlanEnroll(false)}
+        title={`Enroll in ${selectedPlan?.name || 'Plan'}`}
+        size="md"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowPlanEnroll(false)} disabled={planEnrolling}>Cancel</Button>
+            <Button onClick={handlePlanEnroll} loading={planEnrolling}>Enroll</Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <FormField label="Employee" required>
+            <Select
+              value={planEnrollForm.employee_id}
+              onChange={e => setPlanEnrollForm({ ...planEnrollForm, employee_id: e.target.value })}
+              placeholder="Select Employee"
+              options={employees.map(emp => ({ value: emp.id, label: `${emp.first_name} ${emp.last_name}` }))}
+            />
+          </FormField>
+          <FormField label="Start Date" required>
+            <Input
+              type="date"
+              value={planEnrollForm.start_date}
+              onChange={e => setPlanEnrollForm({ ...planEnrollForm, start_date: e.target.value })}
+            />
+          </FormField>
+          <FormField label="Coverage Level">
+            <Select
+              value={planEnrollForm.coverage_level}
+              onChange={e => setPlanEnrollForm({ ...planEnrollForm, coverage_level: e.target.value })}
+              options={[
+                { value: 'employee', label: 'Employee Only' },
+                { value: 'employee_spouse', label: 'Employee + Spouse' },
+                { value: 'family', label: 'Family' },
+              ]}
+            />
+          </FormField>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Employee $/mo">
+              <Input
+                type="number"
+                value={planEnrollForm.employee_contribution}
+                onChange={e => setPlanEnrollForm({ ...planEnrollForm, employee_contribution: e.target.value })}
+              />
+            </FormField>
+            <FormField label="Employer $/mo">
+              <Input
+                type="number"
+                value={planEnrollForm.employer_contribution}
+                onChange={e => setPlanEnrollForm({ ...planEnrollForm, employer_contribution: e.target.value })}
+              />
+            </FormField>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

@@ -127,6 +127,15 @@ def update_question(question_id: str, body: dict, conn=Depends(get_db), _user=De
     return d
 
 
+@router.delete("/surveys/{survey_id}")
+def delete_survey(survey_id: str, conn=Depends(get_db), _user=Depends(get_current_user)):
+    conn.execute("DELETE FROM survey_responses WHERE survey_id = ?", (survey_id,))
+    conn.execute("DELETE FROM survey_questions WHERE survey_id = ?", (survey_id,))
+    conn.execute("DELETE FROM surveys WHERE id = ?", (survey_id,))
+    conn.commit()
+    return {"ok": True}
+
+
 @router.delete("/surveys/questions/{question_id}")
 def delete_question(question_id: str, conn=Depends(get_db), _user=Depends(get_current_user)):
     conn.execute("DELETE FROM survey_questions WHERE id = ?", (question_id,))

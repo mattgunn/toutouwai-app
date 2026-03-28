@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { fetchSuccessionPlans, createSuccessionPlan, fetchSuccessionCandidates, addSuccessionCandidate, removeSuccessionCandidate } from '../modules/succession/api'
+import { useNavigate } from 'react-router-dom'
+import { fetchSuccessionPlans, createSuccessionPlan, updateSuccessionPlan, fetchSuccessionCandidates, addSuccessionCandidate, updateSuccessionCandidate, removeSuccessionCandidate } from '../modules/succession/api'
 import { fetchEmployees, fetchPositions } from '../api'
 import type { SuccessionPlan, SuccessionCandidate } from '../modules/succession/types'
 import type { Employee } from '../types'
@@ -70,6 +71,21 @@ export default function Succession() {
   const [form, setForm] = useState({ position_id: '', incumbent_id: '', risk_of_loss: 'low', impact_of_loss: 'low', notes: '' })
   const [candidateForm, setCandidateForm] = useState({ employee_id: '', readiness: 'not_ready', notes: '' })
   const toast = useToast()
+  const navigate = useNavigate()
+
+  // Edit plan state
+  const [showEditPlan, setShowEditPlan] = useState(false)
+  const [editPlanForm, setEditPlanForm] = useState({ risk_of_loss: 'low', impact_of_loss: 'low', notes: '', incumbent_id: '' })
+  const [editPlanSubmitting, setEditPlanSubmitting] = useState(false)
+
+  // Edit candidate state
+  const [editingCandidate, setEditingCandidate] = useState<SuccessionCandidate | null>(null)
+  const [editCandidateForm, setEditCandidateForm] = useState({ readiness: 'not_ready', notes: '' })
+  const [editCandidateSubmitting, setEditCandidateSubmitting] = useState(false)
+
+  // Promote candidate state
+  const [promotingCandidate, setPromotingCandidate] = useState<SuccessionCandidate | null>(null)
+  const [promoting, setPromoting] = useState(false)
 
   useEffect(() => {
     Promise.all([
@@ -142,6 +158,83 @@ export default function Succession() {
     }
   }
 
+  const openEditPlan = () => {
+    if (!selectedPlan) return
+    setEditPlanForm({
+      risk_of_loss: selectedPlan.risk_of_loss,
+      impact_of_loss: selectedPlan.impact_of_loss,
+      notes: selectedPlan.notes || '',
+      incumbent_id: selectedPlan.incumbent_id || '',
+    })
+    setShowEditPlan(true)
+  }
+
+  const handleEditPlan = async () => {
+    if (!selectedPlan) return
+    setEditPlanSubmitting(true)
+    try {
+      await updateSuccessionPlan(selectedPlan.id, {
+        risk_of_loss: editPlanForm.risk_of_loss,
+        impact_of_loss: editPlanForm.impact_of_loss,
+        notes: editPlanForm.notes || null,
+        incumbent_id: editPlanForm.incumbent_id || null,
+      })
+      toast.success('Succession plan updated')
+      setShowEditPlan(false)
+      const refreshed = await fetchSuccessionPlans()
+      setPlans(refreshed)
+      const updated = refreshed.find(p => p.id === selectedPlan.id)
+      if (updated) setSelectedPlan(updated)
+    } catch {
+      toast.error('Failed to update succession plan')
+    } finally {
+      setEditPlanSubmitting(false)
+    }
+  }
+
+  const openEditCandidate = (candidate: SuccessionCandidate) => {
+    setEditingCandidate(candidate)
+    setEditCandidateForm({
+      readiness: candidate.readiness,
+      notes: candidate.notes || '',
+    })
+  }
+
+  const handleEditCandidate = async () => {
+    if (!editingCandidate) return
+    setEditCandidateSubmitting(true)
+    try {
+      await updateSuccessionCandidate(editingCandidate.id, editCandidateForm)
+      toast.success('Candidate updated')
+      setEditingCandidate(null)
+      if (selectedPlan) {
+        fetchSuccessionCandidates(selectedPlan.id).then(setCandidates).catch(() => {})
+      }
+    } catch {
+      toast.error('Failed to update candidate')
+    } finally {
+      setEditCandidateSubmitting(false)
+    }
+  }
+
+  const handlePromoteCandidate = async () => {
+    if (!promotingCandidate || !selectedPlan) return
+    setPromoting(true)
+    try {
+      await updateSuccessionPlan(selectedPlan.id, { incumbent_id: promotingCandidate.employee_id })
+      toast.success(`${promotingCandidate.employee_name} promoted to incumbent`)
+      setPromotingCandidate(null)
+      const refreshed = await fetchSuccessionPlans()
+      setPlans(refreshed)
+      const updated = refreshed.find(p => p.id === selectedPlan.id)
+      if (updated) setSelectedPlan(updated)
+    } catch {
+      toast.error('Failed to promote candidate')
+    } finally {
+      setPromoting(false)
+    }
+  }
+
   if (loading) {
     return (
       <div>
@@ -162,12 +255,23 @@ export default function Succession() {
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-6">
           <div className="flex items-start justify-between mb-4">
             <div>
-              <h2 className="text-xl font-semibold text-white">{selectedPlan.position_title || 'Unknown Position'}</h2>
+              <h2 className="text-xl font-semibold text-white">
+                <button
+                  className="hover:text-blue-400 transition-colors text-left"
+                  onClick={() => navigate('/positions')}
+                  title="View position details"
+                >
+                  {selectedPlan.position_title || 'Unknown Position'}
+                </button>
+              </h2>
               {selectedPlan.department_name && (
                 <p className="text-sm text-gray-400">{selectedPlan.department_name}</p>
               )}
             </div>
-            <Button size="sm" onClick={() => setShowAddCandidate(true)}>Add Candidate</Button>
+            <div className="flex items-center gap-2">
+              <Button size="sm" onClick={openEditPlan}>Edit Plan</Button>
+              <Button size="sm" onClick={() => setShowAddCandidate(true)}>Add Candidate</Button>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -261,14 +365,31 @@ export default function Succession() {
                     {candidate.notes && <span className="text-xs text-gray-500">{candidate.notes}</span>}
                   </div>
                 </div>
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={() => setConfirmRemove(candidate.id)}
-                  loading={removingId === candidate.id}
-                >
-                  Remove
-                </Button>
+                <div className="flex items-center gap-1">
+                  {candidate.readiness === 'ready_now' && selectedPlan.incumbent_id !== candidate.employee_id && (
+                    <Button
+                      size="sm"
+                      onClick={() => setPromotingCandidate(candidate)}
+                    >
+                      Promote
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => openEditCandidate(candidate)}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => setConfirmRemove(candidate.id)}
+                    loading={removingId === candidate.id}
+                  >
+                    Remove
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -284,6 +405,112 @@ export default function Succession() {
           confirmLabel="Remove"
           variant="danger"
           loading={!!removingId}
+        />
+
+        {/* Edit plan modal */}
+        <Modal
+          open={showEditPlan}
+          onClose={() => setShowEditPlan(false)}
+          title="Edit Succession Plan"
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setShowEditPlan(false)} disabled={editPlanSubmitting}>Cancel</Button>
+              <Button onClick={handleEditPlan} loading={editPlanSubmitting}>Save Changes</Button>
+            </>
+          }
+        >
+          <div className="space-y-3">
+            <FormField label="Current Incumbent">
+              <Select
+                value={editPlanForm.incumbent_id}
+                onChange={e => setEditPlanForm({ ...editPlanForm, incumbent_id: e.target.value })}
+                placeholder="Select incumbent (optional)"
+                options={employees.map(emp => ({ value: emp.id, label: `${emp.first_name} ${emp.last_name}` }))}
+              />
+            </FormField>
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label="Risk of Loss">
+                <Select
+                  value={editPlanForm.risk_of_loss}
+                  onChange={e => setEditPlanForm({ ...editPlanForm, risk_of_loss: e.target.value })}
+                  options={[
+                    { value: 'low', label: 'Low' },
+                    { value: 'medium', label: 'Medium' },
+                    { value: 'high', label: 'High' },
+                    { value: 'critical', label: 'Critical' },
+                  ]}
+                />
+              </FormField>
+              <FormField label="Impact of Loss">
+                <Select
+                  value={editPlanForm.impact_of_loss}
+                  onChange={e => setEditPlanForm({ ...editPlanForm, impact_of_loss: e.target.value })}
+                  options={[
+                    { value: 'low', label: 'Low' },
+                    { value: 'medium', label: 'Medium' },
+                    { value: 'high', label: 'High' },
+                    { value: 'critical', label: 'Critical' },
+                  ]}
+                />
+              </FormField>
+            </div>
+            <FormField label="Notes">
+              <Textarea
+                value={editPlanForm.notes}
+                onChange={e => setEditPlanForm({ ...editPlanForm, notes: e.target.value })}
+                placeholder="Notes (optional)"
+                rows={2}
+              />
+            </FormField>
+          </div>
+        </Modal>
+
+        {/* Edit candidate modal */}
+        <Modal
+          open={!!editingCandidate}
+          onClose={() => setEditingCandidate(null)}
+          title={`Edit Candidate \u2014 ${editingCandidate?.employee_name || ''}`}
+          size="sm"
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setEditingCandidate(null)} disabled={editCandidateSubmitting}>Cancel</Button>
+              <Button onClick={handleEditCandidate} loading={editCandidateSubmitting}>Save Changes</Button>
+            </>
+          }
+        >
+          <div className="space-y-3">
+            <FormField label="Readiness">
+              <Select
+                value={editCandidateForm.readiness}
+                onChange={e => setEditCandidateForm({ ...editCandidateForm, readiness: e.target.value })}
+                options={[
+                  { value: 'ready_now', label: 'Ready Now' },
+                  { value: 'ready_1_year', label: 'Ready in 1 Year' },
+                  { value: 'ready_2_years', label: 'Ready in 2 Years' },
+                  { value: 'not_ready', label: 'Not Ready' },
+                ]}
+              />
+            </FormField>
+            <FormField label="Notes">
+              <Textarea
+                value={editCandidateForm.notes}
+                onChange={e => setEditCandidateForm({ ...editCandidateForm, notes: e.target.value })}
+                placeholder="Notes (optional)"
+                rows={2}
+              />
+            </FormField>
+          </div>
+        </Modal>
+
+        {/* Promote candidate confirmation */}
+        <ConfirmDialog
+          open={!!promotingCandidate}
+          onClose={() => setPromotingCandidate(null)}
+          onConfirm={handlePromoteCandidate}
+          title="Promote Candidate"
+          message={`Are you sure you want to promote ${promotingCandidate?.employee_name || 'this candidate'} to incumbent for this position?`}
+          confirmLabel="Promote"
+          loading={promoting}
         />
       </div>
     )

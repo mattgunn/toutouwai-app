@@ -47,6 +47,11 @@ export async function submitSurveyResponses(surveyId: string, body: unknown): Pr
   if (!res.ok) throw new Error('Failed to submit responses')
 }
 
+export async function deleteSurvey(id: string): Promise<void> {
+  const res = await jsonDelete(`${BASE}/surveys/${id}`)
+  if (!res.ok) throw new Error('Failed to delete survey')
+}
+
 export async function fetchSurveyResults(surveyId: string): Promise<SurveyResultsResponse> {
   const res = await authFetch(`${BASE}/surveys/${surveyId}/results`)
   if (!res.ok) throw new Error('Failed to fetch results')

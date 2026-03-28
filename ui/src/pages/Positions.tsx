@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { fetchPositions, fetchDepartments, createPosition, updatePosition, deletePosition, fetchEmployees } from '../api'
+import { fetchPositions, fetchDepartments, createPosition, updatePosition, deletePosition, fetchEmployees, updateEmployee } from '../api'
 import type { Position, Department, Employee } from '../types'
 import { SkeletonTable } from '../components/Skeleton'
 import PageHeader from '../components/PageHeader'
@@ -17,6 +17,7 @@ const EMPTY_FORM = { title: '', department_id: '', level: '', description: '' }
 export default function Positions() {
   const [positions, setPositions] = useState<Position[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
+  const [allEmployees, setAllEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<Position | null>(null)
@@ -31,11 +32,17 @@ export default function Positions() {
   const [posEmployees, setPosEmployees] = useState<Employee[]>([])
   const [detailLoading, setDetailLoading] = useState(false)
 
+  // Assign employee state
+  const [showAssign, setShowAssign] = useState(false)
+  const [assignEmployeeId, setAssignEmployeeId] = useState('')
+  const [assigning, setAssigning] = useState(false)
+
   const loadData = () => {
     setLoading(true)
     Promise.all([
       fetchPositions().then(setPositions),
       fetchDepartments().then(setDepartments),
+      fetchEmployees({ per_page: '1000' }).then(r => setAllEmployees(r.employees)),
     ])
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -43,18 +50,14 @@ export default function Positions() {
 
   useEffect(() => { loadData() }, [])
 
-  // Fetch employees for selected position (client-side filter since backend doesn't support position filter)
+  // Filter employees for selected position from already-loaded data
   useEffect(() => {
     if (!selectedPos) return
     setDetailLoading(true)
-    fetchEmployees({ per_page: '1000' })
-      .then(r => {
-        const filtered = r.employees.filter(emp => emp.position_id === selectedPos.id)
-        setPosEmployees(filtered)
-      })
-      .catch(() => setPosEmployees([]))
-      .finally(() => setDetailLoading(false))
-  }, [selectedPos])
+    const filtered = allEmployees.filter(emp => emp.position_id === selectedPos.id)
+    setPosEmployees(filtered)
+    setDetailLoading(false)
+  }, [selectedPos, allEmployees])
 
   const openCreate = () => {
     setEditing(null)
@@ -121,11 +124,40 @@ export default function Positions() {
     }
   }
 
+  const handleAssignEmployee = async () => {
+    if (!assignEmployeeId || !selectedPos) return
+    setAssigning(true)
+    try {
+      await updateEmployee(assignEmployeeId, { position_id: selectedPos.id })
+      toast.success('Employee assigned to position')
+      setShowAssign(false)
+      setAssignEmployeeId('')
+      // Refresh data
+      const empRes = await fetchEmployees({ per_page: '1000' })
+      setAllEmployees(empRes.employees)
+      fetchPositions().then(setPositions).catch(() => {})
+    } catch {
+      toast.error('Failed to assign employee')
+    } finally {
+      setAssigning(false)
+    }
+  }
+
+  // Employees not already in this position (for assign dropdown)
+  const unassignedEmployees = allEmployees.filter(emp => !selectedPos || emp.position_id !== selectedPos.id)
+
   const columns = [
     { key: 'title', header: 'Title', render: (pos: Position) => <span className="text-white font-medium">{pos.title}</span> },
     { key: 'department_name', header: 'Department', className: 'hidden md:table-cell', render: (pos: Position) => <span className="text-gray-400">{pos.department_name || '\u2014'}</span> },
     { key: 'level', header: 'Level', className: 'hidden lg:table-cell', render: (pos: Position) => <span className="text-gray-400">{pos.level || '\u2014'}</span> },
-    { key: 'employee_count', header: 'Employees', render: (pos: Position) => <span className="text-gray-400">{pos.employee_count}</span> },
+    { key: 'employee_count', header: 'Employees', render: (pos: Position) => (
+      <span className="text-gray-400">
+        {pos.employee_count}
+        {pos.employee_count === 0 && (
+          <span className="ml-2 inline-block px-1.5 py-0.5 rounded text-xs font-medium bg-amber-600/20 text-amber-400">Vacant</span>
+        )}
+      </span>
+    )},
   ]
 
   const employeeColumns = [
@@ -172,6 +204,7 @@ export default function Positions() {
               <h2 className="text-lg font-bold text-white">{selectedPos.title}</h2>
             </div>
             <div className="flex items-center gap-2">
+              <Button size="sm" onClick={() => setShowAssign(true)}>Assign Employee</Button>
               <Button size="sm" onClick={() => openEdit(selectedPos)}>Edit</Button>
               <Button variant="danger" size="sm" onClick={() => setDeleteId(selectedPos.id)}>Delete</Button>
             </div>
@@ -187,9 +220,10 @@ export default function Positions() {
             <span>Employees: <span className="text-white">{selectedPos.employee_count}</span></span>
           </div>
 
-          {selectedPos.description && (
-            <p className="text-gray-400 text-sm mb-4">{selectedPos.description}</p>
-          )}
+          <div className="mb-4">
+            <p className="text-xs text-gray-500 mb-1">Description</p>
+            <p className="text-gray-400 text-sm">{selectedPos.description || <span className="italic text-gray-600">No description</span>}</p>
+          </div>
 
           <h3 className="text-sm font-semibold text-gray-300 mb-3">Employees in this position</h3>
           {detailLoading ? (
@@ -272,6 +306,29 @@ export default function Positions() {
         confirmLabel="Delete"
         loading={deleting}
       />
+
+      {/* Assign employee modal */}
+      <Modal
+        open={showAssign}
+        onClose={() => { setShowAssign(false); setAssignEmployeeId('') }}
+        title={`Assign Employee to ${selectedPos?.title || 'Position'}`}
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => { setShowAssign(false); setAssignEmployeeId('') }} disabled={assigning}>Cancel</Button>
+            <Button onClick={handleAssignEmployee} loading={assigning} disabled={!assignEmployeeId}>Assign</Button>
+          </>
+        }
+      >
+        <FormField label="Employee" required>
+          <Select
+            value={assignEmployeeId}
+            onChange={e => setAssignEmployeeId(e.target.value)}
+            placeholder="Select employee"
+            options={unassignedEmployees.map(emp => ({ value: emp.id, label: `${emp.first_name} ${emp.last_name}` }))}
+          />
+        </FormField>
+      </Modal>
     </div>
   )
 }

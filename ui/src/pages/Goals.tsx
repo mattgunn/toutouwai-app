@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react'
-import { fetchGoals, updateGoal } from '../api'
+import { fetchGoals, createGoal, updateGoal, deleteGoal, fetchEmployees } from '../api'
 import { formatDate } from '../utils/format'
-import type { Goal } from '../types'
+import type { Goal, Employee } from '../types'
 import StatusBadge from '../components/StatusBadge'
 import PageHeader from '../components/PageHeader'
 import DataTable from '../components/DataTable'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
-import { FormField, Input, Select } from '../components/FormField'
+import { FormField, Input, Select, Textarea } from '../components/FormField'
 import { SkeletonCards } from '../components/Skeleton'
+import ConfirmDialog from '../components/ConfirmDialog'
 import { useToast } from '../components/Toast'
 import EmployeeLink from '../components/EmployeeLink'
 
@@ -20,17 +21,30 @@ const STATUS_OPTIONS = [
 
 export default function Goals() {
   const [goals, setGoals] = useState<Goal[]>([])
+  const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null)
   const [editing, setEditing] = useState(false)
   const [editProgress, setEditProgress] = useState('0')
   const [editStatus, setEditStatus] = useState('')
   const [submitting, setSubmitting] = useState(false)
+
+  // New goal
+  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [createSubmitting, setCreateSubmitting] = useState(false)
+
+  // Delete
+  const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
   const toast = useToast()
 
   const loadData = () => {
     setLoading(true)
-    fetchGoals().then(setGoals).catch(() => {}).finally(() => setLoading(false))
+    Promise.all([
+      fetchGoals().then(setGoals).catch(() => {}),
+      fetchEmployees().then(r => setEmployees(r.employees)).catch(() => {}),
+    ]).finally(() => setLoading(false))
   }
 
   useEffect(() => { loadData() }, [])
@@ -59,6 +73,45 @@ export default function Goals() {
     setEditProgress(String(selectedGoal.progress))
     setEditStatus(selectedGoal.status)
     setEditing(true)
+  }
+
+  const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setCreateSubmitting(true)
+    try {
+      const fd = new FormData(e.currentTarget)
+      await createGoal({
+        employee_id: fd.get('employee_id'),
+        title: fd.get('title'),
+        description: fd.get('description') || null,
+        due_date: fd.get('due_date') || null,
+        status: 'not_started',
+        progress: 0,
+      })
+      setShowCreateForm(false)
+      toast.success('Goal created')
+      loadData()
+    } catch {
+      toast.error('Failed to create goal')
+    } finally {
+      setCreateSubmitting(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deleteId) return
+    setDeleting(true)
+    try {
+      await deleteGoal(deleteId)
+      if (selectedGoal?.id === deleteId) setSelectedGoal(null)
+      toast.success('Goal deleted')
+      loadData()
+    } catch {
+      toast.error('Failed to delete goal')
+    } finally {
+      setDeleting(false)
+      setDeleteId(null)
+    }
   }
 
   const goalColumns = [
@@ -92,7 +145,14 @@ export default function Goals() {
 
   return (
     <div>
-      <PageHeader title="Goals" />
+      <PageHeader
+        title="Goals"
+        actions={
+          <Button onClick={() => setShowCreateForm(true)}>
+            New Goal
+          </Button>
+        }
+      />
 
       <DataTable
         columns={goalColumns}
@@ -100,8 +160,44 @@ export default function Goals() {
         keyField="id"
         emptyMessage="No goals yet"
         emptyIcon="🎯"
+        emptyAction="New Goal"
+        onEmptyAction={() => setShowCreateForm(true)}
         onRowClick={(goal) => { setSelectedGoal(goal); setEditing(false) }}
       />
+
+      {/* Create Goal modal */}
+      <Modal
+        open={showCreateForm}
+        onClose={() => setShowCreateForm(false)}
+        title="New Goal"
+        size="md"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowCreateForm(false)} disabled={createSubmitting}>Cancel</Button>
+            <Button type="submit" form="goal-form" loading={createSubmitting}>Create</Button>
+          </>
+        }
+      >
+        <form id="goal-form" onSubmit={handleCreate} className="space-y-4">
+          <FormField label="Employee" required>
+            <Select
+              name="employee_id"
+              required
+              placeholder="Select employee..."
+              options={employees.map(emp => ({ value: emp.id, label: `${emp.first_name} ${emp.last_name}` }))}
+            />
+          </FormField>
+          <FormField label="Title" required>
+            <Input name="title" required placeholder="Goal title" />
+          </FormField>
+          <FormField label="Description">
+            <Textarea name="description" placeholder="Description (optional)" rows={3} />
+          </FormField>
+          <FormField label="Due Date">
+            <Input name="due_date" type="date" />
+          </FormField>
+        </form>
+      </Modal>
 
       {/* Detail modal */}
       <Modal
@@ -110,7 +206,11 @@ export default function Goals() {
         title="Goal Details"
         size="md"
         footer={
-          <Button size="sm" onClick={openEdit}>Edit</Button>
+          <div className="flex gap-2">
+            <Button variant="danger" size="sm" onClick={() => { setDeleteId(selectedGoal!.id); setSelectedGoal(null) }}>Delete</Button>
+            <div className="flex-1" />
+            <Button size="sm" onClick={openEdit}>Edit</Button>
+          </div>
         }
       >
         {selectedGoal && (
@@ -187,6 +287,17 @@ export default function Goals() {
           </div>
         )}
       </Modal>
+
+      {/* Delete confirmation */}
+      <ConfirmDialog
+        open={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        onConfirm={handleDelete}
+        title="Delete Goal"
+        message="Are you sure you want to delete this goal? This action cannot be undone."
+        confirmLabel="Delete"
+        loading={deleting}
+      />
     </div>
   )
 }

@@ -4,6 +4,7 @@ import {
   fetchSurveys,
   createSurvey,
   updateSurvey,
+  deleteSurvey,
   fetchSurveyQuestions,
   createSurveyQuestion,
   deleteSurveyQuestion,
@@ -187,6 +188,8 @@ function SurveyDetail({
   const [deleteQId, setDeleteQId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [statusLoading, setStatusLoading] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteLoading, setDeleteLoading] = useState(false)
   const toast = useToast()
 
   useEffect(() => {
@@ -201,6 +204,20 @@ function SurveyDetail({
 
   const reloadQuestions = () => {
     fetchSurveyQuestions(survey.id).then(setQuestions).catch(() => {})
+  }
+
+  const handleDeleteSurvey = async () => {
+    setDeleteLoading(true)
+    try {
+      await deleteSurvey(survey.id)
+      toast.success('Survey deleted')
+      onBack()
+    } catch {
+      toast.error('Failed to delete survey')
+    } finally {
+      setDeleteLoading(false)
+      setShowDeleteConfirm(false)
+    }
   }
 
   const handleStatusChange = async (status: string) => {
@@ -275,7 +292,24 @@ function SurveyDetail({
             Close Survey
           </Button>
         )}
+        <Button
+          variant="danger"
+          size="sm"
+          onClick={() => setShowDeleteConfirm(true)}
+        >
+          Delete
+        </Button>
       </div>
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDeleteSurvey}
+        title="Delete Survey"
+        message="Are you sure you want to delete this survey? All questions and responses will be permanently removed."
+        confirmLabel="Delete"
+        loading={deleteLoading}
+      />
 
       {view === 'questions' && (
         <>
