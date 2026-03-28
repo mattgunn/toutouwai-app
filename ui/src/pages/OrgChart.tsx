@@ -90,18 +90,19 @@ function OrgNodeCard({
 export default function OrgChart() {
   const [tree, setTree] = useState<OrgNode[]>([])
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchEmployees({ per_page: '1000' })
+    setLoading(true)
+    fetchEmployees({ per_page: '500' })
       .then(r => {
-        const built = buildTree(r.employees)
+        const emps = r.employees || []
+        if (emps.length === 0) {
+          setTree([])
+          return
+        }
+        const built = buildTree(emps)
         setTree(built)
-        // Default: expand depth 0 and 1
-        const expanded = new Set<string>()
-        getDefaultExpanded(built, 0, expanded)
-        // collapsed = everything NOT in expanded that has children
-        // Actually easier: collapsed starts empty (everything expanded),
-        // but we only want depth 0-1 expanded. So collect all node ids at depth >= 2 that have children.
         const toCollapse = new Set<string>()
         function walk(nodes: OrgNode[], d: number) {
           for (const n of nodes) {
@@ -115,6 +116,7 @@ export default function OrgChart() {
         setCollapsed(toCollapse)
       })
       .catch(() => {})
+      .finally(() => setLoading(false))
   }, [])
 
   const handleToggle = useCallback((id: string) => {
@@ -129,12 +131,28 @@ export default function OrgChart() {
     })
   }, [])
 
+  if (loading) {
+    return (
+      <div>
+        <PageHeader title="Organisation Chart" />
+        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 space-y-4">
+          {[1,2,3,4,5].map(i => (
+            <div key={i} className="flex items-center gap-3 animate-pulse" style={{ paddingLeft: `${(i % 3) * 24}px` }}>
+              <div className="w-8 h-8 bg-gray-700 rounded-full shrink-0" />
+              <div className="h-4 bg-gray-700 rounded w-40" />
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div>
       <PageHeader title="Organisation Chart" />
       <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
         {tree.length === 0 ? (
-          <p className="text-gray-500 text-sm">No employees to display</p>
+          <p className="text-gray-500 text-sm py-8 text-center">No employees to display. Seed data in Settings → Developer to see the org chart.</p>
         ) : (
           tree.map(root => (
             <OrgNodeCard
