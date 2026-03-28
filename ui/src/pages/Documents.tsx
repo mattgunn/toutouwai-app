@@ -71,11 +71,9 @@ export default function Documents() {
     setLoading(true)
     Promise.all([
       loadDocuments(),
-      fetchEmployees().then(r => setEmployees(r.employees)),
-      fetchExpiringDocuments(30).then(setExpiringDocs),
-    ]).catch(() => {
-      toast.error('Failed to load documents')
-    }).finally(() => setLoading(false))
+      fetchEmployees().then(r => setEmployees(r.employees)).catch(() => {}),
+      fetchExpiringDocuments(30).then(setExpiringDocs).catch(() => {}),
+    ]).finally(() => setLoading(false))
   }, [])
 
   const loadDocuments = () => {
@@ -86,9 +84,7 @@ export default function Documents() {
   }
 
   useEffect(() => {
-    loadDocuments().catch(() => {
-      toast.error('Failed to filter documents')
-    })
+    loadDocuments().catch(() => {})
   }, [filterCategory, filterEmployee])
 
   const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {

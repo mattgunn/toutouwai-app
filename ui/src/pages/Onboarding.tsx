@@ -43,19 +43,15 @@ export default function Onboarding() {
   useEffect(() => {
     setLoading(true)
     Promise.all([
-      fetchOnboardingTemplates().then(setTemplates),
-      fetchOnboardingChecklists().then(setChecklists),
-      fetchEmployees().then(r => setEmployees(r.employees)),
-    ]).catch(() => {
-      toast.error('Failed to load onboarding data')
-    }).finally(() => setLoading(false))
+      fetchOnboardingTemplates().then(setTemplates).catch(() => {}),
+      fetchOnboardingChecklists().then(setChecklists).catch(() => {}),
+      fetchEmployees().then(r => setEmployees(r.employees)).catch(() => {}),
+    ]).finally(() => setLoading(false))
   }, [])
 
   const loadTemplateTasks = (t: OnboardingTemplate) => {
     setSelectedTemplate(t)
-    fetchTemplateTasks(t.id).then(setTemplateTasks).catch(() => {
-      toast.error('Failed to load template tasks')
-    })
+    fetchTemplateTasks(t.id).then(setTemplateTasks).catch(() => {})
   }
 
   const handleCreateTemplate = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -246,9 +242,9 @@ export default function Onboarding() {
                     </div>
                   </div>
 
-                  {cl.tasks.length > 0 && (
+                  {(cl.tasks ?? []).length > 0 && (
                     <div className="space-y-1">
-                      {cl.tasks.map(task => (
+                      {(cl.tasks ?? []).map(task => (
                         <div
                           key={task.id}
                           className="flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-800/50 transition-colors"

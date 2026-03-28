@@ -48,11 +48,10 @@ export default function Benefits() {
 
   useEffect(() => {
     Promise.all([
-      fetchBenefitPlans().then(setPlans),
-      fetchBenefitEnrollments().then(setEnrollments),
-      fetchEmployees().then(r => setEmployees(r.employees)),
+      fetchBenefitPlans().then(setPlans).catch(() => {}),
+      fetchBenefitEnrollments().then(setEnrollments).catch(() => {}),
+      fetchEmployees().then(r => setEmployees(r.employees)).catch(() => {}),
     ])
-      .catch(() => toast.error('Failed to load benefits data'))
       .finally(() => setLoading(false))
   }, [])
 

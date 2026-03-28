@@ -24,19 +24,14 @@ export default function Surveys() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [detailView, setDetailView] = useState<'questions' | 'results'>('questions')
   const [loading, setLoading] = useState(true)
-  const toast = useToast()
 
   useEffect(() => {
     setLoading(true)
-    fetchSurveys().then(setSurveys).catch(() => {
-      toast.error('Failed to load surveys')
-    }).finally(() => setLoading(false))
+    fetchSurveys().then(setSurveys).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
   const reload = () => {
-    fetchSurveys().then(setSurveys).catch(() => {
-      toast.error('Failed to reload surveys')
-    })
+    fetchSurveys().then(setSurveys).catch(() => {})
   }
 
   const selected = surveys.find(s => s.id === selectedId)
@@ -204,23 +199,17 @@ function SurveyDetail({
   const toast = useToast()
 
   useEffect(() => {
-    fetchSurveyQuestions(survey.id).then(setQuestions).catch(() => {
-      toast.error('Failed to load questions')
-    })
+    fetchSurveyQuestions(survey.id).then(setQuestions).catch(() => {})
   }, [survey.id])
 
   useEffect(() => {
     if (view === 'results') {
-      fetchSurveyResults(survey.id).then(setResults).catch(() => {
-        toast.error('Failed to load results')
-      })
+      fetchSurveyResults(survey.id).then(setResults).catch(() => {})
     }
   }, [survey.id, view])
 
   const reloadQuestions = () => {
-    fetchSurveyQuestions(survey.id).then(setQuestions).catch(() => {
-      toast.error('Failed to reload questions')
-    })
+    fetchSurveyQuestions(survey.id).then(setQuestions).catch(() => {})
   }
 
   const handleStatusChange = async (status: string) => {
@@ -324,7 +313,7 @@ function SurveyDetail({
                         {q.question_text}
                         {q.required ? <span className="text-red-400 ml-1">*</span> : null}
                       </p>
-                      <p className="text-xs text-gray-500 mt-1 capitalize">{q.question_type.replace(/_/g, ' ')}</p>
+                      <p className="text-xs text-gray-500 mt-1 capitalize">{(q.question_type || '').replace(/_/g, ' ')}</p>
                       {q.options && Array.isArray(q.options) && (
                         <p className="text-xs text-gray-500 mt-1">Options: {q.options.join(', ')}</p>
                       )}

@@ -5,8 +5,6 @@ import EmptyState from '../components/EmptyState'
 import Button from '../components/Button'
 import { Select, Input } from '../components/FormField'
 import { SkeletonTable } from '../components/Skeleton'
-import { useToast } from '../components/Toast'
-
 const ENTITY_TYPES = ['', 'employee', 'department', 'position', 'leave_request', 'time_entry', 'job_posting', 'applicant', 'review', 'goal']
 
 export default function AuditLog() {
@@ -17,7 +15,6 @@ export default function AuditLog() {
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
   const [loading, setLoading] = useState(true)
-  const toast = useToast()
 
   const perPage = 50
 
@@ -30,9 +27,7 @@ export default function AuditLog() {
     fetchAuditLog(params).then(r => {
       setEntries(r.entries)
       setTotal(r.total)
-    }).catch(() => {
-      toast.error('Failed to load audit log')
-    }).finally(() => setLoading(false))
+    }).catch(() => {}).finally(() => setLoading(false))
   }, [page, entityType, fromDate, toDate])
 
   const totalPages = Math.ceil(total / perPage)
@@ -111,7 +106,7 @@ export default function AuditLog() {
                     <td className="px-4 py-3 text-white">{entry.user_name || entry.user_email || '\u2014'}</td>
                     <td className="px-4 py-3">{actionBadge(entry.action)}</td>
                     <td className="px-4 py-3 text-gray-400">
-                      <span className="capitalize">{entry.entity_type.replace(/_/g, ' ')}</span>
+                      <span className="capitalize">{(entry.entity_type || '').replace(/_/g, ' ')}</span>
                     </td>
                     <td className="px-4 py-3 text-gray-400 hidden md:table-cell">{entry.field_name || '\u2014'}</td>
                     <td className="px-4 py-3 text-gray-500 hidden lg:table-cell truncate max-w-32">{entry.old_value || '\u2014'}</td>

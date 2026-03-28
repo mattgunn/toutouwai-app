@@ -39,24 +39,14 @@ export default function MyProfile() {
 
   useEffect(() => {
     if (section === 'leave') {
-      fetchMyLeave().then(setLeaveRequests).catch(() => {
-        toast.error('Failed to load leave data')
-      })
-      fetchMyLeaveBalances().then(setLeaveBalances).catch(() => {
-        toast.error('Failed to load leave balances')
-      })
+      fetchMyLeave().then(setLeaveRequests).catch(() => {})
+      fetchMyLeaveBalances().then(setLeaveBalances).catch(() => {})
     } else if (section === 'time') {
-      fetchMyTime().then(setTimeEntries).catch(() => {
-        toast.error('Failed to load time entries')
-      })
+      fetchMyTime().then(setTimeEntries).catch(() => {})
     } else if (section === 'documents') {
-      fetchMyDocuments().then(setDocuments).catch(() => {
-        toast.error('Failed to load documents')
-      })
+      fetchMyDocuments().then(setDocuments).catch(() => {})
     } else if (section === 'onboarding') {
-      fetchMyOnboarding().then(setOnboarding).catch(() => {
-        toast.error('Failed to load onboarding data')
-      })
+      fetchMyOnboarding().then(setOnboarding).catch(() => {})
     }
   }, [section])
 
@@ -326,7 +316,7 @@ export default function MyProfile() {
                     </div>
                   </div>
                   <div className="space-y-1">
-                    {cl.tasks.map(task => (
+                    {(cl.tasks ?? []).map(task => (
                       <div key={task.id} className="flex items-center gap-3 px-3 py-2 rounded">
                         <div className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center ${
                           task.status === 'completed' ? 'bg-emerald-600 border-emerald-600' : 'border-gray-600'

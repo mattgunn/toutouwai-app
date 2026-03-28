@@ -22,25 +22,18 @@ export default function Workflows() {
   const [definitions, setDefinitions] = useState<WorkflowDefinition[]>([])
   const [showForm, setShowForm] = useState(false)
   const [loading, setLoading] = useState(true)
-  const toast = useToast()
 
   useEffect(() => {
     setLoading(true)
     Promise.all([
-      fetchMyApprovals().then(setApprovals),
-      fetchWorkflowDefinitions().then(setDefinitions),
-    ]).catch(() => {
-      toast.error('Failed to load workflows')
-    }).finally(() => setLoading(false))
+      fetchMyApprovals().then(setApprovals).catch(() => {}),
+      fetchWorkflowDefinitions().then(setDefinitions).catch(() => {}),
+    ]).finally(() => setLoading(false))
   }, [])
 
   const reload = () => {
-    fetchMyApprovals().then(setApprovals).catch(() => {
-      toast.error('Failed to reload approvals')
-    })
-    fetchWorkflowDefinitions().then(setDefinitions).catch(() => {
-      toast.error('Failed to reload definitions')
-    })
+    fetchMyApprovals().then(setApprovals).catch(() => {})
+    fetchWorkflowDefinitions().then(setDefinitions).catch(() => {})
   }
 
   if (loading) {
@@ -135,7 +128,7 @@ function ApprovalsView({ approvals, onAction }: { approvals: WorkflowApproval[];
             <div>
               <p className="text-white font-medium">{approval.definition_name || 'Workflow'}</p>
               <p className="text-xs text-gray-500 mt-1">
-                <span className="capitalize">{approval.entity_type.replace(/_/g, ' ')}</span>
+                <span className="capitalize">{(approval.entity_type || '').replace(/_/g, ' ')}</span>
                 {' \u2022 '}Initiated by {approval.initiated_by_name || 'Unknown'}
                 {' \u2022 '}{new Date(approval.created_at).toLocaleDateString()}
               </p>
@@ -308,8 +301,8 @@ function DefinitionsView({
               {definitions.map(def => (
                 <tr key={def.id} className="border-t border-gray-800 hover:bg-gray-800/50 transition-colors">
                   <td className="px-4 py-3 text-white font-medium">{def.name}</td>
-                  <td className="px-4 py-3 text-gray-400 capitalize">{def.trigger_entity.replace(/_/g, ' ')}</td>
-                  <td className="px-4 py-3 text-gray-400 capitalize hidden md:table-cell">{def.trigger_action.replace(/_/g, ' ')}</td>
+                  <td className="px-4 py-3 text-gray-400 capitalize">{(def.trigger_entity || '').replace(/_/g, ' ')}</td>
+                  <td className="px-4 py-3 text-gray-400 capitalize hidden md:table-cell">{(def.trigger_action || '').replace(/_/g, ' ')}</td>
                   <td className="px-4 py-3 text-gray-400 hidden md:table-cell">{def.step_count || 0}</td>
                   <td className="px-4 py-3">
                     <StatusBadge status={def.is_active ? 'active' : 'inactive'} />

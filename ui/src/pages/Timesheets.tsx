@@ -3,17 +3,14 @@ import { fetchTimeEntries } from '../api'
 import type { TimeEntry } from '../types'
 import EmptyState from '../components/EmptyState'
 import { SkeletonTable } from '../components/Skeleton'
-import { useToast } from '../components/Toast'
-
 export default function Timesheets() {
   const [entries, setEntries] = useState<TimeEntry[]>([])
   const [loading, setLoading] = useState(true)
-  const toast = useToast()
 
   useEffect(() => {
     fetchTimeEntries()
       .then(setEntries)
-      .catch(() => toast.error('Failed to load time entries'))
+      .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
 

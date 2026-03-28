@@ -43,10 +43,9 @@ export default function Compensation() {
 
   useEffect(() => {
     Promise.all([
-      fetchCurrentCompensation().then(setCurrent),
-      fetchEmployees().then(r => setEmployees(r.employees)),
+      fetchCurrentCompensation().then(setCurrent).catch(() => {}),
+      fetchEmployees().then(r => setEmployees(r.employees)).catch(() => {}),
     ])
-      .catch(() => toast.error('Failed to load compensation data'))
       .finally(() => setLoading(false))
   }, [])
 
@@ -54,7 +53,7 @@ export default function Compensation() {
     if (selectedEmployee) {
       fetchCompensation({ employee_id: selectedEmployee })
         .then(setHistory)
-        .catch(() => toast.error('Failed to load compensation history'))
+        .catch(() => {})
     }
   }, [selectedEmployee])
 

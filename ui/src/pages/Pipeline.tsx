@@ -2,19 +2,16 @@ import { useState, useEffect } from 'react'
 import { fetchApplicants } from '../api'
 import type { Applicant } from '../types'
 import { Skeleton } from '../components/Skeleton'
-import { useToast } from '../components/Toast'
-
 const STAGES = ['applied', 'screening', 'interview', 'offer', 'hired', 'rejected']
 
 export default function Pipeline() {
   const [applicants, setApplicants] = useState<Applicant[]>([])
   const [loading, setLoading] = useState(true)
-  const toast = useToast()
 
   useEffect(() => {
     fetchApplicants()
       .then(setApplicants)
-      .catch(() => toast.error('Failed to load pipeline data'))
+      .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
 

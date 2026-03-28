@@ -3,17 +3,14 @@ import { fetchDepartments } from '../api'
 import type { Department } from '../types'
 import EmptyState from '../components/EmptyState'
 import { SkeletonCards } from '../components/Skeleton'
-import { useToast } from '../components/Toast'
-
 export default function Departments() {
   const [departments, setDepartments] = useState<Department[]>([])
   const [loading, setLoading] = useState(true)
-  const toast = useToast()
 
   useEffect(() => {
     fetchDepartments()
       .then(setDepartments)
-      .catch(() => toast.error('Failed to load departments'))
+      .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
 

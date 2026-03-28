@@ -3,17 +3,14 @@ import { fetchLeaveBalances } from '../api'
 import type { LeaveBalance } from '../types'
 import EmptyState from '../components/EmptyState'
 import { SkeletonTable } from '../components/Skeleton'
-import { useToast } from '../components/Toast'
-
 export default function LeaveBalances() {
   const [balances, setBalances] = useState<LeaveBalance[]>([])
   const [loading, setLoading] = useState(true)
-  const toast = useToast()
 
   useEffect(() => {
     fetchLeaveBalances()
       .then(setBalances)
-      .catch(() => toast.error('Failed to load leave balances'))
+      .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
 
@@ -47,8 +44,8 @@ export default function LeaveBalances() {
             <tbody>
               {balances.map((bal, i) => (
                 <tr key={i} className="border-t border-gray-800 hover:bg-gray-800/50 transition-colors">
-                  <td className="px-4 py-3 text-white">{bal.employee_name}</td>
-                  <td className="px-4 py-3 text-gray-400">{bal.leave_type_name}</td>
+                  <td className="px-4 py-3 text-white">{bal.employee_name || '\u2014'}</td>
+                  <td className="px-4 py-3 text-gray-400">{bal.leave_type_name || '\u2014'}</td>
                   <td className="px-4 py-3 text-gray-400">{bal.entitled}</td>
                   <td className="px-4 py-3 text-gray-400">{bal.used}</td>
                   <td className="px-4 py-3 text-emerald-400 font-medium">{bal.remaining}</td>

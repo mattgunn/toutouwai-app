@@ -7,19 +7,16 @@ import EmptyState from '../components/EmptyState'
 import Avatar from '../components/Avatar'
 import { Input } from '../components/FormField'
 import { SkeletonTable } from '../components/Skeleton'
-import { useToast } from '../components/Toast'
-
 export default function Employees() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState<{ key: string; dir: 'asc' | 'desc' } | null>(null)
-  const toast = useToast()
 
   useEffect(() => {
     fetchEmployees()
       .then(r => setEmployees(r.employees))
-      .catch(() => toast.error('Failed to load employees'))
+      .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
 

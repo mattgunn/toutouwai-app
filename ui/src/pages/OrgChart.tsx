@@ -32,7 +32,7 @@ function OrgNodeCard({ node, depth = 0 }: { node: OrgNode; depth?: number }) {
     <div className={depth > 0 ? 'ml-6 border-l border-gray-800 pl-4' : ''}>
       <div className="flex items-center gap-3 py-2">
         <div className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center text-xs text-gray-300 font-medium shrink-0">
-          {node.employee.first_name[0]}{node.employee.last_name[0]}
+          {node.employee.first_name?.[0]}{node.employee.last_name?.[0]}
         </div>
         <div>
           <p className="text-sm text-white font-medium">{node.employee.first_name} {node.employee.last_name}</p>

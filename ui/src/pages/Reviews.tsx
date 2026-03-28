@@ -5,32 +5,25 @@ import StatusBadge from '../components/StatusBadge'
 import EmptyState from '../components/EmptyState'
 import Tabs from '../components/Tabs'
 import { SkeletonTable } from '../components/Skeleton'
-import { useToast } from '../components/Toast'
-
 export default function Reviews() {
   const [cycles, setCycles] = useState<ReviewCycle[]>([])
   const [selectedCycle, setSelectedCycle] = useState<string | null>(null)
   const [reviews, setReviews] = useState<Review[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingReviews, setLoadingReviews] = useState(false)
-  const toast = useToast()
 
   useEffect(() => {
     setLoading(true)
     fetchReviewCycles().then(data => {
       setCycles(data)
       if (data.length > 0) setSelectedCycle(data[0].id)
-    }).catch(() => {
-      toast.error('Failed to load review cycles')
-    }).finally(() => setLoading(false))
+    }).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
   useEffect(() => {
     if (selectedCycle) {
       setLoadingReviews(true)
-      fetchReviews({ cycle_id: selectedCycle }).then(setReviews).catch(() => {
-        toast.error('Failed to load reviews')
-      }).finally(() => setLoadingReviews(false))
+      fetchReviews({ cycle_id: selectedCycle }).then(setReviews).catch(() => {}).finally(() => setLoadingReviews(false))
     }
   }, [selectedCycle])
 

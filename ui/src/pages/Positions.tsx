@@ -3,17 +3,14 @@ import { fetchPositions } from '../api'
 import type { Position } from '../types'
 import EmptyState from '../components/EmptyState'
 import { SkeletonTable } from '../components/Skeleton'
-import { useToast } from '../components/Toast'
-
 export default function Positions() {
   const [positions, setPositions] = useState<Position[]>([])
   const [loading, setLoading] = useState(true)
-  const toast = useToast()
 
   useEffect(() => {
     fetchPositions()
       .then(setPositions)
-      .catch(() => toast.error('Failed to load positions'))
+      .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
 

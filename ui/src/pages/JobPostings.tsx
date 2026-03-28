@@ -4,17 +4,14 @@ import type { JobPosting } from '../types'
 import StatusBadge from '../components/StatusBadge'
 import EmptyState from '../components/EmptyState'
 import { SkeletonCards } from '../components/Skeleton'
-import { useToast } from '../components/Toast'
-
 export default function JobPostings() {
   const [postings, setPostings] = useState<JobPosting[]>([])
   const [loading, setLoading] = useState(true)
-  const toast = useToast()
 
   useEffect(() => {
     fetchJobPostings()
       .then(setPostings)
-      .catch(() => toast.error('Failed to load job postings'))
+      .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
 
@@ -48,7 +45,7 @@ export default function JobPostings() {
               <p className="text-gray-400 text-sm mb-3">{posting.department_name || 'No department'}</p>
               <div className="flex items-center gap-4 text-xs text-gray-500">
                 {posting.location && <span>{posting.location}</span>}
-                <span>{posting.employment_type.replace(/_/g, ' ')}</span>
+                <span>{(posting.employment_type || '').replace(/_/g, ' ')}</span>
                 <span>{posting.applicant_count} applicant{posting.applicant_count !== 1 ? 's' : ''}</span>
               </div>
             </div>

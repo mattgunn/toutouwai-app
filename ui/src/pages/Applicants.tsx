@@ -4,17 +4,14 @@ import type { Applicant } from '../types'
 import StatusBadge from '../components/StatusBadge'
 import EmptyState from '../components/EmptyState'
 import { SkeletonTable } from '../components/Skeleton'
-import { useToast } from '../components/Toast'
-
 export default function Applicants() {
   const [applicants, setApplicants] = useState<Applicant[]>([])
   const [loading, setLoading] = useState(true)
-  const toast = useToast()
 
   useEffect(() => {
     fetchApplicants()
       .then(setApplicants)
-      .catch(() => toast.error('Failed to load applicants'))
+      .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
 

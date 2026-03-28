@@ -4,17 +4,14 @@ import type { LeaveRequest } from '../types'
 import StatusBadge from '../components/StatusBadge'
 import EmptyState from '../components/EmptyState'
 import { SkeletonTable } from '../components/Skeleton'
-import { useToast } from '../components/Toast'
-
 export default function LeaveRequests() {
   const [requests, setRequests] = useState<LeaveRequest[]>([])
   const [loading, setLoading] = useState(true)
-  const toast = useToast()
 
   useEffect(() => {
     fetchLeaveRequests()
       .then(setRequests)
-      .catch(() => toast.error('Failed to load leave requests'))
+      .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
 

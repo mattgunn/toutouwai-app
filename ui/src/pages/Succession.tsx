@@ -71,11 +71,10 @@ export default function Succession() {
 
   useEffect(() => {
     Promise.all([
-      fetchSuccessionPlans().then(setPlans),
-      fetchEmployees().then(r => setEmployees(r.employees)),
-      fetchPositions().then(setPositions),
+      fetchSuccessionPlans().then(setPlans).catch(() => {}),
+      fetchEmployees().then(r => setEmployees(r.employees)).catch(() => {}),
+      fetchPositions().then(setPositions).catch(() => {}),
     ])
-      .catch(() => toast.error('Failed to load succession data'))
       .finally(() => setLoading(false))
   }, [])
 
@@ -83,7 +82,7 @@ export default function Succession() {
     if (selectedPlan) {
       fetchSuccessionCandidates(selectedPlan)
         .then(setCandidates)
-        .catch(() => toast.error('Failed to load candidates'))
+        .catch(() => {})
     }
   }, [selectedPlan])
 

@@ -4,18 +4,13 @@ import type { Goal } from '../types'
 import StatusBadge from '../components/StatusBadge'
 import EmptyState from '../components/EmptyState'
 import { SkeletonCards } from '../components/Skeleton'
-import { useToast } from '../components/Toast'
-
 export default function Goals() {
   const [goals, setGoals] = useState<Goal[]>([])
   const [loading, setLoading] = useState(true)
-  const toast = useToast()
 
   useEffect(() => {
     setLoading(true)
-    fetchGoals().then(setGoals).catch(() => {
-      toast.error('Failed to load goals')
-    }).finally(() => setLoading(false))
+    fetchGoals().then(setGoals).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
   if (loading) {
@@ -44,7 +39,7 @@ export default function Goals() {
               <div className="flex items-start justify-between mb-2">
                 <div>
                   <h3 className="text-white font-medium">{goal.title}</h3>
-                  <p className="text-xs text-gray-500 mt-0.5">{goal.employee_name}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{goal.employee_name || '\u2014'}</p>
                 </div>
                 <StatusBadge status={goal.status} />
               </div>

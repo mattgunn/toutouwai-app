@@ -52,7 +52,7 @@ export default function Dashboard() {
     )
   }
 
-  const pendingCount = data.pending_leave_requests + data.active_review_cycles
+  const pendingCount = (data.pending_leave_requests || 0) + (data.active_review_cycles || 0)
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -153,11 +153,11 @@ export default function Dashboard() {
             <span className="text-lg">🎉</span>
             <h2 className="text-sm font-semibold text-white">Recent Hires</h2>
           </div>
-          {data.recent_hires.length === 0 ? (
+          {(data.recent_hires ?? []).length === 0 ? (
             <p className="text-gray-500 text-sm">No recent hires</p>
           ) : (
             <ul className="space-y-3">
-              {data.recent_hires.map(emp => (
+              {(data.recent_hires ?? []).map(emp => (
                 <li key={emp.id} className="flex items-center gap-3">
                   <div className="flex items-center justify-center w-9 h-9 rounded-full bg-blue-600/20 text-blue-400 text-sm font-bold shrink-0">
                     {emp.first_name?.[0]}{emp.last_name?.[0]}
@@ -182,14 +182,14 @@ export default function Dashboard() {
             <span className="text-lg">🏖️</span>
             <h2 className="text-sm font-semibold text-white">Upcoming Leave</h2>
           </div>
-          {data.upcoming_leave.length === 0 ? (
+          {(data.upcoming_leave ?? []).length === 0 ? (
             <p className="text-gray-500 text-sm">No upcoming leave</p>
           ) : (
             <ul className="space-y-3">
-              {data.upcoming_leave.map(req => (
+              {(data.upcoming_leave ?? []).map(req => (
                 <li key={req.id} className="flex items-center gap-3">
                   <div className="flex items-center justify-center w-9 h-9 rounded-full bg-purple-600/20 text-purple-400 text-sm font-bold shrink-0">
-                    {req.employee_name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                    {req.employee_name?.split(' ').map(n => n?.[0] ?? '').join('').slice(0, 2)}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-white truncate">
@@ -214,7 +214,7 @@ export default function Dashboard() {
           <h2 className="text-sm font-semibold text-white">Announcements</h2>
         </div>
         <div className="space-y-3">
-          {data.recent_hires.length > 0 && (
+          {(data.recent_hires ?? []).length > 0 && (
             <div className="flex items-start gap-3 text-sm">
               <span className="text-gray-500 shrink-0">👋</span>
               <p className="text-gray-400">
@@ -246,7 +246,7 @@ export default function Dashboard() {
               </p>
             </div>
           )}
-          {data.recent_hires.length === 0 && data.open_positions === 0 && data.pending_leave_requests === 0 && (
+          {(data.recent_hires ?? []).length === 0 && data.open_positions === 0 && data.pending_leave_requests === 0 && (
             <p className="text-gray-500 text-sm">Nothing to report right now. All clear!</p>
           )}
         </div>
