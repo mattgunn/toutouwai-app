@@ -16,6 +16,7 @@ import { FormField, Input, Select } from '../components/FormField'
 import { SkeletonTable } from '../components/Skeleton'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { useToast } from '../components/Toast'
+import PageHeader from '../components/PageHeader'
 
 export default function Onboarding() {
   const [tab, setTab] = useState('checklists')
@@ -145,7 +146,7 @@ export default function Onboarding() {
   if (loading) {
     return (
       <div>
-        <h1 className="text-xl font-bold text-white mb-4">Onboarding</h1>
+        <PageHeader title="Onboarding" />
         <SkeletonTable rows={5} cols={3} />
       </div>
     )
@@ -153,9 +154,7 @@ export default function Onboarding() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-bold text-white">Onboarding</h1>
-      </div>
+      <PageHeader title="Onboarding" />
 
       {/* Tabs */}
       <div className="mb-4">
@@ -229,16 +228,23 @@ export default function Onboarding() {
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-xs text-gray-400">
-                        {cl.completed_tasks}/{cl.total_tasks} tasks
-                      </span>
-                      <div className="w-24 h-2 bg-gray-700 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-blue-500 rounded-full transition-all"
-                          style={{ width: cl.total_tasks > 0 ? `${(cl.completed_tasks / cl.total_tasks) * 100}%` : '0%' }}
-                        />
-                      </div>
                       <StatusBadge status={cl.status} />
+                    </div>
+                  </div>
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-gray-400">
+                        {cl.completed_tasks}/{cl.total_tasks} tasks complete
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {cl.total_tasks > 0 ? Math.round((cl.completed_tasks / cl.total_tasks) * 100) : 0}%
+                      </span>
+                    </div>
+                    <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${cl.completed_tasks === cl.total_tasks && cl.total_tasks > 0 ? 'bg-emerald-500' : 'bg-blue-500'}`}
+                        style={{ width: cl.total_tasks > 0 ? `${(cl.completed_tasks / cl.total_tasks) * 100}%` : '0%' }}
+                      />
                     </div>
                   </div>
 

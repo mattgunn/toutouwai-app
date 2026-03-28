@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { ProtectedRoute, ModuleGuard } from './auth'
 import Layout from './components/Layout'
+import PageTransition from './components/PageTransition'
 import Login from './pages/Login'
 import LinkSent from './pages/LinkSent'
 import Verify from './pages/Verify'
@@ -41,6 +42,7 @@ export default function App() {
       <Route path="/*" element={
         <ProtectedRoute>
           <Layout>
+            <PageTransition>
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<ModuleGuard module="dashboard"><Dashboard /></ModuleGuard>} />
@@ -68,6 +70,7 @@ export default function App() {
               <Route path="/settings" element={<ModuleGuard module="settings"><Settings /></ModuleGuard>} />
               <Route path="/my-profile" element={<MyProfile />} />
             </Routes>
+            </PageTransition>
           </Layout>
         </ProtectedRoute>
       } />

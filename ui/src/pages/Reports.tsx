@@ -17,6 +17,8 @@ import type {
 } from '../modules/reports/types'
 import StatCard from '../components/StatCard'
 import EmptyState from '../components/EmptyState'
+import PageHeader from '../components/PageHeader'
+import Tabs from '../components/Tabs'
 
 type Tab = 'headcount' | 'turnover' | 'leave' | 'time' | 'compensation' | 'recruitment'
 
@@ -34,22 +36,15 @@ export default function Reports() {
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-white mb-4">Reports</h1>
+      <PageHeader title="Reports" subtitle="Analytics and insights" />
 
-      <div className="flex gap-1 mb-6 overflow-x-auto">
-        {TABS.map(t => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`px-4 py-2 text-sm rounded transition-colors whitespace-nowrap ${
-              tab === t.key
-                ? 'bg-blue-600/20 text-blue-400'
-                : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
+      <div className="mb-6">
+        <Tabs
+          variant="pills"
+          tabs={TABS}
+          active={tab}
+          onChange={(k) => setTab(k as Tab)}
+        />
       </div>
 
       {tab === 'headcount' && <HeadcountTab />}

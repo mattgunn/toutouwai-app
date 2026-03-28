@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react'
 import { fetchLeaveRequests } from '../api'
 import type { LeaveRequest } from '../types'
 import StatusBadge from '../components/StatusBadge'
-import EmptyState from '../components/EmptyState'
 import { SkeletonTable } from '../components/Skeleton'
+import PageHeader from '../components/PageHeader'
+import DataTable from '../components/DataTable'
+
 export default function LeaveRequests() {
   const [requests, setRequests] = useState<LeaveRequest[]>([])
   const [loading, setLoading] = useState(true)
@@ -15,12 +17,19 @@ export default function LeaveRequests() {
       .finally(() => setLoading(false))
   }, [])
 
+  const columns = [
+    { key: 'employee_name', header: 'Employee', render: (req: LeaveRequest) => <span className="text-white">{req.employee_name || '\u2014'}</span> },
+    { key: 'leave_type_name', header: 'Type', render: (req: LeaveRequest) => <span className="text-gray-400">{req.leave_type_name || '\u2014'}</span> },
+    { key: 'start_date', header: 'Start', render: (req: LeaveRequest) => <span className="text-gray-400">{req.start_date}</span> },
+    { key: 'end_date', header: 'End', render: (req: LeaveRequest) => <span className="text-gray-400">{req.end_date}</span> },
+    { key: 'days', header: 'Days', render: (req: LeaveRequest) => <span className="text-white">{req.days}</span> },
+    { key: 'status', header: 'Status', render: (req: LeaveRequest) => <StatusBadge status={req.status} /> },
+  ]
+
   if (loading) {
     return (
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-bold text-white">Leave Requests</h1>
-        </div>
+        <PageHeader title="Leave Requests" />
         <SkeletonTable rows={5} cols={6} />
       </div>
     )
@@ -28,40 +37,16 @@ export default function LeaveRequests() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-bold text-white">Leave Requests</h1>
-      </div>
+      <PageHeader title="Leave Requests" />
 
-      {requests.length === 0 ? (
-        <EmptyState icon="🏖" message="No leave requests" />
-      ) : (
-        <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-gray-500 text-xs uppercase">
-                <th className="px-4 py-3">Employee</th>
-                <th className="px-4 py-3">Type</th>
-                <th className="px-4 py-3">Start</th>
-                <th className="px-4 py-3">End</th>
-                <th className="px-4 py-3">Days</th>
-                <th className="px-4 py-3">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {requests.map(req => (
-                <tr key={req.id} className="border-t border-gray-800 hover:bg-gray-800/50 transition-colors">
-                  <td className="px-4 py-3 text-white">{req.employee_name || '\u2014'}</td>
-                  <td className="px-4 py-3 text-gray-400">{req.leave_type_name || '\u2014'}</td>
-                  <td className="px-4 py-3 text-gray-400">{req.start_date}</td>
-                  <td className="px-4 py-3 text-gray-400">{req.end_date}</td>
-                  <td className="px-4 py-3 text-white">{req.days}</td>
-                  <td className="px-4 py-3"><StatusBadge status={req.status} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <DataTable
+        columns={columns}
+        data={requests}
+        keyField="id"
+        emptyIcon="🏖"
+        emptyMessage="No leave requests"
+        striped
+      />
     </div>
   )
 }

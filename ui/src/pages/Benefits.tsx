@@ -8,6 +8,8 @@ import StatCard from '../components/StatCard'
 import EmptyState from '../components/EmptyState'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
+import PageHeader from '../components/PageHeader'
+import DataTable from '../components/DataTable'
 import Tabs from '../components/Tabs'
 import { FormField, Input, Select, Textarea } from '../components/FormField'
 import { PageSkeleton } from '../components/Skeleton'
@@ -96,12 +98,28 @@ export default function Benefits() {
     }
   }
 
+  const enrollmentColumns = [
+    { key: 'employee_name', header: 'Employee', render: (e: BenefitEnrollment) => <span className="text-white">{e.employee_name || '\u2014'}</span> },
+    { key: 'plan_name', header: 'Plan', render: (e: BenefitEnrollment) => (
+      <span className="text-gray-400">
+        {e.plan_name || '\u2014'}
+        {e.plan_type && (
+          <span className="ml-2 inline-block px-1.5 py-0.5 rounded text-xs bg-purple-600/20 text-purple-400">
+            {planTypeLabel[e.plan_type] || e.plan_type}
+          </span>
+        )}
+      </span>
+    )},
+    { key: 'coverage_level', header: 'Coverage', className: 'hidden md:table-cell', render: (e: BenefitEnrollment) => <span className="text-gray-400">{coverageLabel[e.coverage_level] || e.coverage_level}</span> },
+    { key: 'employee_contribution', header: 'Employee $', className: 'hidden lg:table-cell', render: (e: BenefitEnrollment) => <span className="text-gray-400">{formatCurrency(e.employee_contribution)}</span> },
+    { key: 'employer_contribution', header: 'Employer $', className: 'hidden lg:table-cell', render: (e: BenefitEnrollment) => <span className="text-gray-400">{formatCurrency(e.employer_contribution)}</span> },
+    { key: 'status', header: 'Status', render: (e: BenefitEnrollment) => <StatusBadge status={e.status} /> },
+  ]
+
   if (loading) {
     return (
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-bold text-white">Benefits</h1>
-        </div>
+        <PageHeader title="Benefits" />
         <PageSkeleton />
       </div>
     )
@@ -109,12 +127,14 @@ export default function Benefits() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-bold text-white">Benefits</h1>
-        <Button onClick={() => tab === 'plans' ? setShowAddPlan(true) : setShowAddEnrollment(true)}>
-          {tab === 'plans' ? 'Add Plan' : 'Enroll Employee'}
-        </Button>
-      </div>
+      <PageHeader
+        title="Benefits"
+        actions={
+          <Button onClick={() => tab === 'plans' ? setShowAddPlan(true) : setShowAddEnrollment(true)}>
+            {tab === 'plans' ? 'Add Plan' : 'Enroll Employee'}
+          </Button>
+        }
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <StatCard label="Active Plans" value={activePlans.length} />
@@ -264,7 +284,7 @@ export default function Benefits() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {plans.map(plan => (
-              <div key={plan.id} className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+              <div key={plan.id} className="bg-gray-900 border border-gray-800 rounded-lg p-4 hover:shadow-md transition-all duration-200">
                 <div className="flex items-start justify-between mb-2">
                   <div>
                     <h3 className="text-white font-medium">{plan.name}</h3>
@@ -285,43 +305,15 @@ export default function Benefits() {
 
       {/* Enrollments tab */}
       {tab === 'enrollments' && (
-        enrollments.length === 0 ? (
-          <EmptyState message="No enrollments yet" icon="📋" action="Enroll Employee" onAction={() => setShowAddEnrollment(true)} />
-        ) : (
-          <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 text-xs uppercase">
-                  <th className="px-4 py-3">Employee</th>
-                  <th className="px-4 py-3">Plan</th>
-                  <th className="px-4 py-3 hidden md:table-cell">Coverage</th>
-                  <th className="px-4 py-3 hidden lg:table-cell">Employee $</th>
-                  <th className="px-4 py-3 hidden lg:table-cell">Employer $</th>
-                  <th className="px-4 py-3">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {enrollments.map(enrollment => (
-                  <tr key={enrollment.id} className="border-t border-gray-800 hover:bg-gray-800/50 transition-colors">
-                    <td className="px-4 py-3 text-white">{enrollment.employee_name || '\u2014'}</td>
-                    <td className="px-4 py-3 text-gray-400">
-                      {enrollment.plan_name || '\u2014'}
-                      {enrollment.plan_type && (
-                        <span className="ml-2 inline-block px-1.5 py-0.5 rounded text-xs bg-purple-600/20 text-purple-400">
-                          {planTypeLabel[enrollment.plan_type] || enrollment.plan_type}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-gray-400 hidden md:table-cell">{coverageLabel[enrollment.coverage_level] || enrollment.coverage_level}</td>
-                    <td className="px-4 py-3 text-gray-400 hidden lg:table-cell">{formatCurrency(enrollment.employee_contribution)}</td>
-                    <td className="px-4 py-3 text-gray-400 hidden lg:table-cell">{formatCurrency(enrollment.employer_contribution)}</td>
-                    <td className="px-4 py-3"><StatusBadge status={enrollment.status} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )
+        <DataTable
+          columns={enrollmentColumns}
+          data={enrollments}
+          keyField="id"
+          emptyMessage="No enrollments yet"
+          emptyIcon="📋"
+          emptyAction="Enroll Employee"
+          onEmptyAction={() => setShowAddEnrollment(true)}
+        />
       )}
     </div>
   )

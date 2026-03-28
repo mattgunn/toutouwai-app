@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import { fetchGoals } from '../api'
 import type { Goal } from '../types'
 import StatusBadge from '../components/StatusBadge'
-import EmptyState from '../components/EmptyState'
+import PageHeader from '../components/PageHeader'
+import DataTable from '../components/DataTable'
 import { SkeletonCards } from '../components/Skeleton'
 export default function Goals() {
   const [goals, setGoals] = useState<Goal[]>([])
@@ -13,12 +14,30 @@ export default function Goals() {
     fetchGoals().then(setGoals).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
+  const goalColumns = [
+    { key: 'title', header: 'Goal', render: (goal: Goal) => (
+      <div>
+        <span className="text-white font-medium">{goal.title}</span>
+        <p className="text-xs text-gray-500 mt-0.5">{goal.employee_name || '\u2014'}</p>
+      </div>
+    )},
+    { key: 'description', header: 'Description', className: 'hidden md:table-cell', render: (goal: Goal) => <span className="text-gray-400 text-sm">{goal.description || '\u2014'}</span> },
+    { key: 'progress', header: 'Progress', render: (goal: Goal) => (
+      <div className="flex items-center gap-2">
+        <div className="flex-1 bg-gray-800 rounded-full h-2 min-w-[60px]">
+          <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${goal.progress}%` }} />
+        </div>
+        <span className="text-xs text-gray-400 w-8">{goal.progress}%</span>
+      </div>
+    )},
+    { key: 'due_date', header: 'Due', className: 'hidden lg:table-cell', render: (goal: Goal) => <span className="text-gray-500">{goal.due_date || '\u2014'}</span> },
+    { key: 'status', header: 'Status', render: (goal: Goal) => <StatusBadge status={goal.status} /> },
+  ]
+
   if (loading) {
     return (
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-bold text-white">Goals</h1>
-        </div>
+        <PageHeader title="Goals" />
         <SkeletonCards count={4} />
       </div>
     )
@@ -26,42 +45,15 @@ export default function Goals() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-bold text-white">Goals</h1>
-      </div>
+      <PageHeader title="Goals" />
 
-      {goals.length === 0 ? (
-        <EmptyState icon="🎯" message="No goals yet" />
-      ) : (
-        <div className="space-y-3">
-          {goals.map(goal => (
-            <div key={goal.id} className="bg-gray-900 border border-gray-800 rounded-lg p-4">
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <h3 className="text-white font-medium">{goal.title}</h3>
-                  <p className="text-xs text-gray-500 mt-0.5">{goal.employee_name || '\u2014'}</p>
-                </div>
-                <StatusBadge status={goal.status} />
-              </div>
-              {goal.description && (
-                <p className="text-gray-400 text-sm mb-3">{goal.description}</p>
-              )}
-              <div className="flex items-center gap-3">
-                <div className="flex-1 bg-gray-800 rounded-full h-2">
-                  <div
-                    className="bg-blue-600 h-2 rounded-full transition-all"
-                    style={{ width: `${goal.progress}%` }}
-                  />
-                </div>
-                <span className="text-xs text-gray-500 shrink-0">{goal.progress}%</span>
-                {goal.due_date && (
-                  <span className="text-xs text-gray-500 shrink-0">Due: {goal.due_date}</span>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <DataTable
+        columns={goalColumns}
+        data={goals}
+        keyField="id"
+        emptyMessage="No goals yet"
+        emptyIcon="🎯"
+      />
     </div>
   )
 }

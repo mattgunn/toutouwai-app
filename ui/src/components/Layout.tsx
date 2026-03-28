@@ -6,67 +6,77 @@ import { useAdminPrefs } from '../hooks/useAdminPrefs'
 import { fetchSettings } from '../api'
 import { MODULES } from '../modules/modules/registry'
 import Breadcrumbs from './Breadcrumbs'
+import {
+  UsersIcon, BuildingOfficeIcon, BuildingOffice2Icon,
+  BriefcaseIcon, HandRaisedIcon, FolderOpenIcon,
+  ClockIcon, CalendarDaysIcon, ChartBarSquareIcon,
+  BanknotesIcon, HeartIcon, ArrowTrendingUpIcon,
+  MegaphoneIcon, DocumentTextIcon, FunnelIcon,
+  StarIcon, FlagIcon, PencilSquareIcon,
+  ShieldCheckIcon, ArrowPathRoundedSquareIcon,
+  UserCircleIcon, ChartPieIcon, Cog6ToothIcon,
+} from './NavIcons'
 
-type NavItem = { to: string; label: string; icon: string; module: string }
+type NavItem = { to: string; label: string; icon: ReactNode; module: string }
 type NavGroup = { heading?: string; items: NavItem[] }
 
 const NAV_GROUPS: NavGroup[] = [
   {
     heading: 'People',
     items: [
-      { to: '/employees',   label: 'Directory',   icon: '\u{1F465}', module: 'employees' },
-      { to: '/org-chart',   label: 'Org Chart',   icon: '\u{1F3E2}', module: 'employees' },
-      { to: '/departments', label: 'Departments', icon: '\u{1F3EC}', module: 'departments' },
-      { to: '/positions',   label: 'Positions',   icon: '\u{1F4BC}', module: 'positions' },
-      { to: '/onboarding',  label: 'Onboarding',  icon: '\u{1F91D}', module: 'employees' },
-      { to: '/documents',   label: 'Documents',   icon: '\u{1F4C1}', module: 'employees' },
+      { to: '/employees',   label: 'Directory',   icon: <UsersIcon className="w-4 h-4" />, module: 'employees' },
+      { to: '/org-chart',   label: 'Org Chart',   icon: <BuildingOfficeIcon className="w-4 h-4" />, module: 'employees' },
+      { to: '/departments', label: 'Departments', icon: <BuildingOffice2Icon className="w-4 h-4" />, module: 'departments' },
+      { to: '/positions',   label: 'Positions',   icon: <BriefcaseIcon className="w-4 h-4" />, module: 'positions' },
+      { to: '/onboarding',  label: 'Onboarding',  icon: <HandRaisedIcon className="w-4 h-4" />, module: 'employees' },
+      { to: '/documents',   label: 'Documents',   icon: <FolderOpenIcon className="w-4 h-4" />, module: 'employees' },
     ],
   },
   {
     heading: 'Time & Leave',
     items: [
-      { to: '/timesheets',     label: 'Timesheets',     icon: '\u{23F1}\u{FE0F}', module: 'timesheets' },
-      { to: '/leave-requests', label: 'Leave Requests', icon: '\u{1F4CB}',         module: 'leave' },
-      { to: '/leave-balances', label: 'Leave Balances', icon: '\u{1F4CA}',         module: 'leave' },
+      { to: '/timesheets',     label: 'Timesheets',     icon: <ClockIcon className="w-4 h-4" />, module: 'timesheets' },
+      { to: '/leave-requests', label: 'Leave Requests', icon: <CalendarDaysIcon className="w-4 h-4" />, module: 'leave' },
+      { to: '/leave-balances', label: 'Leave Balances', icon: <ChartBarSquareIcon className="w-4 h-4" />, module: 'leave' },
     ],
   },
   {
     heading: 'Compensation',
     items: [
-      { to: '/compensation', label: 'Compensation', icon: '\u{1F4B0}', module: 'compensation' },
-      { to: '/benefits',     label: 'Benefits',     icon: '\u{1F3E5}', module: 'benefits' },
-      { to: '/succession',   label: 'Succession',   icon: '\u{1F451}', module: 'succession' },
+      { to: '/compensation', label: 'Compensation', icon: <BanknotesIcon className="w-4 h-4" />, module: 'compensation' },
+      { to: '/benefits',     label: 'Benefits',     icon: <HeartIcon className="w-4 h-4" />, module: 'benefits' },
+      { to: '/succession',   label: 'Succession',   icon: <ArrowTrendingUpIcon className="w-4 h-4" />, module: 'succession' },
     ],
   },
   {
     heading: 'Recruitment',
     items: [
-      { to: '/job-postings', label: 'Job Postings', icon: '\u{1F4E2}', module: 'recruitment' },
-      { to: '/applicants',   label: 'Applicants',   icon: '\u{1F4C4}', module: 'recruitment' },
-      { to: '/pipeline',     label: 'Pipeline',     icon: '\u{1F4C8}', module: 'recruitment' },
+      { to: '/job-postings', label: 'Job Postings', icon: <MegaphoneIcon className="w-4 h-4" />, module: 'recruitment' },
+      { to: '/applicants',   label: 'Applicants',   icon: <DocumentTextIcon className="w-4 h-4" />, module: 'recruitment' },
+      { to: '/pipeline',     label: 'Pipeline',     icon: <FunnelIcon className="w-4 h-4" />, module: 'recruitment' },
     ],
   },
   {
     heading: 'Performance',
     items: [
-      { to: '/reviews', label: 'Reviews', icon: '\u{2B50}', module: 'performance' },
-      { to: '/goals',   label: 'Goals',   icon: '\u{1F3AF}', module: 'performance' },
-      { to: '/surveys', label: 'Surveys', icon: '\u{1F4DD}', module: 'performance' },
+      { to: '/reviews', label: 'Reviews', icon: <StarIcon className="w-4 h-4" />, module: 'performance' },
+      { to: '/goals',   label: 'Goals',   icon: <FlagIcon className="w-4 h-4" />, module: 'performance' },
+      { to: '/surveys', label: 'Surveys', icon: <PencilSquareIcon className="w-4 h-4" />, module: 'performance' },
     ],
   },
   {
     heading: 'Admin',
     items: [
-      { to: '/audit',     label: 'Audit Log',  icon: '\u{1F4DC}', module: 'settings' },
-      { to: '/workflows', label: 'Workflows',  icon: '\u{1F504}', module: 'settings' },
+      { to: '/audit',     label: 'Audit Log',  icon: <ShieldCheckIcon className="w-4 h-4" />, module: 'settings' },
+      { to: '/workflows', label: 'Workflows',  icon: <ArrowPathRoundedSquareIcon className="w-4 h-4" />, module: 'settings' },
     ],
   },
 ]
 
 const GLOBAL_ITEMS: NavItem[] = [
-  { to: '/my-profile', label: 'My Profile', icon: '\u{1F464}', module: '' },
-  { to: '/reports',  label: 'Reports',  icon: '\u{1F4CA}', module: 'reports' },
-  { to: '/settings', label: 'Settings', icon: '\u{2699}\u{FE0F}', module: 'settings' },
+  { to: '/my-profile', label: 'My Profile', icon: <UserCircleIcon className="w-4 h-4" />, module: '' },
+  { to: '/reports',  label: 'Reports',  icon: <ChartPieIcon className="w-4 h-4" />, module: 'reports' },
+  { to: '/settings', label: 'Settings', icon: <Cog6ToothIcon className="w-4 h-4" />, module: 'settings' },
 ]
 
 const ALL_NAV_ITEMS = NAV_GROUPS.flatMap(g => g.items)
@@ -135,7 +145,7 @@ function GlobalSearch({ navItems }: { navItems: NavItem[] }) {
               }}
               className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors text-left"
             >
-              <span>{item.icon}</span>
+              {item.icon}
               <span>{item.label}</span>
             </button>
           ))}
@@ -190,7 +200,7 @@ function VerticalNav({ onNavigate, hasPermission, navGroups }: { onNavigate: () 
                   }`
                 }
               >
-                <span>{icon}</span>
+                {icon}
                 <span>{label}</span>
               </NavLink>
             ))}
@@ -216,7 +226,7 @@ function VerticalNav({ onNavigate, hasPermission, navGroups }: { onNavigate: () 
                 }`
               }
             >
-              <span>{icon}</span>
+              {icon}
               <span>{label}</span>
             </NavLink>
           ))}
@@ -316,7 +326,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                       }`
                     }
                   >
-                    <span className="text-xs">{icon}</span>
+                    {icon}
                     <span>{label}</span>
                   </NavLink>
                 ))
@@ -357,7 +367,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                   }`
                 }
               >
-                <span className="text-xs">{icon}</span>
+                {icon}
                 <span>{label}</span>
               </NavLink>
             ))}
@@ -391,7 +401,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                   }`
                 }
               >
-                <span>{icon}</span>
+                {icon}
                 <span>{label}</span>
               </NavLink>
             ))}

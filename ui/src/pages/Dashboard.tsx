@@ -1,19 +1,29 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchDashboard } from '../api'
 import type { DashboardData } from '../types'
 import { useAuth } from '../auth'
 import StatusBadge from '../components/StatusBadge'
+import {
+  UserCircleIcon,
+  UsersIcon,
+  HeartIcon,
+  BanknotesIcon,
+  CalendarDaysIcon,
+  ChartBarSquareIcon,
+  MegaphoneIcon,
+  StarIcon,
+} from '../components/NavIcons'
 
-const WORKLETS = [
-  { to: '/my-profile',     icon: '\u{1F464}', label: 'My Profile' },
-  { to: '/employees',      icon: '\u{1F465}', label: 'People Directory' },
-  { to: '/benefits',       icon: '\u{1F3E5}', label: 'Benefits' },
-  { to: '/compensation',   icon: '\u{1F4B0}', label: 'Compensation' },
-  { to: '/leave-requests', icon: '\u{1F4CB}', label: 'Time & Leave' },
-  { to: '/reports',        icon: '\u{1F4CA}', label: 'Reports' },
-  { to: '/job-postings',   icon: '\u{1F4E2}', label: 'Recruitment' },
-  { to: '/reviews',        icon: '\u{2B50}',  label: 'Performance' },
+const WORKLETS: { to: string; icon: ReactNode; label: string }[] = [
+  { to: '/my-profile',     icon: <UserCircleIcon className="w-7 h-7" />,      label: 'My Profile' },
+  { to: '/employees',      icon: <UsersIcon className="w-7 h-7" />,           label: 'People Directory' },
+  { to: '/benefits',       icon: <HeartIcon className="w-7 h-7" />,           label: 'Benefits' },
+  { to: '/compensation',   icon: <BanknotesIcon className="w-7 h-7" />,       label: 'Compensation' },
+  { to: '/leave-requests', icon: <CalendarDaysIcon className="w-7 h-7" />,    label: 'Time & Leave' },
+  { to: '/reports',        icon: <ChartBarSquareIcon className="w-7 h-7" />,   label: 'Reports' },
+  { to: '/job-postings',   icon: <MegaphoneIcon className="w-7 h-7" />,       label: 'Recruitment' },
+  { to: '/reviews',        icon: <StarIcon className="w-7 h-7" />,            label: 'Performance' },
 ]
 
 function formatDate(date: Date): string {
@@ -104,10 +114,11 @@ export default function Dashboard() {
               to={to}
               className="flex flex-col items-center justify-center gap-2 rounded-xl
                          border border-gray-800 bg-gray-900 p-5
+                         shadow-sm hover:shadow-md
                          hover:border-blue-500/40 hover:bg-gray-800/70
                          transition-all duration-150 group"
             >
-              <span className="text-3xl group-hover:scale-110 transition-transform duration-150">
+              <span className="text-gray-300 group-hover:text-blue-400 group-hover:scale-110 transition-all duration-150">
                 {icon}
               </span>
               <span className="text-xs font-medium text-gray-300 text-center leading-tight">
@@ -125,16 +136,16 @@ export default function Dashboard() {
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: 'Total Employees', value: data.total_employees, icon: '\u{1F465}', color: 'text-white' },
-            { label: 'Active',          value: data.active_employees, icon: '\u{2705}', color: 'text-emerald-400' },
-            { label: 'Pending Leave',   value: data.pending_leave_requests, icon: '\u{1F4CB}', color: 'text-blue-400' },
-            { label: 'Open Positions',  value: data.open_positions, icon: '\u{1F4BC}', color: 'text-amber-400' },
+            { label: 'Total Employees', value: data.total_employees, icon: <UsersIcon className="w-6 h-6" />, color: 'text-white' },
+            { label: 'Active',          value: data.active_employees, icon: <span className="text-2xl">✅</span>, color: 'text-emerald-400' },
+            { label: 'Pending Leave',   value: data.pending_leave_requests, icon: <CalendarDaysIcon className="w-6 h-6" />, color: 'text-blue-400' },
+            { label: 'Open Positions',  value: data.open_positions, icon: <BanknotesIcon className="w-6 h-6" />, color: 'text-amber-400' },
           ].map(stat => (
             <div
               key={stat.label}
               className="rounded-xl border border-gray-800 bg-gray-900 p-4 flex items-start gap-3"
             >
-              <span className="text-2xl mt-0.5">{stat.icon}</span>
+              <span className="text-gray-400 mt-0.5">{stat.icon}</span>
               <div>
                 <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
                 <p className="text-xs text-gray-500 mt-0.5">{stat.label}</p>

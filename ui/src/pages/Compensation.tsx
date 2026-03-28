@@ -7,6 +7,8 @@ import StatCard from '../components/StatCard'
 import EmptyState from '../components/EmptyState'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
+import PageHeader from '../components/PageHeader'
+import DataTable from '../components/DataTable'
 import { FormField, Input, Select, Textarea } from '../components/FormField'
 import { PageSkeleton } from '../components/Skeleton'
 import { useToast } from '../components/Toast'
@@ -94,12 +96,20 @@ export default function Compensation() {
     }
   }
 
+  const compColumns = [
+    { key: 'employee_name', header: 'Employee', render: (comp: CurrentCompensation) => <span className="text-white">{comp.employee_name || '\u2014'}</span> },
+    { key: 'department_name', header: 'Department', className: 'hidden md:table-cell', render: (comp: CurrentCompensation) => <span className="text-gray-400">{comp.department_name || '\u2014'}</span> },
+    { key: 'position_title', header: 'Position', className: 'hidden lg:table-cell', render: (comp: CurrentCompensation) => <span className="text-gray-400">{comp.position_title || '\u2014'}</span> },
+    { key: 'salary', header: 'Salary', render: (comp: CurrentCompensation) => <span className="text-emerald-400 font-medium">{formatCurrency(comp.salary, comp.currency)}</span> },
+    { key: 'pay_frequency', header: 'Frequency', className: 'hidden md:table-cell', render: (comp: CurrentCompensation) => <span className="text-gray-400">{frequencyLabel[comp.pay_frequency] || comp.pay_frequency}</span> },
+    { key: 'effective_date', header: 'Effective', className: 'hidden lg:table-cell', render: (comp: CurrentCompensation) => <span className="text-gray-500">{comp.effective_date}</span> },
+    { key: 'actions', header: '', render: (comp: CurrentCompensation) => <Button variant="ghost" size="sm" onClick={() => setSelectedEmployee(comp.employee_id)}>History</Button> },
+  ]
+
   if (loading) {
     return (
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-bold text-white">Compensation</h1>
-        </div>
+        <PageHeader title="Compensation" />
         <PageSkeleton />
       </div>
     )
@@ -107,10 +117,7 @@ export default function Compensation() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-bold text-white">Compensation</h1>
-        <Button onClick={() => setShowAdd(true)}>Add Record</Button>
-      </div>
+      <PageHeader title="Compensation" actions={<Button onClick={() => setShowAdd(true)}>Add Record</Button>} />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <StatCard label="Employees" value={current.length} />
@@ -247,42 +254,15 @@ export default function Compensation() {
         />
       </div>
 
-      {filtered.length === 0 ? (
-        <EmptyState message="No compensation records yet" icon="💰" action="Add Record" onAction={() => setShowAdd(true)} />
-      ) : (
-        <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-gray-500 text-xs uppercase">
-                <th className="px-4 py-3">Employee</th>
-                <th className="px-4 py-3 hidden md:table-cell">Department</th>
-                <th className="px-4 py-3 hidden lg:table-cell">Position</th>
-                <th className="px-4 py-3">Salary</th>
-                <th className="px-4 py-3 hidden md:table-cell">Frequency</th>
-                <th className="px-4 py-3 hidden lg:table-cell">Effective</th>
-                <th className="px-4 py-3"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(comp => (
-                <tr key={comp.id} className="border-t border-gray-800 hover:bg-gray-800/50 transition-colors">
-                  <td className="px-4 py-3 text-white">{comp.employee_name || '\u2014'}</td>
-                  <td className="px-4 py-3 text-gray-400 hidden md:table-cell">{comp.department_name || '\u2014'}</td>
-                  <td className="px-4 py-3 text-gray-400 hidden lg:table-cell">{comp.position_title || '\u2014'}</td>
-                  <td className="px-4 py-3 text-emerald-400 font-medium">{formatCurrency(comp.salary, comp.currency)}</td>
-                  <td className="px-4 py-3 text-gray-400 hidden md:table-cell">{frequencyLabel[comp.pay_frequency] || comp.pay_frequency}</td>
-                  <td className="px-4 py-3 text-gray-500 hidden lg:table-cell">{comp.effective_date}</td>
-                  <td className="px-4 py-3">
-                    <Button variant="ghost" size="sm" onClick={() => setSelectedEmployee(comp.employee_id)}>
-                      History
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <DataTable
+        columns={compColumns}
+        data={filtered}
+        keyField="id"
+        emptyMessage="No compensation records yet"
+        emptyIcon="💰"
+        emptyAction="Add Record"
+        onEmptyAction={() => setShowAdd(true)}
+      />
     </div>
   )
 }

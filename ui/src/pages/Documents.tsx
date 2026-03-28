@@ -10,6 +10,8 @@ import { FormField, Input, Select } from '../components/FormField'
 import { SkeletonTable } from '../components/Skeleton'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { useToast } from '../components/Toast'
+import PageHeader from '../components/PageHeader'
+import DataTable from '../components/DataTable'
 
 const CATEGORIES = [
   { value: '', label: 'All Categories' },
@@ -127,7 +129,7 @@ export default function Documents() {
   if (loading) {
     return (
       <div>
-        <h1 className="text-xl font-bold text-white mb-4">Documents</h1>
+        <PageHeader title="Documents" />
         <SkeletonTable rows={5} cols={5} />
       </div>
     )
@@ -135,12 +137,14 @@ export default function Documents() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-bold text-white">Documents</h1>
-        <Button onClick={() => setShowForm(true)}>
-          Add Document
-        </Button>
-      </div>
+      <PageHeader
+        title="Documents"
+        actions={
+          <Button onClick={() => setShowForm(true)}>
+            Add Document
+          </Button>
+        }
+      />
 
       {/* Expiring documents warning */}
       {expiringDocs.length > 0 && (
@@ -218,51 +222,44 @@ export default function Documents() {
           onAction={() => setShowForm(true)}
         />
       ) : (
-        <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-gray-500 text-xs uppercase">
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Employee</th>
-                <th className="px-4 py-3 hidden md:table-cell">Category</th>
-                <th className="px-4 py-3 hidden lg:table-cell">Uploaded By</th>
-                <th className="px-4 py-3">Expiry</th>
-                <th className="px-4 py-3 w-16"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {documents.map(doc => (
-                <tr key={doc.id} className="border-t border-gray-800 hover:bg-gray-800/50 transition-colors">
-                  <td className="px-4 py-3">
-                    <div className="text-white font-medium">{doc.name}</div>
-                    {doc.description && <div className="text-xs text-gray-500">{doc.description}</div>}
-                  </td>
-                  <td className="px-4 py-3 text-gray-400">{doc.employee_name || 'Company'}</td>
-                  <td className="px-4 py-3 hidden md:table-cell"><CategoryBadge category={doc.category} /></td>
-                  <td className="px-4 py-3 text-gray-400 hidden lg:table-cell">{doc.uploaded_by_name || '\u2014'}</td>
-                  <td className="px-4 py-3">
-                    {doc.expiry_date ? (
-                      <span className={`text-sm ${isExpired(doc.expiry_date) ? 'text-red-400' : isExpiringSoon(doc.expiry_date) ? 'text-amber-400' : 'text-gray-400'}`}>
-                        {doc.expiry_date}
-                      </span>
-                    ) : (
-                      <span className="text-gray-600">{'\u2014'}</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setDeleteId(doc.id)}
-                    >
-                      Delete
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={[
+            { key: 'name', header: 'Name', render: (row) => {
+              const doc = row as unknown as Document
+              return (
+                <div>
+                  <div className="text-white font-medium">{doc.name}</div>
+                  {doc.description && <div className="text-xs text-gray-500">{doc.description}</div>}
+                </div>
+              )
+            }},
+            { key: 'employee_name', header: 'Employee', render: (row) => <span className="text-gray-400">{String(row.employee_name || 'Company')}</span> },
+            { key: 'category', header: 'Category', render: (row) => <CategoryBadge category={String(row.category)} />, className: 'hidden md:table-cell' },
+            { key: 'uploaded_by_name', header: 'Uploaded By', render: (row) => <span className="text-gray-400">{String(row.uploaded_by_name || '\u2014')}</span>, className: 'hidden lg:table-cell' },
+            { key: 'expiry_date', header: 'Expiry', render: (row) => {
+              const doc = row as unknown as Document
+              return doc.expiry_date ? (
+                <span className={`text-sm ${isExpired(doc.expiry_date) ? 'text-red-400' : isExpiringSoon(doc.expiry_date) ? 'text-amber-400' : 'text-gray-400'}`}>
+                  {doc.expiry_date}
+                </span>
+              ) : (
+                <span className="text-gray-600">{'\u2014'}</span>
+              )
+            }},
+            { key: '_actions', header: '', render: (row) => (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e: React.MouseEvent) => { e.stopPropagation(); setDeleteId(String(row.id)) }}
+              >
+                Delete
+              </Button>
+            )},
+          ]}
+          data={documents as unknown as Record<string, unknown>[]}
+          keyField="id"
+          striped={false}
+        />
       )}
 
       <ConfirmDialog

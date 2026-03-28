@@ -3,6 +3,7 @@ import { fetchJobPostings } from '../api'
 import type { JobPosting } from '../types'
 import StatusBadge from '../components/StatusBadge'
 import EmptyState from '../components/EmptyState'
+import PageHeader from '../components/PageHeader'
 import { SkeletonCards } from '../components/Skeleton'
 export default function JobPostings() {
   const [postings, setPostings] = useState<JobPosting[]>([])
@@ -18,9 +19,7 @@ export default function JobPostings() {
   if (loading) {
     return (
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-bold text-white">Job Postings</h1>
-        </div>
+        <PageHeader title="Job Postings" />
         <SkeletonCards count={6} />
       </div>
     )
@@ -28,16 +27,14 @@ export default function JobPostings() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-bold text-white">Job Postings</h1>
-      </div>
+      <PageHeader title="Job Postings" />
 
       {postings.length === 0 ? (
         <EmptyState icon="💼" message="No job postings yet" />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {postings.map(posting => (
-            <div key={posting.id} className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+            <div key={posting.id} className={`bg-gray-900 border border-gray-800 rounded-lg p-4 border-l-4 ${posting.status === 'open' ? 'border-l-emerald-500' : posting.status === 'draft' ? 'border-l-amber-500' : 'border-l-gray-600'}`}>
               <div className="flex items-start justify-between mb-2">
                 <h3 className="text-white font-semibold">{posting.title}</h3>
                 <StatusBadge status={posting.status} />

@@ -17,6 +17,8 @@ import Tabs from '../components/Tabs'
 import { SkeletonTable } from '../components/Skeleton'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { useToast } from '../components/Toast'
+import PageHeader from '../components/PageHeader'
+import DataTable from '../components/DataTable'
 
 export default function Surveys() {
   const [surveys, setSurveys] = useState<Survey[]>([])
@@ -51,7 +53,7 @@ export default function Surveys() {
   if (loading) {
     return (
       <div>
-        <h1 className="text-xl font-bold text-white mb-4">Surveys</h1>
+        <PageHeader title="Surveys" />
         <SkeletonTable rows={5} cols={4} />
       </div>
     )
@@ -59,12 +61,14 @@ export default function Surveys() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-bold text-white">Surveys</h1>
-        <Button onClick={() => setShowForm(true)}>
-          New Survey
-        </Button>
-      </div>
+      <PageHeader
+        title="Surveys"
+        actions={
+          <Button onClick={() => setShowForm(true)}>
+            New Survey
+          </Button>
+        }
+      />
 
       {showForm && (
         <CreateSurveyForm
@@ -81,36 +85,22 @@ export default function Surveys() {
           onAction={() => setShowForm(true)}
         />
       ) : (
-        <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-gray-500 text-xs uppercase">
-                <th className="px-4 py-3">Title</th>
-                <th className="px-4 py-3 hidden md:table-cell">Questions</th>
-                <th className="px-4 py-3 hidden md:table-cell">Responses</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 hidden lg:table-cell">Created</th>
-              </tr>
-            </thead>
-            <tbody>
-              {surveys.map(survey => (
-                <tr
-                  key={survey.id}
-                  className="border-t border-gray-800 hover:bg-gray-800/50 transition-colors cursor-pointer"
-                  onClick={() => setSelectedId(survey.id)}
-                >
-                  <td className="px-4 py-3 text-white font-medium">{survey.title}</td>
-                  <td className="px-4 py-3 text-gray-400 hidden md:table-cell">{survey.question_count}</td>
-                  <td className="px-4 py-3 text-gray-400 hidden md:table-cell">{survey.response_count}</td>
-                  <td className="px-4 py-3"><StatusBadge status={survey.status} /></td>
-                  <td className="px-4 py-3 text-gray-500 text-xs hidden lg:table-cell">
-                    {new Date(survey.created_at).toLocaleDateString()}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={[
+            { key: 'title', header: 'Title', render: (row) => <span className="text-white font-medium">{String(row.title)}</span> },
+            { key: 'question_count', header: 'Questions', render: (row) => <span className="text-gray-400">{String(row.question_count)}</span>, className: 'hidden md:table-cell' },
+            { key: 'response_count', header: 'Responses', render: (row) => <span className="text-gray-400">{String(row.response_count)}</span>, className: 'hidden md:table-cell' },
+            { key: 'status', header: 'Status', render: (row) => <StatusBadge status={String(row.status)} /> },
+            { key: 'created_at', header: 'Created', render: (row) => <span className="text-gray-500 text-xs">{new Date(String(row.created_at)).toLocaleDateString()}</span>, className: 'hidden lg:table-cell' },
+          ]}
+          data={surveys as unknown as Record<string, unknown>[]}
+          keyField="id"
+          onRowClick={(row) => setSelectedId(String(row.id))}
+          emptyIcon="📊"
+          emptyMessage="No surveys yet"
+          emptyAction="New Survey"
+          onEmptyAction={() => setShowForm(true)}
+        />
       )}
     </div>
   )
@@ -305,7 +295,7 @@ function SurveyDetail({
           ) : (
             <div className="space-y-3">
               {questions.map((q, i) => (
-                <div key={q.id} className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+                <div key={q.id} className="bg-gray-900 border border-gray-800 rounded-lg p-4 hover:shadow-md transition-all duration-200">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-white text-sm">
@@ -354,7 +344,7 @@ function SurveyDetail({
               <p className="text-sm text-gray-400 mb-4">{results.total_respondents} respondent(s)</p>
               <div className="space-y-3">
                 {results.results.map((r, i) => (
-                  <div key={i} className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+                  <div key={i} className="bg-gray-900 border border-gray-800 rounded-lg p-4 hover:shadow-md transition-all duration-200">
                     <p className="text-white text-sm mb-2">{r.question.question_text}</p>
                     <p className="text-xs text-gray-500 mb-2">{r.response_count} response(s)</p>
 

@@ -15,6 +15,7 @@ import Button from '../components/Button'
 import { FormField, Input, Select, Textarea } from '../components/FormField'
 import { SkeletonTable } from '../components/Skeleton'
 import { useToast } from '../components/Toast'
+import PageHeader from '../components/PageHeader'
 
 export default function Workflows() {
   const [view, setView] = useState('approvals')
@@ -39,7 +40,7 @@ export default function Workflows() {
   if (loading) {
     return (
       <div>
-        <h1 className="text-xl font-bold text-white mb-4">Workflows</h1>
+        <PageHeader title="Workflows" />
         <SkeletonTable rows={5} cols={4} />
       </div>
     )
@@ -47,14 +48,14 @@ export default function Workflows() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-bold text-white">Workflows</h1>
-        {view === 'definitions' && (
+      <PageHeader
+        title="Workflows"
+        actions={view === 'definitions' ? (
           <Button onClick={() => setShowForm(true)}>
             New Definition
           </Button>
-        )}
-      </div>
+        ) : undefined}
+      />
 
       <div className="mb-6">
         <Tabs
@@ -123,7 +124,11 @@ function ApprovalsView({ approvals, onAction }: { approvals: WorkflowApproval[];
   return (
     <div className="space-y-3">
       {approvals.map(approval => (
-        <div key={approval.id} className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+        <div key={approval.id} className={`bg-gray-900 border border-gray-800 rounded-lg p-4 border-l-4 ${
+          approval.status === 'pending' ? 'border-l-amber-500' :
+          approval.status === 'approved' ? 'border-l-emerald-500' :
+          approval.status === 'rejected' ? 'border-l-red-500' : 'border-l-gray-600'
+        }`}>
           <div className="flex items-start justify-between">
             <div>
               <p className="text-white font-medium">{approval.definition_name || 'Workflow'}</p>

@@ -5,6 +5,8 @@ import EmptyState from '../components/EmptyState'
 import Button from '../components/Button'
 import { Select, Input } from '../components/FormField'
 import { SkeletonTable } from '../components/Skeleton'
+import PageHeader from '../components/PageHeader'
+import DataTable from '../components/DataTable'
 const ENTITY_TYPES = ['', 'employee', 'department', 'position', 'leave_request', 'time_entry', 'job_posting', 'applicant', 'review', 'goal']
 
 export default function AuditLog() {
@@ -55,9 +57,9 @@ export default function AuditLog() {
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-white mb-4">Audit Log</h1>
+      <PageHeader title="Audit Log" />
 
-      <div className="flex flex-wrap gap-3 mb-4">
+      <div className="bg-gray-900 border border-gray-800 rounded-lg p-4 mb-4 flex flex-wrap gap-3">
         <Select
           value={entityType}
           onChange={e => { setEntityType(e.target.value); setPage(1) }}
@@ -86,36 +88,20 @@ export default function AuditLog() {
         <EmptyState icon="📜" message="No audit entries found" />
       ) : (
         <>
-          <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 text-xs uppercase">
-                  <th className="px-4 py-3">Timestamp</th>
-                  <th className="px-4 py-3">User</th>
-                  <th className="px-4 py-3">Action</th>
-                  <th className="px-4 py-3">Entity</th>
-                  <th className="px-4 py-3 hidden md:table-cell">Field</th>
-                  <th className="px-4 py-3 hidden lg:table-cell">Old Value</th>
-                  <th className="px-4 py-3 hidden lg:table-cell">New Value</th>
-                </tr>
-              </thead>
-              <tbody>
-                {entries.map(entry => (
-                  <tr key={entry.id} className="border-t border-gray-800 hover:bg-gray-800/50 transition-colors">
-                    <td className="px-4 py-3 text-gray-400 text-xs">{formatDate(entry.created_at)}</td>
-                    <td className="px-4 py-3 text-white">{entry.user_name || entry.user_email || '\u2014'}</td>
-                    <td className="px-4 py-3">{actionBadge(entry.action)}</td>
-                    <td className="px-4 py-3 text-gray-400">
-                      <span className="capitalize">{(entry.entity_type || '').replace(/_/g, ' ')}</span>
-                    </td>
-                    <td className="px-4 py-3 text-gray-400 hidden md:table-cell">{entry.field_name || '\u2014'}</td>
-                    <td className="px-4 py-3 text-gray-500 hidden lg:table-cell truncate max-w-32">{entry.old_value || '\u2014'}</td>
-                    <td className="px-4 py-3 text-gray-400 hidden lg:table-cell truncate max-w-32">{entry.new_value || '\u2014'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            columns={[
+              { key: 'created_at', header: 'Timestamp', render: (row: AuditEntry) => <span className="text-gray-400 text-xs">{formatDate(row.created_at)}</span> },
+              { key: 'user_name', header: 'User', render: (row: AuditEntry) => <span className="text-white">{row.user_name || row.user_email || '\u2014'}</span> },
+              { key: 'action', header: 'Action', render: (row: AuditEntry) => actionBadge(row.action) },
+              { key: 'entity_type', header: 'Entity', render: (row: AuditEntry) => <span className="text-gray-400 capitalize">{(row.entity_type || '').replace(/_/g, ' ')}</span> },
+              { key: 'field_name', header: 'Field', render: (row: AuditEntry) => <span className="text-gray-400">{row.field_name || '\u2014'}</span>, className: 'hidden md:table-cell' },
+              { key: 'old_value', header: 'Old Value', render: (row: AuditEntry) => <span className="text-gray-500 truncate max-w-32 block">{row.old_value || '\u2014'}</span>, className: 'hidden lg:table-cell' },
+              { key: 'new_value', header: 'New Value', render: (row: AuditEntry) => <span className="text-gray-400 truncate max-w-32 block">{row.new_value || '\u2014'}</span>, className: 'hidden lg:table-cell' },
+            ]}
+            data={entries}
+            keyField="id"
+            striped={false}
+          />
 
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-4">

@@ -8,6 +8,7 @@ import StatCard from '../components/StatCard'
 import EmptyState from '../components/EmptyState'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
+import PageHeader from '../components/PageHeader'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { FormField, Select, Textarea } from '../components/FormField'
 import { PageSkeleton } from '../components/Skeleton'
@@ -143,9 +144,7 @@ export default function Succession() {
   if (loading) {
     return (
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-bold text-white">Succession Planning</h1>
-        </div>
+        <PageHeader title="Succession Planning" />
         <PageSkeleton />
       </div>
     )
@@ -153,10 +152,7 @@ export default function Succession() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-bold text-white">Succession Planning</h1>
-        <Button onClick={() => setShowAdd(true)}>Add Plan</Button>
-      </div>
+      <PageHeader title="Succession Planning" actions={<Button onClick={() => setShowAdd(true)}>Add Plan</Button>} />
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <StatCard label="Total Plans" value={plans.length} />
@@ -325,7 +321,7 @@ export default function Succession() {
             <div
               key={plan.id}
               onClick={() => setSelectedPlan(plan.id)}
-              className="bg-gray-900 border border-gray-800 rounded-lg p-4 cursor-pointer hover:border-gray-600 hover:bg-gray-800/50 transition-colors"
+              className="bg-gray-900 border border-gray-800 rounded-lg p-4 cursor-pointer hover:border-gray-600 hover:bg-gray-800/50 hover:shadow-md transition-all duration-200"
             >
               <div className="flex items-start justify-between mb-2">
                 <div>

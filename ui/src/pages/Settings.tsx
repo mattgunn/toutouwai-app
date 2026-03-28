@@ -4,6 +4,8 @@ import { updateSettings, authFetch } from '../api'
 import { INTEGRATIONS } from '../modules/integrations/registry'
 import { useToast } from '../components/Toast'
 import Button from '../components/Button'
+import PageHeader from '../components/PageHeader'
+import Tabs from '../components/Tabs'
 
 type Tab = 'appearance' | 'integrations' | 'developer'
 
@@ -61,23 +63,15 @@ export default function Settings() {
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-white mb-4">Settings</h1>
+      <PageHeader title="Settings" />
 
       {/* Tab bar */}
-      <div className="flex gap-1 mb-6 border-b border-gray-800">
-        {tabs.map(t => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`px-4 py-2 text-sm font-medium transition-colors ${
-              tab === t.key
-                ? 'text-white border-b-2 border-blue-400 -mb-px'
-                : 'text-gray-400 hover:text-gray-200'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
+      <div className="mb-6">
+        <Tabs
+          tabs={tabs}
+          active={tab}
+          onChange={(k) => setTab(k as Tab)}
+        />
       </div>
 
       {/* Appearance tab */}

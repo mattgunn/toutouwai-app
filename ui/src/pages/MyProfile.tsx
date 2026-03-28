@@ -15,6 +15,8 @@ import Button from '../components/Button'
 import { FormField, Input } from '../components/FormField'
 import { PageSkeleton } from '../components/Skeleton'
 import { useToast } from '../components/Toast'
+import PageHeader from '../components/PageHeader'
+import Avatar from '../components/Avatar'
 
 type Section = 'profile' | 'leave' | 'time' | 'documents' | 'onboarding'
 
@@ -73,7 +75,7 @@ export default function MyProfile() {
   if (loading) {
     return (
       <div>
-        <h1 className="text-xl font-bold text-white mb-4">My Profile</h1>
+        <PageHeader title="My Profile" />
         <PageSkeleton />
       </div>
     )
@@ -82,7 +84,7 @@ export default function MyProfile() {
   if (error) {
     return (
       <div>
-        <h1 className="text-xl font-bold text-white mb-4">My Profile</h1>
+        <PageHeader title="My Profile" />
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 text-center">
           <p className="text-gray-400 text-sm">{error}</p>
           <p className="text-gray-500 text-xs mt-2">Your user account may not be linked to an employee record yet.</p>
@@ -93,9 +95,7 @@ export default function MyProfile() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-bold text-white">My Profile</h1>
-      </div>
+      <PageHeader title="My Profile" />
 
       {/* Tabs */}
       <div className="mb-4">
@@ -114,62 +114,81 @@ export default function MyProfile() {
 
       {/* ── Profile ───────────────────────────────────────────── */}
       {section === 'profile' && profile && (
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-lg font-semibold text-white">{profile.first_name} {profile.last_name}</h2>
-              <p className="text-sm text-gray-400">{profile.position_title || 'No position'} {profile.department_name ? `\u00B7 ${profile.department_name}` : ''}</p>
+        <div className="space-y-4">
+          {/* Profile header with avatar */}
+          <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
+            <div className="flex items-center gap-4 mb-4">
+              <Avatar name={`${profile.first_name} ${profile.last_name}`} size="xl" />
+              <div className="flex-1">
+                <h2 className="text-lg font-semibold text-white">{profile.first_name} {profile.last_name}</h2>
+                <p className="text-sm text-gray-400">{profile.position_title || 'No position'} {profile.department_name ? `\u00B7 ${profile.department_name}` : ''}</p>
+              </div>
+              {!editing && (
+                <Button variant="secondary" onClick={() => setEditing(true)}>
+                  Edit
+                </Button>
+              )}
             </div>
-            {!editing && (
-              <Button variant="secondary" onClick={() => setEditing(true)}>
-                Edit
-              </Button>
-            )}
           </div>
 
           {editing ? (
-            <form onSubmit={handleUpdateProfile} className="space-y-3">
-              <FormField label="Phone">
-                <Input name="phone" defaultValue={profile.phone || ''} className="max-w-sm" />
-              </FormField>
-              <FormField label="Address">
-                <Input name="address" defaultValue={profile.address || ''} className="max-w-sm" />
-              </FormField>
-              <FormField label="Emergency Contact">
-                <Input name="emergency_contact" defaultValue={profile.emergency_contact || ''} className="max-w-sm" />
-              </FormField>
-              <div className="flex gap-2">
-                <Button type="submit" loading={submitting}>Save</Button>
-                <Button variant="secondary" onClick={() => setEditing(false)}>Cancel</Button>
-              </div>
-            </form>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs text-gray-500">Email</p>
-                <p className="text-sm text-white">{profile.email}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Phone</p>
-                <p className="text-sm text-white">{profile.phone || '\u2014'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Manager</p>
-                <p className="text-sm text-white">{profile.manager_name || '\u2014'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Start Date</p>
-                <p className="text-sm text-white">{profile.start_date || '\u2014'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Address</p>
-                <p className="text-sm text-white">{profile.address || '\u2014'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Emergency Contact</p>
-                <p className="text-sm text-white">{profile.emergency_contact || '\u2014'}</p>
-              </div>
+            <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
+              <form onSubmit={handleUpdateProfile} className="space-y-3">
+                <FormField label="Phone">
+                  <Input name="phone" defaultValue={profile.phone || ''} className="max-w-sm" />
+                </FormField>
+                <FormField label="Address">
+                  <Input name="address" defaultValue={profile.address || ''} className="max-w-sm" />
+                </FormField>
+                <FormField label="Emergency Contact">
+                  <Input name="emergency_contact" defaultValue={profile.emergency_contact || ''} className="max-w-sm" />
+                </FormField>
+                <div className="flex gap-2">
+                  <Button type="submit" loading={submitting}>Save</Button>
+                  <Button variant="secondary" onClick={() => setEditing(false)}>Cancel</Button>
+                </div>
+              </form>
             </div>
+          ) : (
+            <>
+              {/* Personal Information */}
+              <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
+                <h3 className="text-sm font-semibold text-white mb-4">Personal Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500">Email</p>
+                    <p className="text-sm text-white">{profile.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Phone</p>
+                    <p className="text-sm text-white">{profile.phone || '\u2014'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Address</p>
+                    <p className="text-sm text-white">{profile.address || '\u2014'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Emergency Contact</p>
+                    <p className="text-sm text-white">{profile.emergency_contact || '\u2014'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Employment Details */}
+              <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
+                <h3 className="text-sm font-semibold text-white mb-4">Employment Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500">Manager</p>
+                    <p className="text-sm text-white">{profile.manager_name || '\u2014'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Start Date</p>
+                    <p className="text-sm text-white">{profile.start_date || '\u2014'}</p>
+                  </div>
+                </div>
+              </div>
+            </>
           )}
         </div>
       )}

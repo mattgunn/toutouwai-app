@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import { fetchApplicants } from '../api'
 import type { Applicant } from '../types'
 import StatusBadge from '../components/StatusBadge'
-import EmptyState from '../components/EmptyState'
+import PageHeader from '../components/PageHeader'
+import DataTable from '../components/DataTable'
 import { SkeletonTable } from '../components/Skeleton'
 export default function Applicants() {
   const [applicants, setApplicants] = useState<Applicant[]>([])
@@ -15,10 +16,18 @@ export default function Applicants() {
       .finally(() => setLoading(false))
   }, [])
 
+  const applicantColumns = [
+    { key: 'name', header: 'Name', render: (app: Applicant) => <span className="text-white font-medium">{app.first_name} {app.last_name}</span> },
+    { key: 'email', header: 'Email', render: (app: Applicant) => <span className="text-gray-400">{app.email}</span> },
+    { key: 'job_title', header: 'Job', className: 'hidden md:table-cell', render: (app: Applicant) => <span className="text-gray-400">{app.job_title || '\u2014'}</span> },
+    { key: 'stage', header: 'Stage', render: (app: Applicant) => <StatusBadge status={app.stage} /> },
+    { key: 'applied_at', header: 'Applied', className: 'hidden lg:table-cell', render: (app: Applicant) => <span className="text-gray-400">{app.applied_at}</span> },
+  ]
+
   if (loading) {
     return (
       <div>
-        <h1 className="text-xl font-bold text-white mb-4">Applicants</h1>
+        <PageHeader title="Applicants" />
         <SkeletonTable rows={5} cols={5} />
       </div>
     )
@@ -26,36 +35,15 @@ export default function Applicants() {
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-white mb-4">Applicants</h1>
+      <PageHeader title="Applicants" />
 
-      {applicants.length === 0 ? (
-        <EmptyState icon="👤" message="No applicants yet" />
-      ) : (
-        <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-gray-500 text-xs uppercase">
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Email</th>
-                <th className="px-4 py-3 hidden md:table-cell">Job</th>
-                <th className="px-4 py-3">Stage</th>
-                <th className="px-4 py-3 hidden lg:table-cell">Applied</th>
-              </tr>
-            </thead>
-            <tbody>
-              {applicants.map(app => (
-                <tr key={app.id} className="border-t border-gray-800 hover:bg-gray-800/50 transition-colors">
-                  <td className="px-4 py-3 text-white font-medium">{app.first_name} {app.last_name}</td>
-                  <td className="px-4 py-3 text-gray-400">{app.email}</td>
-                  <td className="px-4 py-3 text-gray-400 hidden md:table-cell">{app.job_title || '\u2014'}</td>
-                  <td className="px-4 py-3"><StatusBadge status={app.stage} /></td>
-                  <td className="px-4 py-3 text-gray-400 hidden lg:table-cell">{app.applied_at}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <DataTable
+        columns={applicantColumns}
+        data={applicants}
+        keyField="id"
+        emptyMessage="No applicants yet"
+        emptyIcon="👤"
+      />
     </div>
   )
 }

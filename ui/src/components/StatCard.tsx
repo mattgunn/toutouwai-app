@@ -34,14 +34,14 @@ function TrendArrow({ direction }: { direction: 'up' | 'down' }) {
 export default function StatCard({ label, value, sub, color = 'default', onClick, trend }: StatCardProps) {
   return (
     <div
-      className={`bg-gray-900 border border-gray-800 border-l-4 ${borderColorMap[color]} rounded-lg p-4 ${
-        onClick ? 'cursor-pointer hover:border-gray-600 hover:bg-gray-800/50 transition-colors' : ''
+      className={`bg-gray-900 border border-gray-800 border-l-4 ${borderColorMap[color]} rounded-lg p-4 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 ${
+        onClick ? 'cursor-pointer hover:border-gray-600 hover:bg-gray-800/50' : ''
       }`}
       onClick={onClick}
     >
       <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{label}</p>
       <div className="flex items-end gap-2">
-        <p className="text-2xl md:text-3xl font-semibold text-white">{value}</p>
+        <p className="text-2xl md:text-3xl font-semibold text-white">{typeof value === 'number' ? value.toLocaleString() : value}</p>
         {trend && (
           <span className={`flex items-center gap-0.5 text-xs font-medium pb-1 ${trendColorMap[trend.direction]}`}>
             <TrendArrow direction={trend.direction} />
