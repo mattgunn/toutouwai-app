@@ -9,158 +9,212 @@
 
 html.workday {
   /* ─── Page / surface backgrounds — warm light gray ──────────────── */
-  .bg-gray-950       { background-color: #f2f3f4 !important; }
-  .bg-gray-950\/40   { background-color: rgba(242,243,244,.4) !important; }
+  .bg-gray-950       { background-color: #f5f6f8 !important; }
+  .bg-gray-950\/40   { background-color: rgba(245,246,248,.4) !important; }
   .bg-gray-900       { background-color: #ffffff !important; }
   .bg-gray-900\/80   { background-color: rgba(255,255,255,.8) !important; }
-  .bg-gray-800       { background-color: #eaecee !important; }
-  .bg-gray-800\/20   { background-color: rgba(234,236,238,.3) !important; }
-  .bg-gray-800\/30   { background-color: rgba(234,236,238,.45) !important; }
-  .bg-gray-800\/50   { background-color: rgba(234,236,238,.5) !important; }
-  .bg-gray-700       { background-color: #dfe1e4 !important; }
-  .bg-gray-700\/50   { background-color: rgba(223,225,228,.5) !important; }
+  .bg-gray-800       { background-color: #f0f2f4 !important; }
+  .bg-gray-800\/20   { background-color: rgba(240,242,244,.3) !important; }
+  .bg-gray-800\/30   { background-color: rgba(240,242,244,.45) !important; }
+  .bg-gray-800\/50   { background-color: rgba(240,242,244,.5) !important; }
+  .bg-gray-700       { background-color: #e4e6e9 !important; }
+  .bg-gray-700\/50   { background-color: rgba(228,230,233,.5) !important; }
 
   /* ─── Blue primary accent (Workday signature blue) ──────────────── */
-  .bg-blue-600       { background-color: #0875e1 !important; }
-  .hover\:bg-blue-500:hover { background-color: #1a8af5 !important; }
-  .hover\:bg-blue-600\/30:hover { background-color: rgba(8,117,225,.12) !important; }
-  .bg-blue-600\/20   { background-color: rgba(8,117,225,.08) !important; }
+  .bg-blue-600       { background-color: #0875e1 !important; border-radius: 20px !important; }
+  .hover\:bg-blue-500:hover { background-color: #0969c8 !important; }
+  .hover\:bg-blue-600\/30:hover { background-color: rgba(8,117,225,.10) !important; }
+  .bg-blue-600\/20   { background-color: rgba(8,117,225,.07) !important; }
+
+  /* Dashboard gradient banner — Workday blue palette */
+  .from-blue-600     { --tw-gradient-from: #0875e1 !important; }
+  .to-indigo-700     { --tw-gradient-to: #0356a6 !important; }
 
   /* Semantic tinted backgrounds — softer pastels */
-  .bg-emerald-600\/20  { background-color: rgba(35,136,35,.07) !important; }
-  .bg-red-600\/20      { background-color: rgba(211,47,47,.07) !important; }
-  .bg-purple-600\/20   { background-color: rgba(139,92,246,.07) !important; }
-  .bg-amber-600\/20    { background-color: rgba(232,157,9,.07) !important; }
+  .bg-emerald-600\/20  { background-color: rgba(35,136,35,.06) !important; }
+  .bg-red-600\/20      { background-color: rgba(211,47,47,.06) !important; }
+  .bg-purple-600\/20   { background-color: rgba(139,92,246,.06) !important; }
+  .bg-amber-600\/20    { background-color: rgba(232,157,9,.06) !important; }
 
-  .bg-red-950\/30      { background-color: rgba(211,47,47,.05) !important; }
-  .bg-emerald-950\/30  { background-color: rgba(35,136,35,.05) !important; }
-  .bg-blue-950\/30     { background-color: rgba(8,117,225,.05) !important; }
-  .bg-green-900\/30    { background-color: rgba(35,136,35,.07) !important; }
-  .bg-emerald-900\/40  { background-color: rgba(187,247,208,.5) !important; }
+  .bg-red-950\/30      { background-color: rgba(211,47,47,.04) !important; }
+  .bg-emerald-950\/30  { background-color: rgba(35,136,35,.04) !important; }
+  .bg-blue-950\/30     { background-color: rgba(8,117,225,.04) !important; }
+  .bg-green-900\/30    { background-color: rgba(35,136,35,.06) !important; }
+  .bg-emerald-900\/40  { background-color: rgba(187,247,208,.45) !important; }
 
-  /* ─── Text colours — charcoal primary ───────────────────────────── */
+  /* ─── Text colours — charcoal primary, Google-style secondary ──── */
   .text-white    { color: #333333 !important; }
   .text-gray-100 { color: #333333 !important; }
-  .text-gray-200 { color: #444444 !important; }
-  .text-gray-300 { color: #555555 !important; }
-  .text-gray-400 { color: #666666 !important; }
-  .text-gray-500 { color: #888888 !important; }
-  .text-gray-600 { color: #888888 !important; }
-  .text-gray-700 { color: #999999 !important; }
+  .text-gray-200 { color: #3c4043 !important; }
+  .text-gray-300 { color: #4a4e52 !important; }
+  .text-gray-400 { color: #5f6368 !important; }
+  .text-gray-500 { color: #80868b !important; }
+  .text-gray-600 { color: #80868b !important; }
+  .text-gray-700 { color: #9aa0a6 !important; }
 
   /* Semantic text — Workday palette */
   .text-blue-400    { color: #0875e1 !important; }
   .text-blue-300    { color: #1a8af5 !important; }
-  .text-emerald-400 { color: #238823 !important; }
-  .text-emerald-300 { color: #2ea52e !important; }
-  .text-red-400     { color: #d32f2f !important; }
-  .text-red-300     { color: #e04545 !important; }
-  .text-amber-400   { color: #c78508 !important; }
-  .text-amber-300   { color: #e89d09 !important; }
+  .text-emerald-400 { color: #1a7c1a !important; }
+  .text-emerald-300 { color: #238823 !important; }
+  .text-red-400     { color: #c62828 !important; }
+  .text-red-300     { color: #d32f2f !important; }
+  .text-amber-400   { color: #b37000 !important; }
+  .text-amber-300   { color: #c78508 !important; }
   .text-purple-400  { color: #7c3aed !important; }
   .text-purple-300  { color: #8b5cf6 !important; }
-  .text-green-400   { color: #238823 !important; }
-  .text-green-500   { color: #238823 !important; }
+  .text-green-400   { color: #1a7c1a !important; }
+  .text-green-500   { color: #1a7c1a !important; }
 
   /* Hover text */
   .hover\:text-white:hover       { color: #333333 !important; }
-  .hover\:text-gray-200:hover    { color: #444444 !important; }
-  .hover\:text-gray-300:hover    { color: #555555 !important; }
-  .hover\:text-gray-400:hover    { color: #666666 !important; }
+  .hover\:text-gray-200:hover    { color: #3c4043 !important; }
+  .hover\:text-gray-300:hover    { color: #4a4e52 !important; }
+  .hover\:text-gray-400:hover    { color: #5f6368 !important; }
   .hover\:text-blue-300:hover    { color: #1a8af5 !important; }
   .hover\:text-blue-400:hover    { color: #0875e1 !important; }
-  .hover\:text-emerald-300:hover { color: #2ea52e !important; }
-  .hover\:text-red-300:hover     { color: #e04545 !important; }
-  .hover\:text-red-400:hover     { color: #d32f2f !important; }
-  .hover\:text-amber-300:hover   { color: #e89d09 !important; }
+  .hover\:text-emerald-300:hover { color: #238823 !important; }
+  .hover\:text-red-300:hover     { color: #d32f2f !important; }
+  .hover\:text-red-400:hover     { color: #c62828 !important; }
+  .hover\:text-amber-300:hover   { color: #c78508 !important; }
   .hover\:text-purple-300:hover  { color: #8b5cf6 !important; }
 
   /* Placeholder */
-  .placeholder-gray-500::placeholder { color: #999999 !important; }
-  .placeholder-gray-600::placeholder { color: #999999 !important; }
+  .placeholder-gray-500::placeholder { color: #9aa0a6 !important; }
+  .placeholder-gray-600::placeholder { color: #9aa0a6 !important; }
 
-  /* ─── Borders — light gray, clean ───────────────────────────────── */
-  .border-gray-800       { border-color: #e0e2e5 !important; }
-  .border-gray-800\/50   { border-color: rgba(224,226,229,.5) !important; }
-  .border-gray-800\/30   { border-color: rgba(224,226,229,.3) !important; }
-  .border-gray-700       { border-color: #d1d5db !important; }
-  .border-gray-700\/50   { border-color: rgba(209,213,219,.5) !important; }
-  .border-gray-600       { border-color: #9ca3af !important; }
-  .border-gray-500       { border-color: #d1d5db !important; }
-  .border-gray-400       { border-color: #e5e7eb !important; }
+  /* ─── Borders — lighter, cleaner ───────────────────────────────── */
+  .border-gray-800       { border-color: #e8eaed !important; }
+  .border-gray-800\/50   { border-color: rgba(232,234,237,.5) !important; }
+  .border-gray-800\/30   { border-color: rgba(232,234,237,.3) !important; }
+  .border-gray-700       { border-color: #dadce0 !important; }
+  .border-gray-700\/50   { border-color: rgba(218,220,224,.5) !important; }
+  .border-gray-600       { border-color: #9aa0a6 !important; }
+  .border-gray-500       { border-color: #dadce0 !important; }
+  .border-gray-400       { border-color: #e8eaed !important; }
   .border-red-800        { border-color: #f9a8a8 !important; }
   .border-emerald-700    { border-color: #86efac !important; }
   .border-emerald-800    { border-color: #86efac !important; }
   .border-green-800\/30  { border-color: rgba(134,239,172,.3) !important; }
   .border-blue-400       { border-color: #0875e1 !important; }
 
-  .hover\:border-gray-600:hover { border-color: #9ca3af !important; }
-  .hover\:border-gray-400:hover { border-color: #666666 !important; }
+  .hover\:border-gray-600:hover { border-color: #9aa0a6 !important; }
+  .hover\:border-gray-400:hover { border-color: #5f6368 !important; }
   .focus\:border-blue-500:focus { border-color: #0875e1 !important; }
 
   /* ─── Hover backgrounds ─────────────────────────────────────────── */
-  .hover\:bg-gray-600:hover { background-color: #d1d5db !important; }
-  .hover\:bg-gray-700:hover     { background-color: #dfe1e4 !important; }
-  .hover\:bg-gray-700\/50:hover { background-color: rgba(223,225,228,.5) !important; }
-  .hover\:bg-gray-800\/30:hover { background-color: rgba(234,236,238,.5) !important; }
-  .hover\:bg-gray-800\/50:hover { background-color: rgba(234,236,238,.6) !important; }
+  .hover\:bg-gray-600:hover { background-color: #dadce0 !important; }
+  .hover\:bg-gray-700:hover     { background-color: #e4e6e9 !important; }
+  .hover\:bg-gray-700\/50:hover { background-color: rgba(228,230,233,.5) !important; }
+  .hover\:bg-gray-800\/30:hover { background-color: rgba(240,242,244,.6) !important; }
+  .hover\:bg-gray-800\/50:hover { background-color: rgba(240,242,244,.7) !important; }
 
-  /* ─── Card elevation — Workday uses shadows, not heavy borders ──── */
+  /* ─── Card elevation — Workday's subtle but clear shadow ────────── */
   .bg-gray-900 {
-    box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04) !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04) !important;
   }
 
-  /* ─── Inputs & form elements — white bg, light borders, rounded ── */
+  /* ─── Rounded corners — more generous for Workday feel ──────────── */
+  .rounded-lg { border-radius: 12px !important; }
+  .rounded-md { border-radius: 8px !important; }
+  .rounded-xl { border-radius: 16px !important; }
+
+  /* ─── Inputs & form elements — white bg, subtle, more rounded ──── */
   input, textarea, select {
     background-color: #ffffff !important;
-    border-color: #d1d5db !important;
+    border-color: #dadce0 !important;
     color: #333333 !important;
-    border-radius: 6px;
+    border-radius: 8px;
   }
   input::placeholder, textarea::placeholder {
-    color: #999999 !important;
+    color: #9aa0a6 !important;
   }
   input:focus, textarea:focus, select:focus {
     border-color: #0875e1 !important;
-    box-shadow: 0 0 0 2px rgba(8,117,225,.12);
+    box-shadow: 0 0 0 3px rgba(8,117,225,.10), inset 0 1px 2px rgba(0,0,0,.04);
+    outline: none;
   }
 
-  /* ─── Tables — clean white rows, subtle separators ──────────────── */
+  /* ─── Tables — clean, minimal, Workday-style ───────────────────── */
   table th {
-    background-color: #f5f6f7 !important;
-    color: #555555 !important;
-    border-color: #e0e2e5 !important;
-    border-bottom: 2px solid #d1d5db !important;
+    background-color: #fafbfc !important;
+    color: #5f6368 !important;
+    border-color: #f0f1f3 !important;
+    border-bottom: 1px solid #e8eaed !important;
     font-weight: 600;
-    letter-spacing: 0.01em;
+    font-size: 0.75rem;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
   }
   table td {
-    border-color: #eef0f1 !important;
+    border-color: #f0f1f3 !important;
     color: #333333 !important;
   }
   table tr:hover td {
     background-color: rgba(8,117,225,.03) !important;
   }
+  table thead tr:hover th {
+    background-color: #fafbfc !important;
+  }
 
-  /* ─── Shadows — Workday's subtle elevation ──────────────────────── */
-  .shadow-xl { box-shadow: 0 4px 20px rgba(0,0,0,.08) !important; }
-  .shadow-lg { box-shadow: 0 2px 10px rgba(0,0,0,.06) !important; }
+  /* ─── Shadows — Workday's clean elevation system ────────────────── */
+  .shadow-xl { box-shadow: 0 4px 24px rgba(0,0,0,.08) !important; }
+  .shadow-lg { box-shadow: 0 2px 12px rgba(0,0,0,.06) !important; }
+  .shadow-sm { box-shadow: 0 1px 2px rgba(0,0,0,.05) !important; }
 
-  /* ─── Rounded buttons ───────────────────────────────────────────── */
-  .rounded-md { border-radius: 6px !important; }
+  /* ─── StatCard hover — better elevation on hover ────────────────── */
+  .hover\:shadow-lg:hover {
+    box-shadow: 0 4px 16px rgba(8,117,225,.08), 0 2px 6px rgba(0,0,0,.06) !important;
+  }
 
-  /* ─── Typography — slightly larger for readability ──────────────── */
+  /* ─── StatCard left-border accent — map to Workday blue palette ── */
+  .border-l-blue-500  { border-left-color: #0875e1 !important; }
+  .border-l-gray-600  { border-left-color: #9aa0a6 !important; }
+
+  /* ─── Tabs — Workday blue underline, thicker indicator ──────────── */
+  /* Underline tab active indicator */
+  .h-0\.5.bg-blue-400 {
+    height: 3px !important;
+    background-color: #0875e1 !important;
+    border-radius: 3px 3px 0 0;
+  }
+  /* Sub-nav active tab border */
+  .border-b-2.border-blue-400 {
+    border-bottom-width: 3px !important;
+    border-bottom-color: #0875e1 !important;
+  }
+
+  /* ─── Focus states — blue outline rings ─────────────────────────── */
+  .focus\:ring-blue-500:focus {
+    box-shadow: 0 0 0 3px rgba(8,117,225,.15) !important;
+  }
+  button:focus-visible {
+    outline: 2px solid #0875e1;
+    outline-offset: 2px;
+  }
+
+  /* ─── Typography — slightly larger, professional ────────────────── */
   .text-xs  { font-size: 0.8rem !important; }
-  .text-sm  { font-size: 0.9rem !important; }
+  .text-sm  { font-size: 0.875rem !important; }
 
   /* ─── Backdrop / overlay ────────────────────────────────────────── */
-  .bg-black\/50 { background-color: rgba(0,0,0,.2) !important; }
+  .bg-black\/50 { background-color: rgba(0,0,0,.18) !important; }
 
   /* ─── Scrollbar ─────────────────────────────────────────────────── */
   ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: #f2f3f4; }
+  ::-webkit-scrollbar-track { background: #f5f6f8; }
   ::-webkit-scrollbar-thumb { background: #c9cdd2; border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+  ::-webkit-scrollbar-thumb:hover { background: #9aa0a6; }
+
+  /* ─── PageHeader — subtle bottom separator ──────────────────────── */
+  /* PageHeader is a flex div with mb-6; add bottom border via CSS */
+  h1.text-2xl.font-bold {
+    color: #202124 !important;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════
+   * NAVIGATION — deep navy sidebar & topbar
+   * ═══════════════════════════════════════════════════════════════ */
 
   /* ─── Workday nav — dark navy, shared between sidebar & topbar ── */
   .workday-sidebar, .workday-topbar {
@@ -178,40 +232,85 @@ html.workday {
     letter-spacing: 0.03em;
   }
 
-  /* Nav text on dark navy */
-  .workday-sidebar .text-gray-400, .workday-topbar .text-gray-400 { color: #8fabc4 !important; }
-  .workday-sidebar .text-gray-600, .workday-topbar .text-gray-600 { color: #4d7a9b !important; }
-  .workday-sidebar .text-gray-500, .workday-topbar .text-gray-500 { color: #6e96b3 !important; }
-  .workday-sidebar .text-gray-200, .workday-topbar .text-gray-200 { color: #d6e4f0 !important; }
+  /* Nav icons and text on dark navy — brighter for legibility */
+  .workday-sidebar .text-gray-400, .workday-topbar .text-gray-400 { color: #a3c0d8 !important; }
+  .workday-sidebar .text-gray-600, .workday-topbar .text-gray-600 { color: #6e96b3 !important; }
+  .workday-sidebar .text-gray-500, .workday-topbar .text-gray-500 { color: #7faac4 !important; }
+  .workday-sidebar .text-gray-200, .workday-topbar .text-gray-200 { color: #dce8f2 !important; }
   .workday-sidebar .text-white,    .workday-topbar .text-white    { color: #ffffff !important; }
-  .workday-sidebar .hover\:text-gray-200:hover, .workday-topbar .hover\:text-gray-200:hover { color: #d6e4f0 !important; }
-  .workday-sidebar .hover\:text-gray-300:hover, .workday-topbar .hover\:text-gray-300:hover { color: #bdd0e0 !important; }
+  .workday-sidebar .hover\:text-gray-200:hover, .workday-topbar .hover\:text-gray-200:hover { color: #dce8f2 !important; }
+  .workday-sidebar .hover\:text-gray-300:hover, .workday-topbar .hover\:text-gray-300:hover { color: #c5d8e8 !important; }
   .workday-sidebar .hover\:text-white:hover,    .workday-topbar .hover\:text-white:hover    { color: #ffffff !important; }
 
   /* Nav hover — subtle blue tint */
-  .workday-sidebar .hover\:bg-gray-800\/50:hover, .workday-topbar .hover\:bg-gray-800\/50:hover { background-color: rgba(8,117,225,.15) !important; }
+  .workday-sidebar .hover\:bg-gray-800\/50:hover, .workday-topbar .hover\:bg-gray-800\/50:hover {
+    background-color: rgba(8,117,225,.10) !important;
+    border-radius: 6px;
+  }
 
-  /* Active nav item — bright blue highlight */
-  .workday-sidebar .bg-blue-600\/20, .workday-topbar .bg-blue-600\/20 { background-color: rgba(8,117,225,.18) !important; }
+  /* Active nav item — bright blue highlight with left border */
+  .workday-sidebar .bg-blue-600\/20, .workday-topbar .bg-blue-600\/20 {
+    background-color: rgba(8,117,225,.22) !important;
+    border-radius: 0 !important;
+  }
   .workday-sidebar .text-blue-400,   .workday-topbar .text-blue-400   { color: #5cb3ff !important; }
   .workday-sidebar .border-blue-400, .workday-topbar .border-blue-400 { border-color: #0875e1 !important; }
   .workday-sidebar .border-gray-800, .workday-topbar .border-gray-800 { border-color: #0a3d6b !important; }
   .workday-topbar .bg-gray-700 { background-color: #0a3d6b !important; }
 
-  /* ─── Workday sub-nav — slightly lighter navy ───────────────────── */
-  .workday-subnav {
-    background-color: #f0f1f3 !important;
-    border-color: #dde0e4 !important;
+  /* Nav search bar on dark navy */
+  .workday-sidebar input, .workday-topbar input {
+    background-color: rgba(255,255,255,.08) !important;
+    border-color: rgba(255,255,255,.12) !important;
+    color: #ffffff !important;
   }
-  .workday-subnav .text-gray-400 { color: #666666 !important; }
+  .workday-sidebar input::placeholder, .workday-topbar input::placeholder {
+    color: #7faac4 !important;
+  }
+  .workday-sidebar input:focus, .workday-topbar input:focus {
+    background-color: rgba(255,255,255,.12) !important;
+    border-color: rgba(8,117,225,.5) !important;
+    box-shadow: 0 0 0 2px rgba(8,117,225,.2);
+  }
+
+  /* Nav search dropdown on dark navy */
+  .workday-topbar .bg-gray-800 {
+    background-color: #033561 !important;
+  }
+  .workday-sidebar .bg-gray-800 {
+    background-color: #033561 !important;
+  }
+
+  /* ─── Workday sub-nav — light surface, not navy ─────────────────── */
+  .workday-subnav {
+    background-color: #ffffff !important;
+    border-color: #e8eaed !important;
+  }
+  .workday-subnav .text-gray-400 { color: #5f6368 !important; }
   .workday-subnav .text-white    { color: #333333 !important; }
   .workday-subnav .border-blue-400 { border-color: #0875e1 !important; }
-  .workday-subnav .hover\:text-gray-200:hover { color: #444444 !important; }
-  .workday-subnav .hover\:bg-gray-800\/50:hover { background-color: rgba(8,117,225,.06) !important; }
+  .workday-subnav .hover\:text-gray-200:hover { color: #333333 !important; }
+  .workday-subnav .hover\:bg-gray-800\/50:hover { background-color: rgba(8,117,225,.05) !important; }
 
   /* ─── AdminSettings dropdown (stays dark) ───────────────────────── */
   .admin-settings-dropdown {
     background-color: #022b4a !important;
     border-color: #0a3d6b !important;
   }
+
+  /* ─── Notification bell badge — keep red on nav ─────────────────── */
+  .workday-sidebar .bg-red-500, .workday-topbar .bg-red-500 {
+    background-color: #d32f2f !important;
+    border-radius: 50% !important;
+  }
+  .workday-sidebar .text-white.bg-red-500, .workday-topbar .text-white.bg-red-500 {
+    color: #ffffff !important;
+  }
+
+  /* ─── Status badges — ensure pill shape ─────────────────────────── */
+  .rounded-full { border-radius: 9999px !important; }
+
+  /* ─── Links in content — Workday blue ───────────────────────────── */
+  a.text-blue-400 { color: #0875e1 !important; }
+  a.text-blue-400:hover { color: #0969c8 !important; text-decoration: underline; }
 }

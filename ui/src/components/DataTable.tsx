@@ -40,7 +40,7 @@ export default function DataTable<T>({
   emptyMessage = 'No data found',
   emptyAction,
   onEmptyAction,
-  striped = true,
+  striped: _striped = true,
   loading = false,
 }: DataTableProps<T>) {
   const [sort, setSort] = useState<{ key: string; dir: 'asc' | 'desc' } | null>(null)
