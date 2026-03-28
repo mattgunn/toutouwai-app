@@ -23,8 +23,9 @@ export default function Login() {
     try {
       await requestLoginLink(email)
       navigate('/link-sent')
-    } catch {
-      setError('Failed to send login link')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to send login link'
+      setError(msg === 'Failed to fetch' ? 'Cannot reach server — is the backend running?' : msg)
     } finally {
       setLoading(false)
     }

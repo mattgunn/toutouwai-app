@@ -6,6 +6,10 @@ export async function requestLoginLink(email: string) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email }),
   })
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({}))
+    throw new Error(detail?.detail || `Request failed (${res.status})`)
+  }
   return res.json()
 }
 
