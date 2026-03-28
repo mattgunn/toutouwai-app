@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
+import EmployeeLink from '../components/EmployeeLink'
 import { fetchEmployees, fetchDepartments, fetchPositions, createEmployee, updateEmployee, fetchDocuments, fetchLeaveRequests, fetchTimeEntries, createLeaveRequest, createTimeEntry, createDocument, createGoal, fetchLeaveTypes, fetchGoals } from '../api'
 import { fetchCompensation, createCompensation } from '../modules/compensation/api'
 import type { Employee, Department, Position, LeaveRequest, LeaveType, TimeEntry } from '../types'
@@ -654,7 +655,7 @@ export default function Employees() {
       render: (emp: Employee) => (
         <div className="flex items-center gap-3">
           <Avatar name={`${emp.first_name} ${emp.last_name}`} imageUrl={emp.avatar_url} size="md" />
-          <span className="text-white font-medium">{emp.first_name} {emp.last_name}</span>
+          <EmployeeLink employeeId={emp.id} name={`${emp.first_name} ${emp.last_name}`} />
         </div>
       ),
     },

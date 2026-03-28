@@ -360,7 +360,7 @@ export default function Reviews() {
         size="md"
         footer={
           <>
-            <Button variant="secondary" onClick={() => { setEditingReview(false); setSelectedReview(null) }} disabled={editSubmitting}>Cancel</Button>
+            <Button variant="secondary" onClick={() => setEditingReview(false)} disabled={editSubmitting}>Cancel</Button>
             <Button onClick={handleEditReview} loading={editSubmitting}>Save Changes</Button>
           </>
         }

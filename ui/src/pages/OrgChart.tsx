@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Link } from 'react-router-dom'
 import { fetchEmployees } from '../api'
+import EmployeeLink from '../components/EmployeeLink'
 import type { Employee } from '../types'
 import PageHeader from '../components/PageHeader'
 import Avatar from '../components/Avatar'
@@ -59,11 +59,7 @@ function OrgNodeCard({
         {!hasChildren && <span className="w-4 shrink-0" />}
         <Avatar name={name} imageUrl={node.employee.avatar_url} size="sm" />
         <div>
-          <Link
-            to={`/employees?id=${node.employee.id}`}
-            className="text-sm text-white font-medium hover:text-blue-400 transition-colors"
-            onClick={e => e.stopPropagation()}
-          >{name}</Link>
+          <EmployeeLink employeeId={node.employee.id} name={name} className="text-sm font-medium" />
           <p className="text-xs text-gray-500">{node.employee.position_title || node.employee.department_name || 'No position'}</p>
         </div>
         {hasChildren && (
