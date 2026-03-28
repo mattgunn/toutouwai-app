@@ -78,6 +78,10 @@ def create_employee(body: dict, conn=Depends(get_db), _user=Depends(get_current_
         raise HTTPException(status_code=400, detail="last_name is required")
     if not body.get("email"):
         raise HTTPException(status_code=400, detail="email is required")
+    # Check for duplicate email
+    existing = conn.execute("SELECT id FROM employees WHERE email = ?", (body["email"],)).fetchone()
+    if existing:
+        raise HTTPException(status_code=409, detail="An employee with this email already exists")
     ts = now_iso()
     eid = new_id()
     conn.execute("""
