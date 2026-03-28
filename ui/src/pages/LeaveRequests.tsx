@@ -20,6 +20,7 @@ export default function LeaveRequests() {
   const [rejectId, setRejectId] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null)
   const toast = useToast()
 
   const loadData = () => {
@@ -37,6 +38,7 @@ export default function LeaveRequests() {
     try {
       await updateLeaveRequestStatus(id, 'approved')
       toast.success('Leave request approved')
+      setSelectedRequest(null)
       loadData()
     } catch {
       toast.error('Failed to approve leave request')
@@ -53,6 +55,7 @@ export default function LeaveRequests() {
       toast.success('Leave request rejected')
       setRejectId(null)
       setRejectReason('')
+      setSelectedRequest(null)
       loadData()
     } catch {
       toast.error('Failed to reject leave request')
@@ -72,35 +75,6 @@ export default function LeaveRequests() {
     { key: 'end_date', header: 'End', render: (req: LeaveRequest) => <span className="text-gray-400">{formatDate(req.end_date)}</span> },
     { key: 'days', header: 'Days', render: (req: LeaveRequest) => <span className="text-white">{req.days}</span> },
     { key: 'status', header: 'Status', render: (req: LeaveRequest) => <StatusBadge status={req.status} /> },
-    {
-      key: '_actions',
-      header: 'Actions',
-      render: (req: LeaveRequest) => {
-        if (req.status !== 'pending') return null
-        const isLoading = actionLoading === req.id
-        return (
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="primary"
-              onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleApprove(req.id) }}
-              loading={isLoading}
-              disabled={!!actionLoading}
-            >
-              Approve
-            </Button>
-            <Button
-              size="sm"
-              variant="danger"
-              onClick={(e: React.MouseEvent) => { e.stopPropagation(); setRejectId(req.id) }}
-              disabled={!!actionLoading}
-            >
-              Reject
-            </Button>
-          </div>
-        )
-      },
-    },
   ]
 
   if (loading) {
@@ -144,9 +118,86 @@ export default function LeaveRequests() {
         keyField="id"
         emptyIcon="🏖"
         emptyMessage="No leave requests"
+        onRowClick={(req) => setSelectedRequest(req)}
         striped
       />
 
+      {/* Detail modal */}
+      <Modal
+        open={!!selectedRequest}
+        onClose={() => setSelectedRequest(null)}
+        title="Leave Request Details"
+        size="md"
+        footer={
+          selectedRequest?.status === 'pending' ? (
+            <div className="flex gap-2">
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => { setRejectId(selectedRequest.id); setSelectedRequest(null) }}
+                disabled={!!actionLoading}
+              >
+                Reject
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => handleApprove(selectedRequest.id)}
+                loading={actionLoading === selectedRequest.id}
+                disabled={!!actionLoading}
+              >
+                Approve
+              </Button>
+            </div>
+          ) : undefined
+        }
+      >
+        {selectedRequest && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Employee</p>
+                <p className="text-sm text-white">{selectedRequest.employee_name || '\u2014'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Leave Type</p>
+                <p className="text-sm text-white">{selectedRequest.leave_type_name || '\u2014'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Start Date</p>
+                <p className="text-sm text-white">{formatDate(selectedRequest.start_date)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">End Date</p>
+                <p className="text-sm text-white">{formatDate(selectedRequest.end_date)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Days</p>
+                <p className="text-sm text-white font-medium">{selectedRequest.days}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Status</p>
+                <StatusBadge status={selectedRequest.status} />
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Notes</p>
+              <p className="text-sm text-gray-300">{selectedRequest.notes || '\u2014'}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Submitted</p>
+                <p className="text-sm text-gray-400">{formatDate(selectedRequest.created_at)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Last Updated</p>
+                <p className="text-sm text-gray-400">{formatDate(selectedRequest.updated_at)}</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Reject modal */}
       <Modal
         open={!!rejectId}
         onClose={() => { setRejectId(null); setRejectReason('') }}

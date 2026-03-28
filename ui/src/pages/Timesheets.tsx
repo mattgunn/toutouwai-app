@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
-import { fetchTimeEntries, fetchEmployees, createTimeEntry } from '../api'
+import { fetchTimeEntries, fetchEmployees, createTimeEntry, updateTimeEntry, deleteTimeEntry } from '../api'
 import type { TimeEntry, Employee } from '../types'
 import { SkeletonTable } from '../components/Skeleton'
 import PageHeader from '../components/PageHeader'
 import DataTable from '../components/DataTable'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
+import ConfirmDialog from '../components/ConfirmDialog'
 import { FormField, Input, Select, Textarea } from '../components/FormField'
 import { useToast } from '../components/Toast'
 import { formatDate } from '../utils/format'
@@ -27,6 +28,12 @@ export default function Timesheets() {
   const [submitting, setSubmitting] = useState(false)
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+  const [selectedEntry, setSelectedEntry] = useState<TimeEntry | null>(null)
+  const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null)
+  const [editForm, setEditForm] = useState(EMPTY_FORM)
+  const [editSubmitting, setEditSubmitting] = useState(false)
+  const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const toast = useToast()
 
   const loadEntries = (from?: string, to?: string) => {
@@ -76,6 +83,55 @@ export default function Timesheets() {
       toast.error('Failed to log time entry')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const openEditModal = (entry: TimeEntry) => {
+    setEditingEntry(entry)
+    setEditForm({
+      employee_id: entry.employee_id,
+      date: entry.date,
+      hours: String(entry.hours),
+      project: entry.project || '',
+      description: entry.description || '',
+    })
+    setSelectedEntry(null)
+  }
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingEntry) return
+    setEditSubmitting(true)
+    try {
+      await updateTimeEntry(editingEntry.id, {
+        date: editForm.date,
+        hours: parseFloat(editForm.hours),
+        project: editForm.project || null,
+        description: editForm.description || null,
+      })
+      toast.success('Time entry updated')
+      setEditingEntry(null)
+      loadEntries(dateFrom, dateTo).catch(() => {})
+    } catch {
+      toast.error('Failed to update time entry')
+    } finally {
+      setEditSubmitting(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deleteId) return
+    setDeleting(true)
+    try {
+      await deleteTimeEntry(deleteId)
+      toast.success('Time entry deleted')
+      setDeleteId(null)
+      setSelectedEntry(null)
+      loadEntries(dateFrom, dateTo).catch(() => {})
+    } catch {
+      toast.error('Failed to delete time entry')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -136,9 +192,54 @@ export default function Timesheets() {
         keyField="id"
         emptyIcon="⏱"
         emptyMessage="No time entries yet"
+        onRowClick={(entry) => setSelectedEntry(entry)}
         striped
       />
 
+      {/* Detail modal */}
+      <Modal
+        open={!!selectedEntry}
+        onClose={() => setSelectedEntry(null)}
+        title="Time Entry Details"
+        size="md"
+        footer={
+          selectedEntry ? (
+            <div className="flex gap-2">
+              <Button variant="danger" size="sm" onClick={() => { setDeleteId(selectedEntry.id) }}>Delete</Button>
+              <Button size="sm" onClick={() => openEditModal(selectedEntry)}>Edit</Button>
+            </div>
+          ) : undefined
+        }
+      >
+        {selectedEntry && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Employee</p>
+                <p className="text-sm text-white">{selectedEntry.employee_name || '\u2014'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Date</p>
+                <p className="text-sm text-white">{formatDate(selectedEntry.date)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Hours</p>
+                <p className="text-sm text-white font-medium">{selectedEntry.hours}h</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Project</p>
+                <p className="text-sm text-white">{selectedEntry.project || '\u2014'}</p>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Description</p>
+              <p className="text-sm text-gray-300">{selectedEntry.description || '\u2014'}</p>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Create modal */}
       <Modal
         open={showModal}
         onClose={() => setShowModal(false)}
@@ -199,6 +300,70 @@ export default function Timesheets() {
           </FormField>
         </form>
       </Modal>
+
+      {/* Edit modal */}
+      <Modal
+        open={!!editingEntry}
+        onClose={() => setEditingEntry(null)}
+        title="Edit Time Entry"
+        size="md"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setEditingEntry(null)} disabled={editSubmitting}>Cancel</Button>
+            <Button type="submit" form="edit-time-form" loading={editSubmitting}>Save Changes</Button>
+          </>
+        }
+      >
+        <form id="edit-time-form" onSubmit={handleEditSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="Date" required>
+              <Input
+                type="date"
+                value={editForm.date}
+                onChange={e => setEditForm(f => ({ ...f, date: e.target.value }))}
+                required
+              />
+            </FormField>
+            <FormField label="Hours" required>
+              <Input
+                type="number"
+                step="0.25"
+                min="0.25"
+                max="24"
+                value={editForm.hours}
+                onChange={e => setEditForm(f => ({ ...f, hours: e.target.value }))}
+                required
+              />
+            </FormField>
+          </div>
+          <FormField label="Project">
+            <Input
+              value={editForm.project}
+              onChange={e => setEditForm(f => ({ ...f, project: e.target.value }))}
+              placeholder="Project name"
+            />
+          </FormField>
+          <FormField label="Description">
+            <Textarea
+              value={editForm.description}
+              onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
+              placeholder="What did you work on?"
+            />
+          </FormField>
+        </form>
+      </Modal>
+
+      {/* Delete confirmation */}
+      <ConfirmDialog
+        open={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        onConfirm={handleDelete}
+        title="Delete Time Entry"
+        message="Are you sure you want to delete this time entry? This action cannot be undone."
+        confirmLabel="Delete"
+        variant="danger"
+        loading={deleting}
+      />
     </div>
   )
 }

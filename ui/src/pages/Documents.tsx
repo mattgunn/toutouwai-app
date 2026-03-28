@@ -57,6 +57,13 @@ function isExpired(date: string | null): boolean {
   return new Date(date) < new Date()
 }
 
+function formatFileSize(bytes: number | null): string {
+  if (!bytes) return '\u2014'
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
 export default function Documents() {
   const [documents, setDocuments] = useState<Document[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -68,6 +75,7 @@ export default function Documents() {
   const [submitting, setSubmitting] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
   const toast = useToast()
 
   useEffect(() => {
@@ -118,6 +126,7 @@ export default function Documents() {
     try {
       await deleteDocument(deleteId)
       setDocuments(prev => prev.filter(d => d.id !== deleteId))
+      if (selectedDoc?.id === deleteId) setSelectedDoc(null)
       toast.success('Document deleted')
     } catch {
       toast.error('Failed to delete document')
@@ -200,6 +209,67 @@ export default function Documents() {
         </form>
       </Modal>
 
+      {/* Detail modal */}
+      <Modal
+        open={!!selectedDoc}
+        onClose={() => setSelectedDoc(null)}
+        title="Document Details"
+        size="md"
+        footer={
+          selectedDoc ? (
+            <Button variant="danger" size="sm" onClick={() => { setDeleteId(selectedDoc.id); setSelectedDoc(null) }}>Delete</Button>
+          ) : undefined
+        }
+      >
+        {selectedDoc && (
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Document Name</p>
+              <p className="text-sm text-white font-medium">{selectedDoc.name}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Employee</p>
+                <p className="text-sm text-white">{selectedDoc.employee_name || 'Company-wide'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Category</p>
+                <CategoryBadge category={selectedDoc.category} />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">File Size</p>
+                <p className="text-sm text-white">{formatFileSize(selectedDoc.file_size)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">File Type</p>
+                <p className="text-sm text-white">{selectedDoc.mime_type || '\u2014'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Expiry Date</p>
+                {selectedDoc.expiry_date ? (
+                  <p className={`text-sm ${isExpired(selectedDoc.expiry_date) ? 'text-red-400' : isExpiringSoon(selectedDoc.expiry_date) ? 'text-amber-400' : 'text-white'}`}>
+                    {formatDate(selectedDoc.expiry_date)}
+                    {isExpired(selectedDoc.expiry_date) && ' (Expired)'}
+                  </p>
+                ) : <span className="text-sm text-gray-500">{'\u2014'}</span>}
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Uploaded By</p>
+                <p className="text-sm text-white">{selectedDoc.uploaded_by_name || '\u2014'}</p>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Description</p>
+              <p className="text-sm text-gray-300">{selectedDoc.description || '\u2014'}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Created</p>
+              <p className="text-sm text-gray-400">{formatDate(selectedDoc.created_at)}</p>
+            </div>
+          </div>
+        )}
+      </Modal>
+
       {/* Filters */}
       <div className="flex gap-3 mb-4">
         <Select
@@ -247,18 +317,10 @@ export default function Documents() {
                 <span className="text-gray-600">{'\u2014'}</span>
               )
             }},
-            { key: '_actions', header: '', render: (row) => (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e: React.MouseEvent) => { e.stopPropagation(); setDeleteId(String(row.id)) }}
-              >
-                Delete
-              </Button>
-            )},
           ]}
           data={documents as unknown as Record<string, unknown>[]}
           keyField="id"
+          onRowClick={(row) => setSelectedDoc(row as unknown as Document)}
           striped={false}
         />
       )}

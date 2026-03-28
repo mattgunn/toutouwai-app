@@ -4,6 +4,7 @@ import { fetchAuditLog } from '../modules/audit/api'
 import type { AuditEntry } from '../modules/audit/types'
 import EmptyState from '../components/EmptyState'
 import Button from '../components/Button'
+import Modal from '../components/Modal'
 import { Select, Input } from '../components/FormField'
 import { SkeletonTable } from '../components/Skeleton'
 import PageHeader from '../components/PageHeader'
@@ -18,6 +19,7 @@ export default function AuditLog() {
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
   const [loading, setLoading] = useState(true)
+  const [selectedEntry, setSelectedEntry] = useState<AuditEntry | null>(null)
 
   const perPage = 50
 
@@ -93,6 +95,7 @@ export default function AuditLog() {
             ]}
             data={entries}
             keyField="id"
+            onRowClick={(entry) => setSelectedEntry(entry)}
             striped={false}
           />
 
@@ -124,6 +127,57 @@ export default function AuditLog() {
           )}
         </>
       )}
+
+      {/* Detail modal */}
+      <Modal
+        open={!!selectedEntry}
+        onClose={() => setSelectedEntry(null)}
+        title="Audit Entry Details"
+        size="md"
+      >
+        {selectedEntry && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Timestamp</p>
+                <p className="text-sm text-white">{formatDate(selectedEntry.created_at)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">User</p>
+                <p className="text-sm text-white">{selectedEntry.user_name || selectedEntry.user_email || '\u2014'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Action</p>
+                {actionBadge(selectedEntry.action)}
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Entity Type</p>
+                <p className="text-sm text-white capitalize">{(selectedEntry.entity_type || '').replace(/_/g, ' ')}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Entity ID</p>
+                <p className="text-sm text-gray-300 font-mono text-xs break-all">{selectedEntry.entity_id}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Field</p>
+                <p className="text-sm text-white">{selectedEntry.field_name || '\u2014'}</p>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Old Value</p>
+              <div className="bg-gray-800 border border-gray-700 rounded p-3">
+                <p className="text-sm text-red-400 font-mono whitespace-pre-wrap break-all">{selectedEntry.old_value || '\u2014'}</p>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">New Value</p>
+              <div className="bg-gray-800 border border-gray-700 rounded p-3">
+                <p className="text-sm text-emerald-400 font-mono whitespace-pre-wrap break-all">{selectedEntry.new_value || '\u2014'}</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

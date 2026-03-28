@@ -1,12 +1,18 @@
 import { useState, useEffect } from 'react'
-import { fetchEmployees, fetchDepartments, fetchPositions, createEmployee, updateEmployee } from '../api'
-import type { Employee, Department, Position } from '../types'
+import { fetchEmployees, fetchDepartments, fetchPositions, createEmployee, updateEmployee, fetchDocuments, fetchLeaveRequests, fetchTimeEntries } from '../api'
+import { fetchCompensation } from '../modules/compensation/api'
+import type { Employee, Department, Position, LeaveRequest, TimeEntry } from '../types'
+import type { CompensationRecord } from '../modules/compensation/types'
+import type { Document } from '../modules/documents/types'
+import { fetchGoals } from '../api'
+import type { Goal } from '../types'
 import StatusBadge from '../components/StatusBadge'
 import Avatar from '../components/Avatar'
 import { Input, Select, FormField } from '../components/FormField'
 import { SkeletonTable } from '../components/Skeleton'
 import PageHeader from '../components/PageHeader'
 import DataTable from '../components/DataTable'
+import Tabs from '../components/Tabs'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
 import { useToast } from '../components/Toast'
@@ -29,6 +35,209 @@ const EMPTY_FORM = {
   status: 'active',
 }
 
+function formatCurrency(amount: number, currency: string) {
+  return new Intl.NumberFormat('en-NZ', { style: 'currency', currency }).format(amount)
+}
+
+function EmployeeDetail({
+  employee,
+  onBack,
+  onEdit,
+}: {
+  employee: Employee
+  onBack: () => void
+  onEdit: (emp: Employee) => void
+}) {
+  const [activeTab, setActiveTab] = useState('compensation')
+  const [compensation, setCompensation] = useState<CompensationRecord[]>([])
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([])
+  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([])
+  const [documents, setDocuments] = useState<Document[]>([])
+  const [goals, setGoals] = useState<Goal[]>([])
+  const [tabLoading, setTabLoading] = useState(false)
+
+  useEffect(() => {
+    setTabLoading(true)
+    if (activeTab === 'compensation') {
+      fetchCompensation({ employee_id: employee.id }).then(setCompensation).catch(() => {}).finally(() => setTabLoading(false))
+    } else if (activeTab === 'leave') {
+      fetchLeaveRequests().then(all => setLeaveRequests(all.filter(r => r.employee_id === employee.id))).catch(() => {}).finally(() => setTabLoading(false))
+    } else if (activeTab === 'time') {
+      fetchTimeEntries({ employee_id: employee.id } as Record<string, string>).then(setTimeEntries).catch(() => {}).finally(() => setTabLoading(false))
+    } else if (activeTab === 'documents') {
+      fetchDocuments({ employee_id: employee.id }).then(setDocuments).catch(() => {}).finally(() => setTabLoading(false))
+    } else if (activeTab === 'goals') {
+      fetchGoals().then(all => setGoals(all.filter(g => g.employee_id === employee.id))).catch(() => {}).finally(() => setTabLoading(false))
+    }
+  }, [activeTab, employee.id])
+
+  const fullName = `${employee.first_name} ${employee.last_name}`
+
+  return (
+    <div>
+      <Button variant="ghost" size="sm" onClick={onBack} className="mb-4">
+        &larr; Back to Directory
+      </Button>
+
+      {/* Header card */}
+      <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-6">
+        <div className="flex items-start gap-6">
+          <Avatar name={fullName} imageUrl={employee.avatar_url} size="xl" />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h2 className="text-xl font-semibold text-white">{fullName}</h2>
+                <p className="text-sm text-gray-400">{employee.position_title || 'No position'} {employee.department_name ? `\u00B7 ${employee.department_name}` : ''}</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <StatusBadge status={employee.status} />
+                <Button size="sm" onClick={() => onEdit(employee)}>Edit</Button>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Email</p>
+                <p className="text-sm text-gray-300">{employee.email}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Phone</p>
+                <p className="text-sm text-gray-300">{employee.phone || '\u2014'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Manager</p>
+                <p className="text-sm text-gray-300">{employee.manager_name || '\u2014'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Start Date</p>
+                <p className="text-sm text-gray-300">{formatDate(employee.start_date)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Address</p>
+                <p className="text-sm text-gray-300">{employee.address || '\u2014'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Emergency Contact</p>
+                <p className="text-sm text-gray-300">{employee.emergency_contact || '\u2014'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="mb-4">
+        <Tabs
+          tabs={[
+            { key: 'compensation', label: 'Compensation' },
+            { key: 'leave', label: 'Leave Requests' },
+            { key: 'time', label: 'Time Entries' },
+            { key: 'documents', label: 'Documents' },
+            { key: 'goals', label: 'Goals' },
+          ]}
+          active={activeTab}
+          onChange={setActiveTab}
+        />
+      </div>
+
+      {/* Tab content */}
+      {tabLoading ? (
+        <SkeletonTable rows={3} cols={4} />
+      ) : (
+        <>
+          {activeTab === 'compensation' && (
+            compensation.length === 0 ? (
+              <p className="text-gray-500 text-sm py-8 text-center">No compensation records</p>
+            ) : (
+              <DataTable
+                columns={[
+                  { key: 'effective_date', header: 'Effective Date', render: (r: CompensationRecord) => <span className="text-gray-400">{formatDate(r.effective_date)}</span> },
+                  { key: 'salary', header: 'Salary', render: (r: CompensationRecord) => <span className="text-emerald-400 font-medium">{formatCurrency(r.salary, r.currency)}</span> },
+                  { key: 'pay_frequency', header: 'Frequency', render: (r: CompensationRecord) => <span className="text-gray-400 capitalize">{r.pay_frequency}</span> },
+                  { key: 'reason', header: 'Reason', render: (r: CompensationRecord) => <span className="text-gray-400 capitalize">{r.reason || '\u2014'}</span> },
+                ]}
+                data={compensation}
+                keyField="id"
+              />
+            )
+          )}
+          {activeTab === 'leave' && (
+            leaveRequests.length === 0 ? (
+              <p className="text-gray-500 text-sm py-8 text-center">No leave requests</p>
+            ) : (
+              <DataTable
+                columns={[
+                  { key: 'leave_type_name', header: 'Type', render: (r: LeaveRequest) => <span className="text-gray-300">{r.leave_type_name || '\u2014'}</span> },
+                  { key: 'start_date', header: 'Start', render: (r: LeaveRequest) => <span className="text-gray-400">{formatDate(r.start_date)}</span> },
+                  { key: 'end_date', header: 'End', render: (r: LeaveRequest) => <span className="text-gray-400">{formatDate(r.end_date)}</span> },
+                  { key: 'days', header: 'Days', render: (r: LeaveRequest) => <span className="text-white">{r.days}</span> },
+                  { key: 'status', header: 'Status', render: (r: LeaveRequest) => <StatusBadge status={r.status} /> },
+                ]}
+                data={leaveRequests}
+                keyField="id"
+              />
+            )
+          )}
+          {activeTab === 'time' && (
+            timeEntries.length === 0 ? (
+              <p className="text-gray-500 text-sm py-8 text-center">No time entries</p>
+            ) : (
+              <DataTable
+                columns={[
+                  { key: 'date', header: 'Date', render: (r: TimeEntry) => <span className="text-gray-400">{formatDate(r.date)}</span> },
+                  { key: 'hours', header: 'Hours', render: (r: TimeEntry) => <span className="text-white font-medium">{r.hours}h</span> },
+                  { key: 'project', header: 'Project', render: (r: TimeEntry) => <span className="text-gray-400">{r.project || '\u2014'}</span> },
+                  { key: 'description', header: 'Description', render: (r: TimeEntry) => <span className="text-gray-400">{r.description || '\u2014'}</span> },
+                ]}
+                data={timeEntries}
+                keyField="id"
+              />
+            )
+          )}
+          {activeTab === 'documents' && (
+            documents.length === 0 ? (
+              <p className="text-gray-500 text-sm py-8 text-center">No documents</p>
+            ) : (
+              <DataTable
+                columns={[
+                  { key: 'name', header: 'Name', render: (r: Document) => <span className="text-white">{r.name}</span> },
+                  { key: 'category', header: 'Category', render: (r: Document) => <span className="text-gray-400 capitalize">{r.category}</span> },
+                  { key: 'expiry_date', header: 'Expiry', render: (r: Document) => <span className="text-gray-400">{r.expiry_date ? formatDate(r.expiry_date) : '\u2014'}</span> },
+                  { key: 'created_at', header: 'Created', render: (r: Document) => <span className="text-gray-400">{formatDate(r.created_at)}</span> },
+                ]}
+                data={documents}
+                keyField="id"
+              />
+            )
+          )}
+          {activeTab === 'goals' && (
+            goals.length === 0 ? (
+              <p className="text-gray-500 text-sm py-8 text-center">No goals</p>
+            ) : (
+              <DataTable
+                columns={[
+                  { key: 'title', header: 'Goal', render: (g: Goal) => <span className="text-white">{g.title}</span> },
+                  { key: 'progress', header: 'Progress', render: (g: Goal) => (
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 bg-gray-800 rounded-full h-2 min-w-[60px]">
+                        <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${g.progress}%` }} />
+                      </div>
+                      <span className="text-xs text-gray-400 w-8">{g.progress}%</span>
+                    </div>
+                  )},
+                  { key: 'due_date', header: 'Due', render: (g: Goal) => <span className="text-gray-400">{formatDate(g.due_date)}</span> },
+                  { key: 'status', header: 'Status', render: (g: Goal) => <StatusBadge status={g.status} /> },
+                ]}
+                data={goals}
+                keyField="id"
+              />
+            )
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
 export default function Employees() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
@@ -39,6 +248,7 @@ export default function Employees() {
   const [editing, setEditing] = useState<Employee | null>(null)
   const [form, setForm] = useState(EMPTY_FORM)
   const [submitting, setSubmitting] = useState(false)
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
   const toast = useToast()
 
   const loadData = () => {
@@ -144,6 +354,19 @@ export default function Employees() {
     )
   }
 
+  // Detail view
+  if (selectedEmployee) {
+    return (
+      <EmployeeDetail
+        employee={selectedEmployee}
+        onBack={() => setSelectedEmployee(null)}
+        onEdit={(emp) => {
+          openEdit(emp)
+        }}
+      />
+    )
+  }
+
   return (
     <div>
       <PageHeader
@@ -167,7 +390,7 @@ export default function Employees() {
         keyField="id"
         emptyIcon="👥"
         emptyMessage="No employees found"
-        onRowClick={openEdit}
+        onRowClick={(emp) => setSelectedEmployee(emp)}
         striped
       />
 

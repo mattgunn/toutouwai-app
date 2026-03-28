@@ -62,7 +62,7 @@ export default function Succession() {
   const [submittingCandidate, setSubmittingCandidate] = useState(false)
   const [removingId, setRemovingId] = useState<string | null>(null)
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null)
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
+  const [selectedPlan, setSelectedPlan] = useState<SuccessionPlan | null>(null)
   const [candidates, setCandidates] = useState<SuccessionCandidate[]>([])
   const [showAdd, setShowAdd] = useState(false)
   const [showAddCandidate, setShowAddCandidate] = useState(false)
@@ -81,7 +81,7 @@ export default function Succession() {
 
   useEffect(() => {
     if (selectedPlan) {
-      fetchSuccessionCandidates(selectedPlan)
+      fetchSuccessionCandidates(selectedPlan.id)
         .then(setCandidates)
         .catch(() => {})
     }
@@ -111,11 +111,11 @@ export default function Succession() {
     if (!candidateForm.employee_id || !selectedPlan) return
     setSubmittingCandidate(true)
     try {
-      await addSuccessionCandidate(selectedPlan, candidateForm)
+      await addSuccessionCandidate(selectedPlan.id, candidateForm)
       setCandidateForm({ employee_id: '', readiness: 'not_ready', notes: '' })
       setShowAddCandidate(false)
       toast.success('Candidate added')
-      fetchSuccessionCandidates(selectedPlan).then(setCandidates).catch(() => {})
+      fetchSuccessionCandidates(selectedPlan.id).then(setCandidates).catch(() => {})
       fetchSuccessionPlans().then(setPlans).catch(() => {})
     } catch {
       toast.error('Failed to add candidate')
@@ -130,7 +130,7 @@ export default function Succession() {
       await removeSuccessionCandidate(candidateId)
       toast.success('Candidate removed')
       if (selectedPlan) {
-        fetchSuccessionCandidates(selectedPlan).then(setCandidates).catch(() => {})
+        fetchSuccessionCandidates(selectedPlan.id).then(setCandidates).catch(() => {})
         fetchSuccessionPlans().then(setPlans).catch(() => {})
       }
     } catch {
@@ -146,6 +146,144 @@ export default function Succession() {
       <div>
         <PageHeader title="Succession Planning" />
         <PageSkeleton />
+      </div>
+    )
+  }
+
+  // Detail view for selected plan
+  if (selectedPlan) {
+    return (
+      <div>
+        <Button variant="ghost" size="sm" onClick={() => { setSelectedPlan(null); setCandidates([]) }} className="mb-4">
+          &larr; Back to Plans
+        </Button>
+
+        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-6">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h2 className="text-xl font-semibold text-white">{selectedPlan.position_title || 'Unknown Position'}</h2>
+              {selectedPlan.department_name && (
+                <p className="text-sm text-gray-400">{selectedPlan.department_name}</p>
+              )}
+            </div>
+            <Button size="sm" onClick={() => setShowAddCandidate(true)}>Add Candidate</Button>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Incumbent</p>
+              <p className="text-sm text-white">{selectedPlan.incumbent_name || '\u2014'}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Risk of Loss</p>
+              <RiskBadge level={selectedPlan.risk_of_loss} />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Impact of Loss</p>
+              <RiskBadge level={selectedPlan.impact_of_loss} />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Candidates</p>
+              <p className="text-sm text-white">{selectedPlan.candidate_count}</p>
+            </div>
+          </div>
+
+          {selectedPlan.notes && (
+            <div className="mt-4">
+              <p className="text-xs text-gray-500 mb-1">Notes</p>
+              <p className="text-sm text-gray-300">{selectedPlan.notes}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Add candidate form modal */}
+        <Modal
+          open={showAddCandidate}
+          onClose={() => setShowAddCandidate(false)}
+          title="Add Candidate"
+          size="md"
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setShowAddCandidate(false)} disabled={submittingCandidate}>Cancel</Button>
+              <Button onClick={handleAddCandidate} loading={submittingCandidate}>Add</Button>
+            </>
+          }
+        >
+          <div className="space-y-3">
+            <FormField label="Employee" required>
+              <Select
+                value={candidateForm.employee_id}
+                onChange={e => setCandidateForm({ ...candidateForm, employee_id: e.target.value })}
+                placeholder="Select Employee"
+                options={employees.map(emp => ({ value: emp.id, label: `${emp.first_name} ${emp.last_name}` }))}
+              />
+            </FormField>
+            <FormField label="Readiness">
+              <Select
+                value={candidateForm.readiness}
+                onChange={e => setCandidateForm({ ...candidateForm, readiness: e.target.value })}
+                options={[
+                  { value: 'ready_now', label: 'Ready Now' },
+                  { value: 'ready_1_year', label: 'Ready in 1 Year' },
+                  { value: 'ready_2_years', label: 'Ready in 2 Years' },
+                  { value: 'not_ready', label: 'Not Ready' },
+                ]}
+              />
+            </FormField>
+            <FormField label="Notes">
+              <Textarea
+                value={candidateForm.notes}
+                onChange={e => setCandidateForm({ ...candidateForm, notes: e.target.value })}
+                placeholder="Notes (optional)"
+                rows={2}
+              />
+            </FormField>
+          </div>
+        </Modal>
+
+        {/* Candidates list */}
+        <h3 className="text-sm font-semibold text-white mb-3">Succession Candidates</h3>
+
+        {candidates.length === 0 ? (
+          <EmptyState message="No candidates identified yet" icon="👤" action="Add Candidate" onAction={() => setShowAddCandidate(true)} />
+        ) : (
+          <div className="space-y-2">
+            {candidates.map(candidate => (
+              <div key={candidate.id} className="bg-gray-900 border border-gray-800 rounded-lg p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-white text-sm font-medium">{candidate.employee_name}</p>
+                  {candidate.current_position && (
+                    <p className="text-xs text-gray-500">{candidate.current_position}</p>
+                  )}
+                  <div className="mt-1 flex items-center gap-2">
+                    <ReadinessBadge readiness={candidate.readiness} />
+                    {candidate.notes && <span className="text-xs text-gray-500">{candidate.notes}</span>}
+                  </div>
+                </div>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => setConfirmRemove(candidate.id)}
+                  loading={removingId === candidate.id}
+                >
+                  Remove
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Confirm remove candidate */}
+        <ConfirmDialog
+          open={!!confirmRemove}
+          onClose={() => setConfirmRemove(null)}
+          onConfirm={() => confirmRemove && handleRemoveCandidate(confirmRemove)}
+          title="Remove Candidate"
+          message="Are you sure you want to remove this candidate from the succession plan?"
+          confirmLabel="Remove"
+          variant="danger"
+          loading={!!removingId}
+        />
       </div>
     )
   }
@@ -227,91 +365,6 @@ export default function Succession() {
         </div>
       </Modal>
 
-      {/* Candidates panel */}
-      <Modal
-        open={!!selectedPlan}
-        onClose={() => setSelectedPlan(null)}
-        title="Succession Candidates"
-        size="lg"
-        footer={
-          <Button variant="secondary" size="sm" onClick={() => setShowAddCandidate(true)}>
-            + Add Candidate
-          </Button>
-        }
-      >
-        {/* Add candidate form */}
-        {showAddCandidate && (
-          <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 mb-4">
-            <div className="space-y-2">
-              <FormField label="Employee" required>
-                <Select
-                  value={candidateForm.employee_id}
-                  onChange={e => setCandidateForm({ ...candidateForm, employee_id: e.target.value })}
-                  placeholder="Select Employee"
-                  options={employees.map(emp => ({ value: emp.id, label: `${emp.first_name} ${emp.last_name}` }))}
-                />
-              </FormField>
-              <FormField label="Readiness">
-                <Select
-                  value={candidateForm.readiness}
-                  onChange={e => setCandidateForm({ ...candidateForm, readiness: e.target.value })}
-                  options={[
-                    { value: 'ready_now', label: 'Ready Now' },
-                    { value: 'ready_1_year', label: 'Ready in 1 Year' },
-                    { value: 'ready_2_years', label: 'Ready in 2 Years' },
-                    { value: 'not_ready', label: 'Not Ready' },
-                  ]}
-                />
-              </FormField>
-              <div className="flex justify-end gap-2">
-                <Button variant="ghost" size="sm" onClick={() => setShowAddCandidate(false)}>Cancel</Button>
-                <Button size="sm" onClick={handleAddCandidate} loading={submittingCandidate}>Add</Button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {candidates.length === 0 ? (
-          <EmptyState message="No candidates identified yet" icon="👤" action="Add Candidate" onAction={() => setShowAddCandidate(true)} />
-        ) : (
-          <div className="space-y-2">
-            {candidates.map(candidate => (
-              <div key={candidate.id} className="bg-gray-800 border border-gray-700 rounded-lg p-3 flex items-center justify-between">
-                <div>
-                  <p className="text-white text-sm font-medium">{candidate.employee_name}</p>
-                  {candidate.current_position && (
-                    <p className="text-xs text-gray-500">{candidate.current_position}</p>
-                  )}
-                  <div className="mt-1">
-                    <ReadinessBadge readiness={candidate.readiness} />
-                  </div>
-                </div>
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={() => setConfirmRemove(candidate.id)}
-                  loading={removingId === candidate.id}
-                >
-                  Remove
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
-      </Modal>
-
-      {/* Confirm remove candidate */}
-      <ConfirmDialog
-        open={!!confirmRemove}
-        onClose={() => setConfirmRemove(null)}
-        onConfirm={() => confirmRemove && handleRemoveCandidate(confirmRemove)}
-        title="Remove Candidate"
-        message="Are you sure you want to remove this candidate from the succession plan?"
-        confirmLabel="Remove"
-        variant="danger"
-        loading={!!removingId}
-      />
-
       {/* Plans grid */}
       {plans.length === 0 ? (
         <EmptyState message="No succession plans yet" icon="📊" action="Add Plan" onAction={() => setShowAdd(true)} />
@@ -320,7 +373,7 @@ export default function Succession() {
           {plans.map(plan => (
             <div
               key={plan.id}
-              onClick={() => setSelectedPlan(plan.id)}
+              onClick={() => setSelectedPlan(plan)}
               className="bg-gray-900 border border-gray-800 rounded-lg p-4 cursor-pointer hover:border-gray-600 hover:bg-gray-800/50 hover:shadow-md transition-all duration-200"
             >
               <div className="flex items-start justify-between mb-2">
