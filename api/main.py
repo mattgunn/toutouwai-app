@@ -8,7 +8,7 @@ from .routers import (
     auth, dashboard, employees, departments, positions, leave, time_entries,
     recruitment, performance, settings, integrations,
     compensation, benefits, succession, onboarding, documents, self_service,
-    reports, audit, workflows, surveys,
+    reports, audit, workflows, surveys, seed,
 )
 
 app = FastAPI(title="HRIS API", version="0.1.0")
@@ -43,6 +43,7 @@ app.include_router(reports.router, prefix="/api", tags=["reports"])
 app.include_router(audit.router, prefix="/api", tags=["audit"])
 app.include_router(workflows.router, prefix="/api", tags=["workflows"])
 app.include_router(surveys.router, prefix="/api", tags=["surveys"])
+app.include_router(seed.router, prefix="/api", tags=["seed"])
 
 
 @app.get("/api/health")

@@ -1,14 +1,20 @@
 import { useState } from 'react'
 import { useAdminPrefs } from '../hooks/useAdminPrefs'
-import { updateSettings } from '../api'
+import { updateSettings, authFetch } from '../api'
 import { INTEGRATIONS } from '../modules/integrations/registry'
+import { useToast } from '../components/Toast'
+import Button from '../components/Button'
 
-type Tab = 'appearance' | 'integrations'
+type Tab = 'appearance' | 'integrations' | 'developer'
 
 export default function Settings() {
   const prefs = useAdminPrefs()
+  const toast = useToast()
   const [tab, setTab] = useState<Tab>('appearance')
   const [integrationSettings, setIntegrationSettings] = useState<Record<string, unknown>>({})
+  const [seeding, setSeeding] = useState(false)
+  const [clearing, setClearing] = useState(false)
+  const [seedResult, setSeedResult] = useState<Record<string, number> | null>(null)
 
   const handleIntegrationChange = (updates: Record<string, unknown>) => {
     const merged = { ...integrationSettings, ...updates }
@@ -16,9 +22,41 @@ export default function Settings() {
     updateSettings(updates).catch(() => {})
   }
 
+  const handleSeed = async () => {
+    setSeeding(true)
+    setSeedResult(null)
+    try {
+      const res = await authFetch('/api/seed', { method: 'POST' })
+      if (!res.ok) throw new Error('Seed failed')
+      const data = await res.json()
+      setSeedResult(data.counts)
+      toast.success('Database seeded with dummy data! Refresh pages to see data.')
+    } catch {
+      toast.error('Failed to seed database')
+    } finally {
+      setSeeding(false)
+    }
+  }
+
+  const handleClear = async () => {
+    if (!confirm('This will DELETE all employees, leave, recruitment, and other data. Users and settings will be kept. Continue?')) return
+    setClearing(true)
+    setSeedResult(null)
+    try {
+      const res = await authFetch('/api/seed', { method: 'DELETE' })
+      if (!res.ok) throw new Error('Clear failed')
+      toast.success('All data cleared. Database is now empty (users kept).')
+    } catch {
+      toast.error('Failed to clear database')
+    } finally {
+      setClearing(false)
+    }
+  }
+
   const tabs: { key: Tab; label: string }[] = [
     { key: 'appearance', label: 'Appearance' },
     { key: 'integrations', label: 'Integrations' },
+    { key: 'developer', label: 'Developer' },
   ]
 
   return (
@@ -151,6 +189,77 @@ export default function Settings() {
               />
             )
           })}
+        </div>
+      )}
+
+      {/* Developer tab */}
+      {tab === 'developer' && (
+        <div className="space-y-6 max-w-2xl">
+          {/* Mode indicator */}
+          <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+            <h2 className="text-sm font-semibold text-white mb-2">Environment</h2>
+            <p className="text-xs text-gray-500 mb-3">
+              Development tools for testing and populating the application with sample data.
+            </p>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-600/20 text-amber-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                Development Mode
+              </span>
+            </div>
+          </div>
+
+          {/* Seed data */}
+          <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+            <h2 className="text-sm font-semibold text-white mb-2">Seed Database</h2>
+            <p className="text-xs text-gray-500 mb-4">
+              Populate the database with realistic NZ-based dummy data across all modules:
+              departments, employees, leave, timesheets, recruitment, reviews, goals,
+              compensation, benefits, succession plans, onboarding, documents, surveys,
+              workflows, and audit logs.
+            </p>
+
+            <div className="flex gap-3">
+              <Button variant="primary" loading={seeding} onClick={handleSeed}>
+                {seeding ? 'Seeding...' : 'Seed Database'}
+              </Button>
+              <Button variant="danger" loading={clearing} onClick={handleClear}>
+                {clearing ? 'Clearing...' : 'Clear All Data'}
+              </Button>
+            </div>
+
+            {seedResult && (
+              <div className="mt-4 bg-gray-800 rounded-lg p-3">
+                <h3 className="text-xs font-semibold text-emerald-400 mb-2">Seed Complete</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {Object.entries(seedResult).map(([table, count]) => (
+                    <div key={table} className="flex justify-between text-xs">
+                      <span className="text-gray-400">{table.replace(/_/g, ' ')}</span>
+                      <span className="text-white font-mono">{count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* API info */}
+          <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+            <h2 className="text-sm font-semibold text-white mb-2">API Documentation</h2>
+            <p className="text-xs text-gray-500 mb-3">
+              FastAPI auto-generated docs are available at:
+            </p>
+            <div className="space-y-1">
+              <a href="/api/docs" target="_blank" rel="noopener noreferrer"
+                className="block text-xs text-blue-400 hover:text-blue-300">
+                /api/docs — Swagger UI
+              </a>
+              <a href="/api/redoc" target="_blank" rel="noopener noreferrer"
+                className="block text-xs text-blue-400 hover:text-blue-300">
+                /api/redoc — ReDoc
+              </a>
+            </div>
+          </div>
         </div>
       )}
     </div>
