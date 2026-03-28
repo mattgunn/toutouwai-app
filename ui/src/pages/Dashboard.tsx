@@ -45,19 +45,40 @@ function getGreeting(): string {
 export default function Dashboard() {
   const { user } = useAuth()
   const [data, setData] = useState<DashboardData | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchDashboard().then(setData).catch(() => {})
+    fetchDashboard()
+      .then(setData)
+      .catch(() => {})
+      .finally(() => setLoading(false))
   }, [])
 
   const displayName = user?.name && user.name !== 'Admin'
     ? user.name.split(' ')[0]
     : user?.email?.split('@')[0] ?? 'there'
 
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto space-y-6">
+        <div className="rounded-xl bg-gray-800 p-6 animate-pulse h-28" />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[1,2,3,4,5,6,7,8].map(i => <div key={i} className="rounded-xl bg-gray-900 border border-gray-800 p-5 h-24 animate-pulse" />)}
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[1,2,3,4].map(i => <div key={i} className="rounded-xl bg-gray-900 border border-gray-800 p-4 h-20 animate-pulse" />)}
+        </div>
+      </div>
+    )
+  }
+
   if (!data) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500 dark:text-gray-400">Loading dashboard...</div>
+      <div className="max-w-6xl mx-auto">
+        <div className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-700 p-6 text-white shadow-lg">
+          <h1 className="text-2xl font-bold">{getGreeting()}, {displayName}</h1>
+          <p className="text-sm opacity-80 mt-1">Dashboard data is currently unavailable. Try seeding the database in Settings → Developer.</p>
+        </div>
       </div>
     )
   }
