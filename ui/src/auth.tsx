@@ -66,22 +66,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    fetch(`${BASE}/auth/me`, {
-      headers: { Authorization: `Bearer ${jwt}` },
-    })
-      .then(res => {
-        if (!res.ok) throw new Error('Unauthorized')
-        return res.json()
+    let cancelled = false
+
+    const fetchMe = (attempt = 1) => {
+      fetch(`${BASE}/auth/me`, {
+        headers: { Authorization: `Bearer ${jwt}` },
       })
-      .then((profile: UserProfile) => {
-        setUser(profile)
-        setLoading(false)
-      })
-      .catch(() => {
-        localStorage.removeItem('hris_jwt')
-        setJwt(null)
-        setLoading(false)
-      })
+        .then(res => {
+          if (!res.ok) throw new Error(res.status === 401 ? 'Unauthorized' : 'ServerError')
+          return res.json()
+        })
+        .then((profile: UserProfile) => {
+          if (!cancelled) {
+            setUser(profile)
+            setLoading(false)
+          }
+        })
+        .catch(err => {
+          if (cancelled) return
+          // Retry on network/server errors (not auth failures)
+          if (err.message !== 'Unauthorized' && attempt < 3) {
+            setTimeout(() => fetchMe(attempt + 1), 1000 * attempt)
+            return
+          }
+          localStorage.removeItem('hris_jwt')
+          setJwt(null)
+          setLoading(false)
+        })
+    }
+
+    fetchMe()
+    return () => { cancelled = true }
   }, [jwt])
 
   return (
