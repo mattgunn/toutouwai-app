@@ -145,3 +145,17 @@ def update_applicant_stage(applicant_id: str, body: dict, conn=Depends(get_db), 
     )
     conn.commit()
     return get_applicant(applicant_id, conn=conn, _user=_user)
+
+
+@router.delete("/recruitment/postings/{posting_id}")
+def delete_posting(posting_id: str, conn=Depends(get_db), _user=Depends(get_current_user)):
+    conn.execute("DELETE FROM job_postings WHERE id = ?", (posting_id,))
+    conn.commit()
+    return {"ok": True}
+
+
+@router.delete("/recruitment/applicants/{applicant_id}")
+def delete_applicant(applicant_id: str, conn=Depends(get_db), _user=Depends(get_current_user)):
+    conn.execute("DELETE FROM applicants WHERE id = ?", (applicant_id,))
+    conn.commit()
+    return {"ok": True}

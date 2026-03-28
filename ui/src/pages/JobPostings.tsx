@@ -1,28 +1,59 @@
 import { useState, useEffect } from 'react'
-import { fetchJobPostings, fetchApplicants } from '../api'
+import { fetchJobPostings, fetchApplicants, createJobPosting, updateJobPosting, fetchDepartments } from '../api'
 import type { JobPosting, Applicant } from '../types'
 import StatusBadge from '../components/StatusBadge'
 import EmptyState from '../components/EmptyState'
 import PageHeader from '../components/PageHeader'
 import DataTable from '../components/DataTable'
 import Button from '../components/Button'
+import Modal from '../components/Modal'
+import { FormField, Input, Select, Textarea } from '../components/FormField'
 import { SkeletonCards, SkeletonTable } from '../components/Skeleton'
 import { formatDate, formatCurrency } from '../utils/format'
+import { useToast } from '../components/Toast'
+
+interface Department {
+  id: string
+  name: string
+}
+
+const EMPLOYMENT_TYPES = [
+  { value: 'full_time', label: 'Full Time' },
+  { value: 'part_time', label: 'Part Time' },
+  { value: 'contract', label: 'Contract' },
+]
+
+const STATUS_OPTIONS = [
+  { value: 'draft', label: 'Draft' },
+  { value: 'open', label: 'Open' },
+  { value: 'closed', label: 'Closed' },
+]
 
 export default function JobPostings() {
   const [postings, setPostings] = useState<JobPosting[]>([])
   const [loading, setLoading] = useState(true)
+  const toast = useToast()
 
   // Detail view state
   const [selectedPosting, setSelectedPosting] = useState<JobPosting | null>(null)
   const [applicants, setApplicants] = useState<Applicant[]>([])
   const [detailLoading, setDetailLoading] = useState(false)
 
-  useEffect(() => {
+  // Modal state
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editingPosting, setEditingPosting] = useState<JobPosting | null>(null)
+  const [departments, setDepartments] = useState<Department[]>([])
+  const [submitting, setSubmitting] = useState(false)
+
+  const loadPostings = () => {
     fetchJobPostings()
       .then(setPostings)
       .catch(() => {})
       .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    loadPostings()
   }, [])
 
   // Fetch applicants when a posting is selected
@@ -34,6 +65,53 @@ export default function JobPostings() {
       .catch(() => setApplicants([]))
       .finally(() => setDetailLoading(false))
   }, [selectedPosting])
+
+  const openCreateModal = () => {
+    setEditingPosting(null)
+    setModalOpen(true)
+    fetchDepartments().then(setDepartments).catch(() => {})
+  }
+
+  const openEditModal = (posting: JobPosting) => {
+    setEditingPosting(posting)
+    setModalOpen(true)
+    fetchDepartments().then(setDepartments).catch(() => {})
+  }
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setSubmitting(true)
+    try {
+      const fd = new FormData(e.currentTarget)
+      const body: Record<string, unknown> = {
+        title: fd.get('title'),
+        department_id: fd.get('department_id') || null,
+        description: fd.get('description') || null,
+        requirements: fd.get('requirements') || null,
+        location: fd.get('location') || null,
+        employment_type: fd.get('employment_type') || 'full_time',
+        salary_min: fd.get('salary_min') ? Number(fd.get('salary_min')) : null,
+        salary_max: fd.get('salary_max') ? Number(fd.get('salary_max')) : null,
+        status: fd.get('status') || 'draft',
+      }
+      if (editingPosting) {
+        const updated = await updateJobPosting(editingPosting.id, body)
+        setPostings(prev => prev.map(p => (p.id === updated.id ? updated : p)))
+        if (selectedPosting?.id === updated.id) setSelectedPosting(updated)
+        toast.success('Job posting updated')
+      } else {
+        await createJobPosting(body)
+        toast.success('Job posting created')
+        setLoading(true)
+        loadPostings()
+      }
+      setModalOpen(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save job posting')
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   const applicantColumns = [
     { key: 'name', header: 'Name', render: (a: Applicant) => <span className="text-white font-medium">{a.first_name} {a.last_name}</span> },
@@ -54,7 +132,10 @@ export default function JobPostings() {
 
   return (
     <div>
-      <PageHeader title="Job Postings" />
+      <PageHeader
+        title="Job Postings"
+        actions={<Button onClick={openCreateModal}>Add Posting</Button>}
+      />
 
       {postings.length === 0 ? (
         <EmptyState icon="💼" message="No job postings yet" />
@@ -96,6 +177,9 @@ export default function JobPostings() {
               <h2 className="text-lg font-bold text-white">{selectedPosting.title}</h2>
               <StatusBadge status={selectedPosting.status} />
             </div>
+            <Button variant="secondary" size="sm" onClick={() => openEditModal(selectedPosting)}>
+              Edit
+            </Button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-sm mb-4">
@@ -161,6 +245,78 @@ export default function JobPostings() {
           )}
         </div>
       )}
+
+      {/* Create / Edit Modal */}
+      <Modal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={editingPosting ? 'Edit Job Posting' : 'Add Job Posting'}
+        size="xl"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setModalOpen(false)}>Cancel</Button>
+            <Button type="submit" form="posting-form" loading={submitting}>
+              {editingPosting ? 'Save Changes' : 'Create Posting'}
+            </Button>
+          </>
+        }
+      >
+        <form id="posting-form" onSubmit={handleSubmit} className="space-y-4">
+          <FormField label="Title" required>
+            <Input name="title" required defaultValue={editingPosting?.title || ''} placeholder="e.g. Senior Software Engineer" />
+          </FormField>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField label="Department">
+              <Select
+                name="department_id"
+                placeholder="Select department"
+                options={departments.map(d => ({ value: d.id, label: d.name }))}
+                defaultValue={editingPosting?.department_id || ''}
+              />
+            </FormField>
+
+            <FormField label="Status">
+              <Select
+                name="status"
+                options={STATUS_OPTIONS}
+                defaultValue={editingPosting?.status || 'draft'}
+              />
+            </FormField>
+          </div>
+
+          <FormField label="Description">
+            <Textarea name="description" defaultValue={editingPosting?.description || ''} rows={4} placeholder="Job description..." />
+          </FormField>
+
+          <FormField label="Requirements">
+            <Textarea name="requirements" defaultValue={editingPosting?.requirements || ''} rows={4} placeholder="Job requirements..." />
+          </FormField>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField label="Location">
+              <Input name="location" defaultValue={editingPosting?.location || ''} placeholder="e.g. Auckland, NZ" />
+            </FormField>
+
+            <FormField label="Employment Type">
+              <Select
+                name="employment_type"
+                options={EMPLOYMENT_TYPES}
+                defaultValue={editingPosting?.employment_type || 'full_time'}
+              />
+            </FormField>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField label="Salary Min">
+              <Input name="salary_min" type="number" min={0} defaultValue={editingPosting?.salary_min ?? ''} placeholder="e.g. 80000" />
+            </FormField>
+            <FormField label="Salary Max">
+              <Input name="salary_max" type="number" min={0} defaultValue={editingPosting?.salary_max ?? ''} placeholder="e.g. 120000" />
+            </FormField>
+          </div>
+        </form>
+      </Modal>
     </div>
   )
 }

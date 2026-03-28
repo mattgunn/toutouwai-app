@@ -486,7 +486,7 @@ export default function Help() {
               'Visual Kanban-style recruitment funnel',
               'Candidate cards with key details',
               'Stage counts and progression tracking',
-              'Drag-and-drop style stage management',
+              'Stage management via dropdown controls on each card',
             ]}
             linkTo="/pipeline"
             linkLabel="Go to Pipeline"

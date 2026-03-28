@@ -29,15 +29,6 @@ function buildTree(employees: Employee[]): OrgNode[] {
   return roots
 }
 
-function getDefaultExpanded(nodes: OrgNode[], depth: number, set: Set<string>) {
-  for (const node of nodes) {
-    if (depth <= 1) {
-      set.add(node.employee.id)
-      getDefaultExpanded(node.children, depth + 1, set)
-    }
-  }
-}
-
 function OrgNodeCard({
   node,
   depth = 0,

@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { formatDate } from '../utils/format'
 import {
-  fetchMyProfile, updateMyProfile, fetchMyLeave,
+  fetchMyProfile, updateMyProfile, fetchMyLeave, submitMyLeave,
   fetchMyLeaveBalances, fetchMyTime, fetchMyDocuments, fetchMyOnboarding,
 } from '../modules/self_service/api'
+import { fetchLeaveTypes } from '../modules/leave/api'
 import type { Employee } from '../types'
-import type { LeaveRequest, LeaveBalance } from '../modules/leave/types'
+import type { LeaveType, LeaveRequest, LeaveBalance } from '../modules/leave/types'
 import type { TimeEntry } from '../modules/time/types'
 import type { Document } from '../modules/documents/types'
 import type { OnboardingChecklist } from '../modules/onboarding/types'
@@ -14,7 +15,8 @@ import EmptyState from '../components/EmptyState'
 import DataTable from '../components/DataTable'
 import Tabs from '../components/Tabs'
 import Button from '../components/Button'
-import { FormField, Input } from '../components/FormField'
+import Modal from '../components/Modal'
+import { FormField, Input, Select, Textarea } from '../components/FormField'
 import { PageSkeleton } from '../components/Skeleton'
 import { useToast } from '../components/Toast'
 import PageHeader from '../components/PageHeader'
@@ -36,15 +38,24 @@ export default function MyProfile() {
   const [submitting, setSubmitting] = useState(false)
   const toast = useToast()
 
+  // Leave request modal state
+  const [leaveModalOpen, setLeaveModalOpen] = useState(false)
+  const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([])
+  const [leaveSubmitting, setLeaveSubmitting] = useState(false)
+
   useEffect(() => {
     setLoading(true)
     fetchMyProfile().then(setProfile).catch(e => setError(e.message)).finally(() => setLoading(false))
   }, [])
 
+  const loadLeaveData = () => {
+    fetchMyLeave().then(setLeaveRequests).catch(() => {})
+    fetchMyLeaveBalances().then(setLeaveBalances).catch(() => {})
+  }
+
   useEffect(() => {
     if (section === 'leave') {
-      fetchMyLeave().then(setLeaveRequests).catch(() => {})
-      fetchMyLeaveBalances().then(setLeaveBalances).catch(() => {})
+      loadLeaveData()
     } else if (section === 'time') {
       fetchMyTime().then(setTimeEntries).catch(() => {})
     } else if (section === 'documents') {
@@ -71,6 +82,33 @@ export default function MyProfile() {
       toast.error('Failed to update profile')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const openLeaveModal = () => {
+    setLeaveModalOpen(true)
+    fetchLeaveTypes().then(setLeaveTypes).catch(() => {})
+  }
+
+  const handleSubmitLeave = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setLeaveSubmitting(true)
+    try {
+      const fd = new FormData(e.currentTarget)
+      await submitMyLeave({
+        leave_type_id: fd.get('leave_type_id'),
+        start_date: fd.get('start_date'),
+        end_date: fd.get('end_date'),
+        days: Number(fd.get('days')),
+        notes: fd.get('notes') || null,
+      })
+      toast.success('Leave request submitted')
+      setLeaveModalOpen(false)
+      loadLeaveData()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to submit leave request')
+    } finally {
+      setLeaveSubmitting(false)
     }
   }
 
@@ -114,7 +152,7 @@ export default function MyProfile() {
         />
       </div>
 
-      {/* ── Profile ───────────────────────────────────────────── */}
+      {/* -- Profile ------------------------------------------------- */}
       {section === 'profile' && profile && (
         <div className="space-y-4">
           {/* Profile header with avatar */}
@@ -195,9 +233,14 @@ export default function MyProfile() {
         </div>
       )}
 
-      {/* ── Leave ─────────────────────────────────────────────── */}
+      {/* -- Leave --------------------------------------------------- */}
       {section === 'leave' && (
         <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div />
+            <Button onClick={openLeaveModal}>Request Leave</Button>
+          </div>
+
           {/* Balances */}
           {leaveBalances.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -228,10 +271,52 @@ export default function MyProfile() {
             emptyIcon="🏖️"
             emptyMessage="No leave requests"
           />
+
+          {/* Leave Request Modal */}
+          <Modal
+            open={leaveModalOpen}
+            onClose={() => setLeaveModalOpen(false)}
+            title="Request Leave"
+            size="lg"
+            footer={
+              <>
+                <Button variant="secondary" onClick={() => setLeaveModalOpen(false)}>Cancel</Button>
+                <Button type="submit" form="leave-request-form" loading={leaveSubmitting}>Submit Request</Button>
+              </>
+            }
+          >
+            <form id="leave-request-form" onSubmit={handleSubmitLeave} className="space-y-4">
+              <FormField label="Leave Type" required>
+                <Select
+                  name="leave_type_id"
+                  required
+                  placeholder="Select leave type"
+                  options={leaveTypes.filter(lt => lt.is_active).map(lt => ({ value: lt.id, label: lt.name }))}
+                />
+              </FormField>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField label="Start Date" required>
+                  <Input name="start_date" type="date" required />
+                </FormField>
+                <FormField label="End Date" required>
+                  <Input name="end_date" type="date" required />
+                </FormField>
+              </div>
+
+              <FormField label="Days" required>
+                <Input name="days" type="number" min={0.5} step={0.5} required placeholder="e.g. 3" />
+              </FormField>
+
+              <FormField label="Notes">
+                <Textarea name="notes" placeholder="Optional notes..." />
+              </FormField>
+            </form>
+          </Modal>
         </div>
       )}
 
-      {/* ── Time ──────────────────────────────────────────────── */}
+      {/* -- Time ---------------------------------------------------- */}
       {section === 'time' && (
         <div>
           <DataTable
@@ -248,7 +333,7 @@ export default function MyProfile() {
         </div>
       )}
 
-      {/* ── Documents ─────────────────────────────────────────── */}
+      {/* -- Documents ----------------------------------------------- */}
       {section === 'documents' && (
         <div>
           <DataTable
@@ -265,7 +350,7 @@ export default function MyProfile() {
         </div>
       )}
 
-      {/* ── Onboarding ────────────────────────────────────────── */}
+      {/* -- Onboarding ---------------------------------------------- */}
       {section === 'onboarding' && (
         <div>
           {onboarding.length === 0 ? (

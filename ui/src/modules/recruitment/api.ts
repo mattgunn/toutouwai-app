@@ -1,4 +1,4 @@
-import { BASE, authFetch, jsonPost, jsonPut } from '../shared/api'
+import { BASE, authFetch, jsonPost, jsonPut, jsonDelete } from '../shared/api'
 import type { JobPosting, Applicant } from './types'
 
 export async function fetchJobPostings(params?: Record<string, string>): Promise<JobPosting[]> {
@@ -55,4 +55,14 @@ export async function updateApplicantStage(id: string, stage: string): Promise<A
   const res = await jsonPut(`${BASE}/recruitment/applicants/${id}/stage`, { stage })
   if (!res.ok) throw new Error('Failed to update applicant stage')
   return res.json()
+}
+
+export async function deleteJobPosting(id: string): Promise<void> {
+  const res = await jsonDelete(`${BASE}/recruitment/postings/${id}`)
+  if (!res.ok) throw new Error('Failed to delete job posting')
+}
+
+export async function deleteApplicant(id: string): Promise<void> {
+  const res = await jsonDelete(`${BASE}/recruitment/applicants/${id}`)
+  if (!res.ok) throw new Error('Failed to delete applicant')
 }
