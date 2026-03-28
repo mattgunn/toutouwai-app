@@ -3,24 +3,30 @@ import os
 import smtplib
 from email.mime.text import MIMEText
 import jwt
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from ..db import get_connection, new_id, now_iso
 from ..deps import JWT_SECRET, JWT_ALGORITHM, get_db, get_current_user, ALL_MODULES
 
 router = APIRouter()
 
-SMTP_HOST = os.environ.get("SMTP_HOST", "")
-SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
-SMTP_USER = os.environ.get("SMTP_USER", "")
-SMTP_PASS = os.environ.get("SMTP_PASS", "")
-EMAIL_FROM = os.environ.get("EMAIL_FROM", "")
-DEFAULT_ADMIN_EMAIL = os.environ.get("DEFAULT_ADMIN_EMAIL", "")
+
+def _smtp_cfg():
+    """Read SMTP config at call time so .env is already loaded."""
+    return {
+        "host": os.environ.get("SMTP_HOST", ""),
+        "port": int(os.environ.get("SMTP_PORT", "587")),
+        "user": os.environ.get("SMTP_USER", ""),
+        "password": os.environ.get("SMTP_PASS", ""),
+        "from_addr": os.environ.get("EMAIL_FROM", "") or os.environ.get("SMTP_USER", ""),
+    }
 
 
 def send_login_email(to_email: str, login_url: str):
     """Send the magic login link via SMTP. Falls back to console if SMTP not configured."""
-    if not SMTP_HOST or not SMTP_USER:
+    cfg = _smtp_cfg()
+
+    if not cfg["host"] or not cfg["user"]:
         print(f"\n{'='*60}")
         print(f"  Login link for {to_email}:")
         print(f"  {login_url}")
@@ -32,13 +38,13 @@ def send_login_email(to_email: str, login_url: str):
         "plain",
     )
     msg["Subject"] = "HRIS Login Link"
-    msg["From"] = EMAIL_FROM or SMTP_USER
+    msg["From"] = cfg["from_addr"]
     msg["To"] = to_email
 
     try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+        with smtplib.SMTP(cfg["host"], cfg["port"]) as server:
             server.starttls()
-            server.login(SMTP_USER, SMTP_PASS)
+            server.login(cfg["user"], cfg["password"])
             server.sendmail(msg["From"], [to_email], msg.as_string())
         print(f"  Login email sent to {to_email}")
     except Exception as e:
@@ -51,12 +57,12 @@ class RequestLinkBody(BaseModel):
 
 
 @router.post("/request-link")
-def request_link(body: RequestLinkBody, conn=Depends(get_db)):
+def request_link(body: RequestLinkBody, request: Request, conn=Depends(get_db)):
     # Auto-create user if they don't exist (first user or default admin becomes admin)
     row = conn.execute("SELECT * FROM users WHERE email = ?", (body.email,)).fetchone()
     if not row:
         user_count = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
-        is_default_admin = body.email == DEFAULT_ADMIN_EMAIL
+        is_default_admin = body.email == os.environ.get("DEFAULT_ADMIN_EMAIL", "")
         ts = now_iso()
         user_id = new_id()
         role = "admin" if (user_count == 0 or is_default_admin) else "member"
@@ -71,7 +77,11 @@ def request_link(body: RequestLinkBody, conn=Depends(get_db)):
 
     # Generate token and send via email (or console fallback)
     token = jwt.encode({"sub": row["id"], "type": "login"}, JWT_SECRET, algorithm=JWT_ALGORITHM)
-    login_url = f"http://localhost:5183/verify?token={token}"
+    base_url = os.environ.get("APP_BASE_URL", "")
+    if not base_url:
+        origin = request.headers.get("origin", "")
+        base_url = origin or "http://localhost:5183"
+    login_url = f"{base_url}/verify?token={token}"
     send_login_email(body.email, login_url)
 
     return {"ok": True}
