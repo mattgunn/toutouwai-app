@@ -156,10 +156,95 @@ export default function Compensation() {
     )
   }
 
+  const modals = (
+    <>
+      {/* Add compensation modal */}
+      <Modal
+        open={showAdd}
+        onClose={() => setShowAdd(false)}
+        title="Add Compensation Record"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowAdd(false)} disabled={submitting}>Cancel</Button>
+            <Button onClick={handleAdd} loading={submitting}>Save</Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <FormField label="Employee" required>
+            <Select
+              value={form.employee_id}
+              onChange={e => setForm({ ...form, employee_id: e.target.value })}
+              placeholder="Select Employee"
+              options={employees.map(emp => ({ value: emp.id, label: `${emp.first_name} ${emp.last_name}` }))}
+            />
+          </FormField>
+          <FormField label="Effective Date" required>
+            <Input type="date" value={form.effective_date} onChange={e => setForm({ ...form, effective_date: e.target.value })} />
+          </FormField>
+          <FormField label="Salary" required>
+            <Input type="number" value={form.salary} onChange={e => setForm({ ...form, salary: e.target.value })} placeholder="Salary" />
+          </FormField>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Currency">
+              <Select value={form.currency} onChange={e => setForm({ ...form, currency: e.target.value })} options={[{ value: 'NZD', label: 'NZD' }, { value: 'AUD', label: 'AUD' }, { value: 'USD', label: 'USD' }, { value: 'GBP', label: 'GBP' }, { value: 'EUR', label: 'EUR' }]} />
+            </FormField>
+            <FormField label="Frequency">
+              <Select value={form.pay_frequency} onChange={e => setForm({ ...form, pay_frequency: e.target.value })} options={[{ value: 'annual', label: 'Annual' }, { value: 'monthly', label: 'Monthly' }, { value: 'hourly', label: 'Hourly' }]} />
+            </FormField>
+          </div>
+          <FormField label="Reason">
+            <Select value={form.reason} onChange={e => setForm({ ...form, reason: e.target.value })} placeholder="Reason (optional)" options={[{ value: 'hire', label: 'New Hire' }, { value: 'promotion', label: 'Promotion' }, { value: 'merit', label: 'Merit Increase' }, { value: 'adjustment', label: 'Adjustment' }, { value: 'market', label: 'Market Adjustment' }]} />
+          </FormField>
+          <FormField label="Notes">
+            <Textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="Notes (optional)" rows={2} />
+          </FormField>
+        </div>
+      </Modal>
+
+      {/* Edit compensation record modal */}
+      <Modal
+        open={!!editingRecord}
+        onClose={() => setEditingRecord(null)}
+        title="Edit Compensation Record"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setEditingRecord(null)} disabled={editSubmitting}>Cancel</Button>
+            <Button onClick={handleEditRecord} loading={editSubmitting}>Save Changes</Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <FormField label="Effective Date" required>
+            <Input type="date" value={editForm.effective_date} onChange={e => setEditForm({ ...editForm, effective_date: e.target.value })} />
+          </FormField>
+          <FormField label="Salary" required>
+            <Input type="number" value={editForm.salary} onChange={e => setEditForm({ ...editForm, salary: e.target.value })} placeholder="Salary" />
+          </FormField>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Currency">
+              <Select value={editForm.currency} onChange={e => setEditForm({ ...editForm, currency: e.target.value })} options={[{ value: 'NZD', label: 'NZD' }, { value: 'AUD', label: 'AUD' }, { value: 'USD', label: 'USD' }, { value: 'GBP', label: 'GBP' }, { value: 'EUR', label: 'EUR' }]} />
+            </FormField>
+            <FormField label="Frequency">
+              <Select value={editForm.pay_frequency} onChange={e => setEditForm({ ...editForm, pay_frequency: e.target.value })} options={[{ value: 'annual', label: 'Annual' }, { value: 'monthly', label: 'Monthly' }, { value: 'hourly', label: 'Hourly' }]} />
+            </FormField>
+          </div>
+          <FormField label="Reason">
+            <Select value={editForm.reason} onChange={e => setEditForm({ ...editForm, reason: e.target.value })} placeholder="Reason (optional)" options={[{ value: 'hire', label: 'New Hire' }, { value: 'promotion', label: 'Promotion' }, { value: 'merit', label: 'Merit Increase' }, { value: 'adjustment', label: 'Adjustment' }, { value: 'market', label: 'Market Adjustment' }]} />
+          </FormField>
+          <FormField label="Notes">
+            <Textarea value={editForm.notes} onChange={e => setEditForm({ ...editForm, notes: e.target.value })} placeholder="Notes (optional)" rows={2} />
+          </FormField>
+        </div>
+      </Modal>
+    </>
+  )
+
   // Detail view
   if (selectedEmployee) {
     return (
       <div>
+        {modals}
         <Button variant="ghost" size="sm" onClick={() => setSelectedEmployee(null)} className="mb-4">
           &larr; Back to Compensation
         </Button>
@@ -234,171 +319,7 @@ export default function Compensation() {
         <StatCard label="Average Salary" value={formatCurrency(avgSalary, 'NZD')} color="blue" />
       </div>
 
-      {/* Add compensation modal */}
-      <Modal
-        open={showAdd}
-        onClose={() => setShowAdd(false)}
-        title="Add Compensation Record"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setShowAdd(false)} disabled={submitting}>Cancel</Button>
-            <Button onClick={handleAdd} loading={submitting}>Save</Button>
-          </>
-        }
-      >
-        <div className="space-y-3">
-          <FormField label="Employee" required>
-            <Select
-              value={form.employee_id}
-              onChange={e => setForm({ ...form, employee_id: e.target.value })}
-              placeholder="Select Employee"
-              options={employees.map(emp => ({ value: emp.id, label: `${emp.first_name} ${emp.last_name}` }))}
-            />
-          </FormField>
-          <FormField label="Effective Date" required>
-            <Input
-              type="date"
-              value={form.effective_date}
-              onChange={e => setForm({ ...form, effective_date: e.target.value })}
-            />
-          </FormField>
-          <FormField label="Salary" required>
-            <Input
-              type="number"
-              value={form.salary}
-              onChange={e => setForm({ ...form, salary: e.target.value })}
-              placeholder="Salary"
-            />
-          </FormField>
-          <div className="grid grid-cols-2 gap-3">
-            <FormField label="Currency">
-              <Select
-                value={form.currency}
-                onChange={e => setForm({ ...form, currency: e.target.value })}
-                options={[
-                  { value: 'NZD', label: 'NZD' },
-                  { value: 'AUD', label: 'AUD' },
-                  { value: 'USD', label: 'USD' },
-                  { value: 'GBP', label: 'GBP' },
-                  { value: 'EUR', label: 'EUR' },
-                ]}
-              />
-            </FormField>
-            <FormField label="Frequency">
-              <Select
-                value={form.pay_frequency}
-                onChange={e => setForm({ ...form, pay_frequency: e.target.value })}
-                options={[
-                  { value: 'annual', label: 'Annual' },
-                  { value: 'monthly', label: 'Monthly' },
-                  { value: 'hourly', label: 'Hourly' },
-                ]}
-              />
-            </FormField>
-          </div>
-          <FormField label="Reason">
-            <Select
-              value={form.reason}
-              onChange={e => setForm({ ...form, reason: e.target.value })}
-              placeholder="Reason (optional)"
-              options={[
-                { value: 'hire', label: 'New Hire' },
-                { value: 'promotion', label: 'Promotion' },
-                { value: 'merit', label: 'Merit Increase' },
-                { value: 'adjustment', label: 'Adjustment' },
-                { value: 'market', label: 'Market Adjustment' },
-              ]}
-            />
-          </FormField>
-          <FormField label="Notes">
-            <Textarea
-              value={form.notes}
-              onChange={e => setForm({ ...form, notes: e.target.value })}
-              placeholder="Notes (optional)"
-              rows={2}
-            />
-          </FormField>
-        </div>
-      </Modal>
-
-      {/* Edit compensation record modal */}
-      <Modal
-        open={!!editingRecord}
-        onClose={() => setEditingRecord(null)}
-        title="Edit Compensation Record"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setEditingRecord(null)} disabled={editSubmitting}>Cancel</Button>
-            <Button onClick={handleEditRecord} loading={editSubmitting}>Save Changes</Button>
-          </>
-        }
-      >
-        <div className="space-y-3">
-          <FormField label="Effective Date" required>
-            <Input
-              type="date"
-              value={editForm.effective_date}
-              onChange={e => setEditForm({ ...editForm, effective_date: e.target.value })}
-            />
-          </FormField>
-          <FormField label="Salary" required>
-            <Input
-              type="number"
-              value={editForm.salary}
-              onChange={e => setEditForm({ ...editForm, salary: e.target.value })}
-              placeholder="Salary"
-            />
-          </FormField>
-          <div className="grid grid-cols-2 gap-3">
-            <FormField label="Currency">
-              <Select
-                value={editForm.currency}
-                onChange={e => setEditForm({ ...editForm, currency: e.target.value })}
-                options={[
-                  { value: 'NZD', label: 'NZD' },
-                  { value: 'AUD', label: 'AUD' },
-                  { value: 'USD', label: 'USD' },
-                  { value: 'GBP', label: 'GBP' },
-                  { value: 'EUR', label: 'EUR' },
-                ]}
-              />
-            </FormField>
-            <FormField label="Frequency">
-              <Select
-                value={editForm.pay_frequency}
-                onChange={e => setEditForm({ ...editForm, pay_frequency: e.target.value })}
-                options={[
-                  { value: 'annual', label: 'Annual' },
-                  { value: 'monthly', label: 'Monthly' },
-                  { value: 'hourly', label: 'Hourly' },
-                ]}
-              />
-            </FormField>
-          </div>
-          <FormField label="Reason">
-            <Select
-              value={editForm.reason}
-              onChange={e => setEditForm({ ...editForm, reason: e.target.value })}
-              placeholder="Reason (optional)"
-              options={[
-                { value: 'hire', label: 'New Hire' },
-                { value: 'promotion', label: 'Promotion' },
-                { value: 'merit', label: 'Merit Increase' },
-                { value: 'adjustment', label: 'Adjustment' },
-                { value: 'market', label: 'Market Adjustment' },
-              ]}
-            />
-          </FormField>
-          <FormField label="Notes">
-            <Textarea
-              value={editForm.notes}
-              onChange={e => setEditForm({ ...editForm, notes: e.target.value })}
-              placeholder="Notes (optional)"
-              rows={2}
-            />
-          </FormField>
-        </div>
-      </Modal>
+      {modals}
 
       <div className="mb-4">
         <Input
