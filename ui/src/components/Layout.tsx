@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { useAuth } from '../auth'
@@ -6,6 +6,7 @@ import { useAdminPrefs } from '../hooks/useAdminPrefs'
 import { fetchSettings } from '../api'
 import { MODULES } from '../modules/modules/registry'
 import Breadcrumbs from './Breadcrumbs'
+import Avatar from './Avatar'
 import {
   UsersIcon, BuildingOfficeIcon, BuildingOffice2Icon,
   BriefcaseIcon, HandRaisedIcon, FolderOpenIcon,
@@ -81,6 +82,38 @@ const GLOBAL_ITEMS: NavItem[] = [
 
 const ALL_NAV_ITEMS = NAV_GROUPS.flatMap(g => g.items)
 
+const COLLAPSED_STORAGE_KEY = 'hris_nav_collapsed'
+
+function loadCollapsedGroups(): Set<string> {
+  try {
+    const raw = localStorage.getItem(COLLAPSED_STORAGE_KEY)
+    if (raw) {
+      const arr = JSON.parse(raw)
+      if (Array.isArray(arr)) return new Set(arr)
+    }
+  } catch { /* ignore */ }
+  return new Set()
+}
+
+function saveCollapsedGroups(groups: Set<string>) {
+  try {
+    localStorage.setItem(COLLAPSED_STORAGE_KEY, JSON.stringify([...groups]))
+  } catch { /* ignore */ }
+}
+
+function ChevronIcon({ expanded }: { expanded: boolean }) {
+  return (
+    <svg
+      className={`w-3 h-3 text-gray-600 transition-transform duration-150 ${expanded ? 'rotate-90' : ''}`}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+    </svg>
+  )
+}
+
 function NotificationBell({ count = 3 }: { count?: number }) {
   return (
     <button className="relative p-1.5 text-gray-400 hover:text-gray-200 transition-colors" aria-label="Notifications">
@@ -96,7 +129,7 @@ function NotificationBell({ count = 3 }: { count?: number }) {
   )
 }
 
-function GlobalSearch({ navItems }: { navItems: NavItem[] }) {
+function GlobalSearch({ navItems, sidebar }: { navItems: NavItem[]; sidebar?: boolean }) {
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -119,7 +152,7 @@ function GlobalSearch({ navItems }: { navItems: NavItem[] }) {
   }, [])
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className={`relative ${sidebar ? 'mx-3 my-2' : ''}`}>
       <div className="relative">
         <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -130,7 +163,11 @@ function GlobalSearch({ navItems }: { navItems: NavItem[] }) {
           value={query}
           onChange={e => { setQuery(e.target.value); setOpen(true) }}
           onFocus={() => setOpen(true)}
-          className="w-48 lg:w-64 bg-gray-800 border border-gray-700 rounded-md pl-9 pr-3 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+          className={
+            sidebar
+              ? 'w-full bg-gray-800 border border-gray-700 rounded-md pl-9 pr-3 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors'
+              : 'w-48 lg:w-64 bg-gray-800 border border-gray-700 rounded-md pl-9 pr-3 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors'
+          }
         />
       </div>
       {open && results.length > 0 && (
@@ -167,7 +204,21 @@ function MenuIcon({ open }: { open: boolean }) {
   )
 }
 
-function VerticalNav({ onNavigate, hasPermission, navGroups }: { onNavigate: () => void; hasPermission: (m: string) => boolean; navGroups: NavGroup[] }) {
+function VerticalNav({
+  onNavigate,
+  hasPermission,
+  navGroups,
+  collapsedGroups,
+  onToggleGroup,
+}: {
+  onNavigate: () => void
+  hasPermission: (m: string) => boolean
+  navGroups: NavGroup[]
+  collapsedGroups: Set<string>
+  onToggleGroup: (heading: string) => void
+}) {
+  const location = useLocation()
+
   const filteredGroups = navGroups
     .map(group => ({
       ...group,
@@ -180,37 +231,54 @@ function VerticalNav({ onNavigate, hasPermission, navGroups }: { onNavigate: () 
   return (
     <>
       <div className="flex-1 py-2 overflow-y-auto">
-        {filteredGroups.map((group, gi) => (
-          <div key={gi} className={group.heading ? 'mt-3' : ''}>
-            {group.heading && (
-              <p className="px-4 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-widest text-gray-600">
-                {group.heading}
-              </p>
-            )}
-            {group.items.map(({ to, label, icon }) => (
-              <NavLink
-                key={to}
-                to={to}
-                onClick={onNavigate}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-2 text-sm transition-colors ${
-                    isActive
-                      ? 'bg-blue-600/20 text-blue-400 border-r-2 border-blue-400'
-                      : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
-                  }`
-                }
-              >
-                {icon}
-                <span>{label}</span>
-              </NavLink>
-            ))}
-          </div>
-        ))}
+        {filteredGroups.map((group, gi) => {
+          const heading = group.heading
+          const isCollapsed = heading ? collapsedGroups.has(heading) : false
+          // Auto-expand group containing active route
+          const isActiveGroup = heading
+            ? group.items.some(item => location.pathname.startsWith(item.to))
+            : false
+          const showItems = !heading || isActiveGroup || !isCollapsed
+
+          return (
+            <div key={gi}>
+              {heading && (
+                <>
+                  {gi > 0 && <div className="border-t border-gray-800/50 mt-1 pt-1" />}
+                  <button
+                    onClick={() => onToggleGroup(heading)}
+                    className="w-full flex items-center justify-between px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500 hover:text-gray-300 transition-colors"
+                  >
+                    <span>{heading}</span>
+                    <ChevronIcon expanded={showItems} />
+                  </button>
+                </>
+              )}
+              {showItems && group.items.map(({ to, label, icon }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  onClick={onNavigate}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                      isActive
+                        ? 'bg-blue-600/20 text-blue-400 border-l-3 border-blue-400 font-medium'
+                        : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
+                    }`
+                  }
+                >
+                  {icon}
+                  <span>{label}</span>
+                </NavLink>
+              ))}
+            </div>
+          )
+        })}
       </div>
 
       {filteredGlobal.length > 0 && (
         <div className="py-2 border-t border-gray-800">
-          <p className="px-4 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-widest text-gray-600">
+          <p className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500">
             Global
           </p>
           {filteredGlobal.map(({ to, label, icon }) => (
@@ -221,7 +289,7 @@ function VerticalNav({ onNavigate, hasPermission, navGroups }: { onNavigate: () 
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
                   isActive
-                    ? 'bg-blue-600/20 text-blue-400 border-r-2 border-blue-400'
+                    ? 'bg-blue-600/20 text-blue-400 border-l-3 border-blue-400 font-medium'
                     : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
                 }`
               }
@@ -253,6 +321,20 @@ export default function Layout({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const prefs = useAdminPrefs()
   const [moduleSettings, setModuleSettings] = useState<Record<string, unknown>>({})
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(loadCollapsedGroups)
+
+  const toggleGroup = useCallback((heading: string) => {
+    setCollapsedGroups(prev => {
+      const next = new Set(prev)
+      if (next.has(heading)) {
+        next.delete(heading)
+      } else {
+        next.add(heading)
+      }
+      saveCollapsedGroups(next)
+      return next
+    })
+  }, [])
 
   useEffect(() => {
     fetchSettings().then(setModuleSettings).catch(() => {})
@@ -340,13 +422,14 @@ export default function Layout({ children }: { children: ReactNode }) {
                   key={gi}
                   to={group.items[0].to}
                   className={
-                    `flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors whitespace-nowrap rounded ${
+                    `flex items-center gap-1.5 px-4 py-2 text-sm transition-colors whitespace-nowrap rounded-md ${
                       isGroupActive
                         ? 'bg-blue-600/20 text-blue-400'
                         : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
                     }`
                   }
                 >
+                  {group.items[0].icon}
                   <span>{group.heading}</span>
                 </NavLink>
               )
@@ -394,10 +477,10 @@ export default function Layout({ children }: { children: ReactNode }) {
                 key={to}
                 to={to}
                 className={({ isActive }) =>
-                  `flex items-center gap-2 px-3.5 py-1.5 text-sm font-medium transition-colors whitespace-nowrap ${
+                  `flex items-center gap-2 px-4 py-2 text-sm transition-colors whitespace-nowrap ${
                     isActive
-                      ? 'text-white border-b-2 border-blue-400 -mb-px'
-                      : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50 rounded'
+                      ? 'text-white border-b-3 border-blue-400 -mb-px font-medium'
+                      : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50 rounded-md'
                   }`
                 }
               >
@@ -432,7 +515,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           <div className="fixed inset-0 z-30 bg-black/50 md:hidden" onClick={closeSidebar} />
         )}
         <nav
-          className={`fixed inset-y-0 left-0 z-40 w-56 border-r border-gray-800 flex flex-col
+          className={`fixed inset-y-0 left-0 z-40 w-60 border-r border-gray-800 flex flex-col
             transform transition-transform duration-200 ease-in-out md:hidden
             ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
             ${!effectiveNavColor ? 'bg-gray-900' : ''} ${topbarClass}`}
@@ -444,17 +527,31 @@ export default function Layout({ children }: { children: ReactNode }) {
             </h1>
           </div>
 
-          <VerticalNav onNavigate={closeSidebar} hasPermission={hasPermission} navGroups={enabledNavGroups} />
+          <VerticalNav
+            onNavigate={closeSidebar}
+            hasPermission={hasPermission}
+            navGroups={enabledNavGroups}
+            collapsedGroups={collapsedGroups}
+            onToggleGroup={toggleGroup}
+          />
 
           <div className="px-4 py-3 border-t border-gray-800">
             {user && (
-              <div className="text-xs text-gray-500 truncate mb-2" title={user.email}>
-                {displayName}
+              <div className="flex items-center gap-3 mb-2">
+                <Avatar name={user.name || user.email} size="sm" />
+                <div className="min-w-0">
+                  <div className="text-sm text-white font-medium truncate" title={user.email}>
+                    {displayName}
+                  </div>
+                  {user.role && (
+                    <div className="text-xs text-gray-500 capitalize">{user.role}</div>
+                  )}
+                </div>
               </div>
             )}
             <button
               onClick={handleLogout}
-              className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+              className="text-xs text-gray-500 hover:text-red-400 transition-colors"
             >
               Sign out
             </button>
@@ -503,41 +600,62 @@ export default function Layout({ children }: { children: ReactNode }) {
 
       {/* Sidebar */}
       <nav
-        className={`fixed inset-y-0 left-0 z-40 w-56 border-r border-gray-800 flex flex-col
+        className={`fixed inset-y-0 left-0 z-40 w-60 border-r border-gray-800 flex flex-col
           transform transition-transform duration-200 ease-in-out
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
           md:relative md:translate-x-0
           ${!effectiveNavColor ? 'bg-gray-900' : ''} ${katanaSidebar}`}
         style={navBg}
       >
-        <NavLink to="/dashboard" className="block px-4 py-4 border-b border-gray-800 hover:opacity-80 transition-opacity" style={navBg}>
+        {/* Brand area with gradient separator */}
+        <NavLink to="/dashboard" className="block px-4 py-4 hover:opacity-80 transition-opacity" style={navBg}>
           <h1 className="text-lg font-bold tracking-tight" style={{ color: '#ffffff' }}>
             {isDev ? `DEV \u2014 ${prefs.instanceLabel || 'HRIS'}` : (prefs.instanceLabel || 'HRIS')}
           </h1>
         </NavLink>
+        <div className="h-px bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800" />
 
-        <VerticalNav onNavigate={closeSidebar} hasPermission={hasPermission} navGroups={enabledNavGroups} />
+        {/* Sidebar search */}
+        <GlobalSearch navItems={allItems} sidebar />
 
-        <div className="px-4 py-3 border-t border-gray-800">
+        <VerticalNav
+          onNavigate={closeSidebar}
+          hasPermission={hasPermission}
+          navGroups={enabledNavGroups}
+          collapsedGroups={collapsedGroups}
+          onToggleGroup={toggleGroup}
+        />
+
+        {/* User footer */}
+        <div className="border-t border-gray-800">
           {user && (
-            <div className="text-xs text-gray-500 truncate mb-2" title={user.email}>
-              {displayName}
+            <div className="flex items-center gap-3 px-4 py-3">
+              <Avatar name={user.name || user.email} size="sm" />
+              <div className="min-w-0 flex-1">
+                <div className="text-sm text-white font-medium truncate" title={user.email}>
+                  {displayName}
+                </div>
+                {user.role && (
+                  <div className="text-xs text-gray-500 capitalize">{user.role}</div>
+                )}
+              </div>
             </div>
           )}
-          <button
-            onClick={handleLogout}
-            className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
-          >
-            Sign out
-          </button>
+          <div className="px-4 pb-3">
+            <button
+              onClick={handleLogout}
+              className="text-xs text-gray-500 hover:text-red-400 transition-colors"
+            >
+              Sign out
+            </button>
+          </div>
         </div>
       </nav>
 
       {/* Main area with top utility bar + content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Utility bar (search + bell) - desktop only */}
-        <div className="hidden md:flex items-center justify-between px-6 py-2 border-b border-gray-800 bg-gray-950 shrink-0">
-          <GlobalSearch navItems={allItems} />
+        {/* Utility bar (bell + user name) - desktop only */}
+        <div className="hidden md:flex items-center justify-end px-6 py-2 border-b border-gray-800 bg-gray-950 shrink-0">
           <div className="flex items-center gap-2">
             <NotificationBell />
             {user && (
