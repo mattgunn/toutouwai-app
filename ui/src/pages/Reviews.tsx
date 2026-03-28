@@ -3,24 +3,45 @@ import { fetchReviewCycles, fetchReviews } from '../api'
 import type { ReviewCycle, Review } from '../types'
 import StatusBadge from '../components/StatusBadge'
 import EmptyState from '../components/EmptyState'
+import Tabs from '../components/Tabs'
+import { SkeletonTable } from '../components/Skeleton'
+import { useToast } from '../components/Toast'
 
 export default function Reviews() {
   const [cycles, setCycles] = useState<ReviewCycle[]>([])
   const [selectedCycle, setSelectedCycle] = useState<string | null>(null)
   const [reviews, setReviews] = useState<Review[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadingReviews, setLoadingReviews] = useState(false)
+  const toast = useToast()
 
   useEffect(() => {
+    setLoading(true)
     fetchReviewCycles().then(data => {
       setCycles(data)
       if (data.length > 0) setSelectedCycle(data[0].id)
-    }).catch(() => {})
+    }).catch(() => {
+      toast.error('Failed to load review cycles')
+    }).finally(() => setLoading(false))
   }, [])
 
   useEffect(() => {
     if (selectedCycle) {
-      fetchReviews({ cycle_id: selectedCycle }).then(setReviews).catch(() => {})
+      setLoadingReviews(true)
+      fetchReviews({ cycle_id: selectedCycle }).then(setReviews).catch(() => {
+        toast.error('Failed to load reviews')
+      }).finally(() => setLoadingReviews(false))
     }
   }, [selectedCycle])
+
+  if (loading) {
+    return (
+      <div>
+        <h1 className="text-xl font-bold text-white mb-4">Performance Reviews</h1>
+        <SkeletonTable rows={5} cols={4} />
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -28,26 +49,26 @@ export default function Reviews() {
 
       {/* Cycle selector */}
       {cycles.length > 0 && (
-        <div className="flex gap-2 mb-4 overflow-x-auto">
-          {cycles.map(cycle => (
-            <button
-              key={cycle.id}
-              onClick={() => setSelectedCycle(cycle.id)}
-              className={`px-3 py-1.5 text-sm rounded whitespace-nowrap transition-colors ${
-                selectedCycle === cycle.id
-                  ? 'bg-blue-600/20 text-blue-400'
-                  : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
-              }`}
-            >
-              {cycle.name}
-              <span className="ml-2"><StatusBadge status={cycle.status} /></span>
-            </button>
-          ))}
+        <div className="mb-4">
+          <Tabs
+            variant="pills"
+            tabs={cycles.map(cycle => ({
+              key: cycle.id,
+              label: cycle.name,
+            }))}
+            active={selectedCycle || ''}
+            onChange={setSelectedCycle}
+          />
         </div>
       )}
 
-      {reviews.length === 0 ? (
-        <EmptyState message={cycles.length === 0 ? 'No review cycles yet' : 'No reviews in this cycle'} />
+      {loadingReviews ? (
+        <SkeletonTable rows={5} cols={4} />
+      ) : reviews.length === 0 ? (
+        <EmptyState
+          icon="📋"
+          message={cycles.length === 0 ? 'No review cycles yet' : 'No reviews in this cycle'}
+        />
       ) : (
         <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
           <table className="w-full text-sm">

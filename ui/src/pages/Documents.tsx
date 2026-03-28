@@ -4,6 +4,12 @@ import { fetchEmployees } from '../api'
 import type { Document } from '../modules/documents/types'
 import type { Employee } from '../types'
 import EmptyState from '../components/EmptyState'
+import Modal from '../components/Modal'
+import Button from '../components/Button'
+import { FormField, Input, Select } from '../components/FormField'
+import { SkeletonTable } from '../components/Skeleton'
+import ConfirmDialog from '../components/ConfirmDialog'
+import { useToast } from '../components/Toast'
 
 const CATEGORIES = [
   { value: '', label: 'All Categories' },
@@ -55,53 +61,89 @@ export default function Documents() {
   const [filterEmployee, setFilterEmployee] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [expiringDocs, setExpiringDocs] = useState<Document[]>([])
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const toast = useToast()
 
   useEffect(() => {
-    loadDocuments()
-    fetchEmployees().then(r => setEmployees(r.employees)).catch(() => {})
-    fetchExpiringDocuments(30).then(setExpiringDocs).catch(() => {})
+    setLoading(true)
+    Promise.all([
+      loadDocuments(),
+      fetchEmployees().then(r => setEmployees(r.employees)),
+      fetchExpiringDocuments(30).then(setExpiringDocs),
+    ]).catch(() => {
+      toast.error('Failed to load documents')
+    }).finally(() => setLoading(false))
   }, [])
 
   const loadDocuments = () => {
     const params: Record<string, string> = {}
     if (filterCategory) params.category = filterCategory
     if (filterEmployee) params.employee_id = filterEmployee
-    fetchDocuments(params).then(setDocuments).catch(() => {})
+    return fetchDocuments(params).then(setDocuments)
   }
 
   useEffect(() => {
-    loadDocuments()
+    loadDocuments().catch(() => {
+      toast.error('Failed to filter documents')
+    })
   }, [filterCategory, filterEmployee])
 
   const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    const fd = new FormData(e.currentTarget)
-    const doc = await createDocument({
-      name: fd.get('name'),
-      employee_id: fd.get('employee_id') || null,
-      category: fd.get('category') || 'general',
-      description: fd.get('description') || null,
-      expiry_date: fd.get('expiry_date') || null,
-    })
-    setDocuments(prev => [doc, ...prev])
-    setShowForm(false)
+    setSubmitting(true)
+    try {
+      const fd = new FormData(e.currentTarget)
+      const doc = await createDocument({
+        name: fd.get('name'),
+        employee_id: fd.get('employee_id') || null,
+        category: fd.get('category') || 'general',
+        description: fd.get('description') || null,
+        expiry_date: fd.get('expiry_date') || null,
+      })
+      setDocuments(prev => [doc, ...prev])
+      setShowForm(false)
+      toast.success('Document added')
+    } catch {
+      toast.error('Failed to add document')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
-  const handleDelete = async (id: string) => {
-    await deleteDocument(id)
-    setDocuments(prev => prev.filter(d => d.id !== id))
+  const handleDelete = async () => {
+    if (!deleteId) return
+    setDeleting(true)
+    try {
+      await deleteDocument(deleteId)
+      setDocuments(prev => prev.filter(d => d.id !== deleteId))
+      toast.success('Document deleted')
+    } catch {
+      toast.error('Failed to delete document')
+    } finally {
+      setDeleting(false)
+      setDeleteId(null)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div>
+        <h1 className="text-xl font-bold text-white mb-4">Documents</h1>
+        <SkeletonTable rows={5} cols={5} />
+      </div>
+    )
   }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold text-white">Documents</h1>
-        <button
-          onClick={() => setShowForm(true)}
-          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
-        >
+        <Button onClick={() => setShowForm(true)}>
           Add Document
-        </button>
+        </Button>
       </div>
 
       {/* Expiring documents warning */}
@@ -119,72 +161,66 @@ export default function Documents() {
         </div>
       )}
 
-      {showForm && (
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-4 mb-4">
-          <h3 className="text-sm font-semibold text-white mb-3">Add Document Record</h3>
-          <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Name</label>
-              <input name="name" required className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white placeholder-gray-500" placeholder="Document name" />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Employee</label>
-              <select name="employee_id" className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white">
-                <option value="">Company-wide</option>
-                {employees.map(emp => (
-                  <option key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Category</label>
-              <select name="category" className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white">
-                {CATEGORIES.filter(c => c.value).map(c => (
-                  <option key={c.value} value={c.value}>{c.label}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Expiry Date</label>
-              <input name="expiry_date" type="date" className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white" />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-xs text-gray-500 mb-1">Description</label>
-              <input name="description" className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white placeholder-gray-500" placeholder="Optional description" />
-            </div>
-            <div className="md:col-span-2 flex gap-2">
-              <button type="submit" className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors">Add</button>
-              <button type="button" onClick={() => setShowForm(false)} className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded transition-colors">Cancel</button>
-            </div>
-          </form>
-        </div>
-      )}
+      <Modal
+        open={showForm}
+        onClose={() => setShowForm(false)}
+        title="Add Document Record"
+        size="lg"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowForm(false)} disabled={submitting}>Cancel</Button>
+            <Button type="submit" form="doc-form" loading={submitting}>Add</Button>
+          </>
+        }
+      >
+        <form id="doc-form" onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField label="Name" required>
+            <Input name="name" required placeholder="Document name" />
+          </FormField>
+          <FormField label="Employee">
+            <Select
+              name="employee_id"
+              placeholder="Company-wide"
+              options={employees.map(emp => ({ value: emp.id, label: `${emp.first_name} ${emp.last_name}` }))}
+            />
+          </FormField>
+          <FormField label="Category">
+            <Select
+              name="category"
+              options={CATEGORIES.filter(c => c.value).map(c => ({ value: c.value, label: c.label }))}
+            />
+          </FormField>
+          <FormField label="Expiry Date">
+            <Input name="expiry_date" type="date" />
+          </FormField>
+          <FormField label="Description" className="md:col-span-2">
+            <Input name="description" placeholder="Optional description" />
+          </FormField>
+        </form>
+      </Modal>
 
       {/* Filters */}
       <div className="flex gap-3 mb-4">
-        <select
+        <Select
           value={filterCategory}
           onChange={e => setFilterCategory(e.target.value)}
-          className="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
-        >
-          {CATEGORIES.map(c => (
-            <option key={c.value} value={c.value}>{c.label}</option>
-          ))}
-        </select>
-        <select
+          options={CATEGORIES.map(c => ({ value: c.value, label: c.label }))}
+        />
+        <Select
           value={filterEmployee}
           onChange={e => setFilterEmployee(e.target.value)}
-          className="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
-        >
-          <option value="">All Employees</option>
-          {employees.map(emp => (
-            <option key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name}</option>
-          ))}
-        </select>
+          placeholder="All Employees"
+          options={employees.map(emp => ({ value: emp.id, label: `${emp.first_name} ${emp.last_name}` }))}
+        />
       </div>
 
       {documents.length === 0 ? (
-        <EmptyState message="No documents found" />
+        <EmptyState
+          icon="📄"
+          message="No documents found"
+          action="Add Document"
+          onAction={() => setShowForm(true)}
+        />
       ) : (
         <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
           <table className="w-full text-sm">
@@ -218,12 +254,13 @@ export default function Documents() {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <button
-                      onClick={() => handleDelete(doc.id)}
-                      className="text-xs text-gray-500 hover:text-red-400 transition-colors"
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDeleteId(doc.id)}
                     >
                       Delete
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -231,6 +268,16 @@ export default function Documents() {
           </table>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        onConfirm={handleDelete}
+        title="Delete Document"
+        message="Are you sure you want to delete this document? This action cannot be undone."
+        confirmLabel="Delete"
+        loading={deleting}
+      />
     </div>
   )
 }

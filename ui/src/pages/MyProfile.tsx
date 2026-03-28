@@ -10,6 +10,11 @@ import type { Document } from '../modules/documents/types'
 import type { OnboardingChecklist } from '../modules/onboarding/types'
 import StatusBadge from '../components/StatusBadge'
 import EmptyState from '../components/EmptyState'
+import Tabs from '../components/Tabs'
+import Button from '../components/Button'
+import { FormField, Input } from '../components/FormField'
+import { PageSkeleton } from '../components/Skeleton'
+import { useToast } from '../components/Toast'
 
 type Section = 'profile' | 'leave' | 'time' | 'documents' | 'onboarding'
 
@@ -23,42 +28,66 @@ export default function MyProfile() {
   const [onboarding, setOnboarding] = useState<OnboardingChecklist[]>([])
   const [editing, setEditing] = useState(false)
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const toast = useToast()
 
   useEffect(() => {
-    fetchMyProfile().then(setProfile).catch(e => setError(e.message))
+    setLoading(true)
+    fetchMyProfile().then(setProfile).catch(e => setError(e.message)).finally(() => setLoading(false))
   }, [])
 
   useEffect(() => {
     if (section === 'leave') {
-      fetchMyLeave().then(setLeaveRequests).catch(() => {})
-      fetchMyLeaveBalances().then(setLeaveBalances).catch(() => {})
+      fetchMyLeave().then(setLeaveRequests).catch(() => {
+        toast.error('Failed to load leave data')
+      })
+      fetchMyLeaveBalances().then(setLeaveBalances).catch(() => {
+        toast.error('Failed to load leave balances')
+      })
     } else if (section === 'time') {
-      fetchMyTime().then(setTimeEntries).catch(() => {})
+      fetchMyTime().then(setTimeEntries).catch(() => {
+        toast.error('Failed to load time entries')
+      })
     } else if (section === 'documents') {
-      fetchMyDocuments().then(setDocuments).catch(() => {})
+      fetchMyDocuments().then(setDocuments).catch(() => {
+        toast.error('Failed to load documents')
+      })
     } else if (section === 'onboarding') {
-      fetchMyOnboarding().then(setOnboarding).catch(() => {})
+      fetchMyOnboarding().then(setOnboarding).catch(() => {
+        toast.error('Failed to load onboarding data')
+      })
     }
   }, [section])
 
   const handleUpdateProfile = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    const fd = new FormData(e.currentTarget)
-    const updated = await updateMyProfile({
-      phone: fd.get('phone') || null,
-      address: fd.get('address') || null,
-      emergency_contact: fd.get('emergency_contact') || null,
-    })
-    setProfile(updated)
-    setEditing(false)
+    setSubmitting(true)
+    try {
+      const fd = new FormData(e.currentTarget)
+      const updated = await updateMyProfile({
+        phone: fd.get('phone') || null,
+        address: fd.get('address') || null,
+        emergency_contact: fd.get('emergency_contact') || null,
+      })
+      setProfile(updated)
+      setEditing(false)
+      toast.success('Profile updated')
+    } catch {
+      toast.error('Failed to update profile')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
-  const tabClass = (s: Section) =>
-    `px-4 py-2 text-sm font-medium transition-colors ${
-      section === s
-        ? 'text-blue-400 border-b-2 border-blue-400'
-        : 'text-gray-400 hover:text-gray-200'
-    }`
+  if (loading) {
+    return (
+      <div>
+        <h1 className="text-xl font-bold text-white mb-4">My Profile</h1>
+        <PageSkeleton />
+      </div>
+    )
+  }
 
   if (error) {
     return (
@@ -79,12 +108,18 @@ export default function MyProfile() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-gray-800 mb-4">
-        <button className={tabClass('profile')} onClick={() => setSection('profile')}>Profile</button>
-        <button className={tabClass('leave')} onClick={() => setSection('leave')}>Leave</button>
-        <button className={tabClass('time')} onClick={() => setSection('time')}>Time</button>
-        <button className={tabClass('documents')} onClick={() => setSection('documents')}>Documents</button>
-        <button className={tabClass('onboarding')} onClick={() => setSection('onboarding')}>Onboarding</button>
+      <div className="mb-4">
+        <Tabs
+          tabs={[
+            { key: 'profile', label: 'Profile' },
+            { key: 'leave', label: 'Leave' },
+            { key: 'time', label: 'Time' },
+            { key: 'documents', label: 'Documents' },
+            { key: 'onboarding', label: 'Onboarding' },
+          ]}
+          active={section}
+          onChange={(k) => setSection(k as Section)}
+        />
       </div>
 
       {/* ── Profile ───────────────────────────────────────────── */}
@@ -96,32 +131,26 @@ export default function MyProfile() {
               <p className="text-sm text-gray-400">{profile.position_title || 'No position'} {profile.department_name ? `\u00B7 ${profile.department_name}` : ''}</p>
             </div>
             {!editing && (
-              <button
-                onClick={() => setEditing(true)}
-                className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded transition-colors"
-              >
+              <Button variant="secondary" onClick={() => setEditing(true)}>
                 Edit
-              </button>
+              </Button>
             )}
           </div>
 
           {editing ? (
             <form onSubmit={handleUpdateProfile} className="space-y-3">
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Phone</label>
-                <input name="phone" defaultValue={profile.phone || ''} className="w-full max-w-sm bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white placeholder-gray-500" />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Address</label>
-                <input name="address" defaultValue={profile.address || ''} className="w-full max-w-sm bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white placeholder-gray-500" />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Emergency Contact</label>
-                <input name="emergency_contact" defaultValue={profile.emergency_contact || ''} className="w-full max-w-sm bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white placeholder-gray-500" />
-              </div>
+              <FormField label="Phone">
+                <Input name="phone" defaultValue={profile.phone || ''} className="max-w-sm" />
+              </FormField>
+              <FormField label="Address">
+                <Input name="address" defaultValue={profile.address || ''} className="max-w-sm" />
+              </FormField>
+              <FormField label="Emergency Contact">
+                <Input name="emergency_contact" defaultValue={profile.emergency_contact || ''} className="max-w-sm" />
+              </FormField>
               <div className="flex gap-2">
-                <button type="submit" className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors">Save</button>
-                <button type="button" onClick={() => setEditing(false)} className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded transition-colors">Cancel</button>
+                <Button type="submit" loading={submitting}>Save</Button>
+                <Button variant="secondary" onClick={() => setEditing(false)}>Cancel</Button>
               </div>
             </form>
           ) : (
@@ -177,7 +206,7 @@ export default function MyProfile() {
           {/* Recent requests */}
           <h3 className="text-sm font-semibold text-white">Recent Leave Requests</h3>
           {leaveRequests.length === 0 ? (
-            <EmptyState message="No leave requests" />
+            <EmptyState icon="🏖️" message="No leave requests" />
           ) : (
             <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
               <table className="w-full text-sm">
@@ -211,7 +240,7 @@ export default function MyProfile() {
       {section === 'time' && (
         <div>
           {timeEntries.length === 0 ? (
-            <EmptyState message="No time entries" />
+            <EmptyState icon="⏱️" message="No time entries" />
           ) : (
             <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
               <table className="w-full text-sm">
@@ -243,7 +272,7 @@ export default function MyProfile() {
       {section === 'documents' && (
         <div>
           {documents.length === 0 ? (
-            <EmptyState message="No documents" />
+            <EmptyState icon="📄" message="No documents" />
           ) : (
             <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
               <table className="w-full text-sm">
@@ -275,7 +304,7 @@ export default function MyProfile() {
       {section === 'onboarding' && (
         <div>
           {onboarding.length === 0 ? (
-            <EmptyState message="No onboarding checklists" />
+            <EmptyState icon="📋" message="No onboarding checklists" />
           ) : (
             <div className="space-y-4">
               {onboarding.map(cl => (

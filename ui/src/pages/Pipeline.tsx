@@ -1,20 +1,46 @@
 import { useState, useEffect } from 'react'
 import { fetchApplicants } from '../api'
 import type { Applicant } from '../types'
+import { Skeleton } from '../components/Skeleton'
+import { useToast } from '../components/Toast'
 
 const STAGES = ['applied', 'screening', 'interview', 'offer', 'hired', 'rejected']
 
 export default function Pipeline() {
   const [applicants, setApplicants] = useState<Applicant[]>([])
+  const [loading, setLoading] = useState(true)
+  const toast = useToast()
 
   useEffect(() => {
-    fetchApplicants().then(setApplicants).catch(() => {})
+    fetchApplicants()
+      .then(setApplicants)
+      .catch(() => toast.error('Failed to load pipeline data'))
+      .finally(() => setLoading(false))
   }, [])
 
   const byStage = STAGES.map(stage => ({
     stage,
     applicants: applicants.filter(a => a.stage === stage),
   }))
+
+  if (loading) {
+    return (
+      <div>
+        <h1 className="text-xl font-bold text-white mb-4">Recruitment Pipeline</h1>
+        <div className="flex gap-4 overflow-x-auto pb-4">
+          {STAGES.map(stage => (
+            <div key={stage} className="min-w-[220px] flex-shrink-0">
+              <div className="bg-gray-800 rounded-lg p-3 space-y-3">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-20 w-full rounded" />
+                <Skeleton className="h-20 w-full rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div>

@@ -11,19 +11,32 @@ import {
 import type { Survey, SurveyQuestion, SurveyResultsResponse } from '../modules/surveys/types'
 import StatusBadge from '../components/StatusBadge'
 import EmptyState from '../components/EmptyState'
+import Button from '../components/Button'
+import { FormField, Input, Select, Textarea } from '../components/FormField'
+import Tabs from '../components/Tabs'
+import { SkeletonTable } from '../components/Skeleton'
+import ConfirmDialog from '../components/ConfirmDialog'
+import { useToast } from '../components/Toast'
 
 export default function Surveys() {
   const [surveys, setSurveys] = useState<Survey[]>([])
   const [showForm, setShowForm] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [detailView, setDetailView] = useState<'questions' | 'results'>('questions')
+  const [loading, setLoading] = useState(true)
+  const toast = useToast()
 
   useEffect(() => {
-    fetchSurveys().then(setSurveys).catch(() => {})
+    setLoading(true)
+    fetchSurveys().then(setSurveys).catch(() => {
+      toast.error('Failed to load surveys')
+    }).finally(() => setLoading(false))
   }, [])
 
   const reload = () => {
-    fetchSurveys().then(setSurveys).catch(() => {})
+    fetchSurveys().then(setSurveys).catch(() => {
+      toast.error('Failed to reload surveys')
+    })
   }
 
   const selected = surveys.find(s => s.id === selectedId)
@@ -40,16 +53,22 @@ export default function Surveys() {
     )
   }
 
+  if (loading) {
+    return (
+      <div>
+        <h1 className="text-xl font-bold text-white mb-4">Surveys</h1>
+        <SkeletonTable rows={5} cols={4} />
+      </div>
+    )
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold text-white">Surveys</h1>
-        <button
-          onClick={() => setShowForm(true)}
-          className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
-        >
+        <Button onClick={() => setShowForm(true)}>
           New Survey
-        </button>
+        </Button>
       </div>
 
       {showForm && (
@@ -60,7 +79,12 @@ export default function Surveys() {
       )}
 
       {surveys.length === 0 ? (
-        <EmptyState message="No surveys yet" />
+        <EmptyState
+          icon="📊"
+          message="No surveys yet"
+          action="New Survey"
+          onAction={() => setShowForm(true)}
+        />
       ) : (
         <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
           <table className="w-full text-sm">
@@ -101,29 +125,41 @@ function CreateSurveyForm({ onCreated, onCancel }: { onCreated: () => void; onCa
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [anonymous, setAnonymous] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const toast = useToast()
 
   const handleSubmit = async () => {
-    await createSurvey({ title, description: description || null, anonymous: anonymous ? 1 : 0 })
-    onCreated()
+    setSubmitting(true)
+    try {
+      await createSurvey({ title, description: description || null, anonymous: anonymous ? 1 : 0 })
+      toast.success('Survey created')
+      onCreated()
+    } catch {
+      toast.error('Failed to create survey')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
     <div className="bg-gray-900 border border-gray-800 rounded-lg p-4 mb-4">
       <h2 className="text-sm font-semibold text-white mb-3">New Survey</h2>
       <div className="space-y-3">
-        <input
-          value={title}
-          onChange={e => setTitle(e.target.value)}
-          placeholder="Survey title"
-          className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white placeholder-gray-500"
-        />
-        <textarea
-          value={description}
-          onChange={e => setDescription(e.target.value)}
-          placeholder="Description (optional)"
-          className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white placeholder-gray-500"
-          rows={2}
-        />
+        <FormField label="Title" required>
+          <Input
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            placeholder="Survey title"
+          />
+        </FormField>
+        <FormField label="Description">
+          <Textarea
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            placeholder="Description (optional)"
+            rows={2}
+          />
+        </FormField>
         <label className="flex items-center gap-2 text-sm text-gray-400">
           <input
             type="checkbox"
@@ -135,16 +171,12 @@ function CreateSurveyForm({ onCreated, onCancel }: { onCreated: () => void; onCa
         </label>
       </div>
       <div className="flex gap-2 mt-3">
-        <button
-          onClick={handleSubmit}
-          disabled={!title}
-          className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
-        >
+        <Button onClick={handleSubmit} disabled={!title} loading={submitting}>
           Create
-        </button>
-        <button onClick={onCancel} className="px-3 py-1.5 bg-gray-700 text-gray-300 text-sm rounded hover:bg-gray-600 transition-colors">
+        </Button>
+        <Button variant="secondary" onClick={onCancel}>
           Cancel
-        </button>
+        </Button>
       </div>
     </div>
   )
@@ -166,37 +198,65 @@ function SurveyDetail({
   const [questions, setQuestions] = useState<SurveyQuestion[]>([])
   const [results, setResults] = useState<SurveyResultsResponse | null>(null)
   const [showAddQ, setShowAddQ] = useState(false)
+  const [deleteQId, setDeleteQId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [statusLoading, setStatusLoading] = useState(false)
+  const toast = useToast()
 
   useEffect(() => {
-    fetchSurveyQuestions(survey.id).then(setQuestions).catch(() => {})
+    fetchSurveyQuestions(survey.id).then(setQuestions).catch(() => {
+      toast.error('Failed to load questions')
+    })
   }, [survey.id])
 
   useEffect(() => {
     if (view === 'results') {
-      fetchSurveyResults(survey.id).then(setResults).catch(() => {})
+      fetchSurveyResults(survey.id).then(setResults).catch(() => {
+        toast.error('Failed to load results')
+      })
     }
   }, [survey.id, view])
 
   const reloadQuestions = () => {
-    fetchSurveyQuestions(survey.id).then(setQuestions).catch(() => {})
+    fetchSurveyQuestions(survey.id).then(setQuestions).catch(() => {
+      toast.error('Failed to reload questions')
+    })
   }
 
   const handleStatusChange = async (status: string) => {
-    await updateSurvey(survey.id, { status })
-    onUpdate()
+    setStatusLoading(true)
+    try {
+      await updateSurvey(survey.id, { status })
+      toast.success(`Survey ${status === 'active' ? 'activated' : 'closed'}`)
+      onUpdate()
+    } catch {
+      toast.error('Failed to update survey status')
+    } finally {
+      setStatusLoading(false)
+    }
   }
 
-  const handleDeleteQuestion = async (qid: string) => {
-    await deleteSurveyQuestion(qid)
-    reloadQuestions()
+  const handleDeleteQuestion = async () => {
+    if (!deleteQId) return
+    setDeleting(true)
+    try {
+      await deleteSurveyQuestion(deleteQId)
+      reloadQuestions()
+      toast.success('Question deleted')
+    } catch {
+      toast.error('Failed to delete question')
+    } finally {
+      setDeleting(false)
+      setDeleteQId(null)
+    }
   }
 
   return (
     <div>
       <div className="flex items-center gap-3 mb-4">
-        <button onClick={onBack} className="text-gray-400 hover:text-white transition-colors text-sm">
+        <Button variant="ghost" size="sm" onClick={onBack}>
           &larr; Back
-        </button>
+        </Button>
         <h1 className="text-xl font-bold text-white">{survey.title}</h1>
         <StatusBadge status={survey.status} />
       </div>
@@ -206,40 +266,34 @@ function SurveyDetail({
       )}
 
       <div className="flex items-center gap-2 mb-6">
-        <div className="flex gap-1">
-          <button
-            onClick={() => onViewChange('questions')}
-            className={`px-4 py-2 text-sm rounded transition-colors ${
-              view === 'questions' ? 'bg-blue-600/20 text-blue-400' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
-            }`}
-          >
-            Questions ({questions.length})
-          </button>
-          <button
-            onClick={() => onViewChange('results')}
-            className={`px-4 py-2 text-sm rounded transition-colors ${
-              view === 'results' ? 'bg-blue-600/20 text-blue-400' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
-            }`}
-          >
-            Results
-          </button>
-        </div>
+        <Tabs
+          variant="pills"
+          tabs={[
+            { key: 'questions', label: 'Questions', count: questions.length },
+            { key: 'results', label: 'Results' },
+          ]}
+          active={view}
+          onChange={(k) => onViewChange(k as 'questions' | 'results')}
+        />
         <div className="flex-1" />
         {survey.status === 'draft' && (
-          <button
+          <Button
+            size="sm"
             onClick={() => handleStatusChange('active')}
-            className="px-3 py-1.5 bg-emerald-600 text-white text-xs rounded hover:bg-emerald-700 transition-colors"
+            loading={statusLoading}
           >
             Activate
-          </button>
+          </Button>
         )}
         {survey.status === 'active' && (
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={() => handleStatusChange('closed')}
-            className="px-3 py-1.5 bg-gray-700 text-gray-300 text-xs rounded hover:bg-gray-600 transition-colors"
+            loading={statusLoading}
           >
             Close Survey
-          </button>
+          </Button>
         )}
       </div>
 
@@ -252,16 +306,13 @@ function SurveyDetail({
               onCancel={() => setShowAddQ(false)}
             />
           ) : (
-            <button
-              onClick={() => setShowAddQ(true)}
-              className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors mb-4"
-            >
+            <Button onClick={() => setShowAddQ(true)} className="mb-4">
               Add Question
-            </button>
+            </Button>
           )}
 
           {questions.length === 0 ? (
-            <EmptyState message="No questions yet" />
+            <EmptyState icon="❓" message="No questions yet" />
           ) : (
             <div className="space-y-3">
               {questions.map((q, i) => (
@@ -278,26 +329,37 @@ function SurveyDetail({
                         <p className="text-xs text-gray-500 mt-1">Options: {q.options.join(', ')}</p>
                       )}
                     </div>
-                    <button
-                      onClick={() => handleDeleteQuestion(q.id)}
-                      className="text-gray-500 hover:text-red-400 text-xs transition-colors"
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDeleteQId(q.id)}
                     >
                       Delete
-                    </button>
+                    </Button>
                   </div>
                 </div>
               ))}
             </div>
           )}
+
+          <ConfirmDialog
+            open={!!deleteQId}
+            onClose={() => setDeleteQId(null)}
+            onConfirm={handleDeleteQuestion}
+            title="Delete Question"
+            message="Are you sure you want to delete this question?"
+            confirmLabel="Delete"
+            loading={deleting}
+          />
         </>
       )}
 
       {view === 'results' && (
         <>
           {!results ? (
-            <div className="text-gray-500 text-sm">Loading results...</div>
+            <SkeletonTable rows={3} cols={2} />
           ) : results.total_respondents === 0 ? (
-            <EmptyState message="No responses yet" />
+            <EmptyState icon="📬" message="No responses yet" />
           ) : (
             <>
               <p className="text-sm text-gray-400 mb-4">{results.total_respondents} respondent(s)</p>
@@ -373,56 +435,66 @@ function AddQuestionForm({
   const [text, setText] = useState('')
   const [type, setType] = useState('rating')
   const [options, setOptions] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const toast = useToast()
 
   const handleSubmit = async () => {
-    await createSurveyQuestion(surveyId, {
-      question_text: text,
-      question_type: type,
-      options: type === 'multiple_choice' ? options.split(',').map(o => o.trim()).filter(Boolean) : null,
-    })
-    onCreated()
+    setSubmitting(true)
+    try {
+      await createSurveyQuestion(surveyId, {
+        question_text: text,
+        question_type: type,
+        options: type === 'multiple_choice' ? options.split(',').map(o => o.trim()).filter(Boolean) : null,
+      })
+      toast.success('Question added')
+      onCreated()
+    } catch {
+      toast.error('Failed to add question')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
     <div className="bg-gray-900 border border-gray-800 rounded-lg p-4 mb-4">
       <h2 className="text-sm font-semibold text-white mb-3">Add Question</h2>
       <div className="space-y-3">
-        <input
-          value={text}
-          onChange={e => setText(e.target.value)}
-          placeholder="Question text"
-          className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white placeholder-gray-500"
-        />
-        <select
-          value={type}
-          onChange={e => setType(e.target.value)}
-          className="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
-        >
-          <option value="rating">Rating (1-5)</option>
-          <option value="text">Text</option>
-          <option value="multiple_choice">Multiple Choice</option>
-          <option value="yes_no">Yes / No</option>
-        </select>
-        {type === 'multiple_choice' && (
-          <input
-            value={options}
-            onChange={e => setOptions(e.target.value)}
-            placeholder="Options (comma-separated)"
-            className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white placeholder-gray-500"
+        <FormField label="Question Text" required>
+          <Input
+            value={text}
+            onChange={e => setText(e.target.value)}
+            placeholder="Question text"
           />
+        </FormField>
+        <FormField label="Type">
+          <Select
+            value={type}
+            onChange={e => setType(e.target.value)}
+            options={[
+              { value: 'rating', label: 'Rating (1-5)' },
+              { value: 'text', label: 'Text' },
+              { value: 'multiple_choice', label: 'Multiple Choice' },
+              { value: 'yes_no', label: 'Yes / No' },
+            ]}
+          />
+        </FormField>
+        {type === 'multiple_choice' && (
+          <FormField label="Options" hint="Comma-separated values">
+            <Input
+              value={options}
+              onChange={e => setOptions(e.target.value)}
+              placeholder="Options (comma-separated)"
+            />
+          </FormField>
         )}
       </div>
       <div className="flex gap-2 mt-3">
-        <button
-          onClick={handleSubmit}
-          disabled={!text}
-          className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
-        >
+        <Button onClick={handleSubmit} disabled={!text} loading={submitting}>
           Add
-        </button>
-        <button onClick={onCancel} className="px-3 py-1.5 bg-gray-700 text-gray-300 text-sm rounded hover:bg-gray-600 transition-colors">
+        </Button>
+        <Button variant="secondary" onClick={onCancel}>
           Cancel
-        </button>
+        </Button>
       </div>
     </div>
   )

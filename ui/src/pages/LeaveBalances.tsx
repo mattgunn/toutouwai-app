@@ -2,20 +2,36 @@ import { useState, useEffect } from 'react'
 import { fetchLeaveBalances } from '../api'
 import type { LeaveBalance } from '../types'
 import EmptyState from '../components/EmptyState'
+import { SkeletonTable } from '../components/Skeleton'
+import { useToast } from '../components/Toast'
 
 export default function LeaveBalances() {
   const [balances, setBalances] = useState<LeaveBalance[]>([])
+  const [loading, setLoading] = useState(true)
+  const toast = useToast()
 
   useEffect(() => {
-    fetchLeaveBalances().then(setBalances).catch(() => {})
+    fetchLeaveBalances()
+      .then(setBalances)
+      .catch(() => toast.error('Failed to load leave balances'))
+      .finally(() => setLoading(false))
   }, [])
+
+  if (loading) {
+    return (
+      <div>
+        <h1 className="text-xl font-bold text-white mb-4">Leave Balances</h1>
+        <SkeletonTable rows={5} cols={5} />
+      </div>
+    )
+  }
 
   return (
     <div>
       <h1 className="text-xl font-bold text-white mb-4">Leave Balances</h1>
 
       {balances.length === 0 ? (
-        <EmptyState message="No leave balance data" />
+        <EmptyState icon="📊" message="No leave balance data" />
       ) : (
         <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
           <table className="w-full text-sm">

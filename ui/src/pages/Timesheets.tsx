@@ -2,13 +2,31 @@ import { useState, useEffect } from 'react'
 import { fetchTimeEntries } from '../api'
 import type { TimeEntry } from '../types'
 import EmptyState from '../components/EmptyState'
+import { SkeletonTable } from '../components/Skeleton'
+import { useToast } from '../components/Toast'
 
 export default function Timesheets() {
   const [entries, setEntries] = useState<TimeEntry[]>([])
+  const [loading, setLoading] = useState(true)
+  const toast = useToast()
 
   useEffect(() => {
-    fetchTimeEntries().then(setEntries).catch(() => {})
+    fetchTimeEntries()
+      .then(setEntries)
+      .catch(() => toast.error('Failed to load time entries'))
+      .finally(() => setLoading(false))
   }, [])
+
+  if (loading) {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-xl font-bold text-white">Timesheets</h1>
+        </div>
+        <SkeletonTable rows={5} cols={5} />
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -17,7 +35,7 @@ export default function Timesheets() {
       </div>
 
       {entries.length === 0 ? (
-        <EmptyState message="No time entries yet" />
+        <EmptyState icon="⏱" message="No time entries yet" />
       ) : (
         <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
           <table className="w-full text-sm">

@@ -2,13 +2,31 @@ import { useState, useEffect } from 'react'
 import { fetchDepartments } from '../api'
 import type { Department } from '../types'
 import EmptyState from '../components/EmptyState'
+import { SkeletonCards } from '../components/Skeleton'
+import { useToast } from '../components/Toast'
 
 export default function Departments() {
   const [departments, setDepartments] = useState<Department[]>([])
+  const [loading, setLoading] = useState(true)
+  const toast = useToast()
 
   useEffect(() => {
-    fetchDepartments().then(setDepartments).catch(() => {})
+    fetchDepartments()
+      .then(setDepartments)
+      .catch(() => toast.error('Failed to load departments'))
+      .finally(() => setLoading(false))
   }, [])
+
+  if (loading) {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-xl font-bold text-white">Departments</h1>
+        </div>
+        <SkeletonCards count={6} />
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -17,7 +35,7 @@ export default function Departments() {
       </div>
 
       {departments.length === 0 ? (
-        <EmptyState message="No departments yet" />
+        <EmptyState message="No departments yet" icon="🏢" />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {departments.map(dept => (

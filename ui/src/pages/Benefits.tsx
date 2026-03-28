@@ -6,6 +6,12 @@ import type { Employee } from '../types'
 import StatusBadge from '../components/StatusBadge'
 import StatCard from '../components/StatCard'
 import EmptyState from '../components/EmptyState'
+import Modal from '../components/Modal'
+import Button from '../components/Button'
+import Tabs from '../components/Tabs'
+import { FormField, Input, Select, Textarea } from '../components/FormField'
+import { PageSkeleton } from '../components/Skeleton'
+import { useToast } from '../components/Toast'
 
 const planTypeLabel: Record<string, string> = {
   health: 'Health',
@@ -27,19 +33,27 @@ function formatCurrency(amount: number) {
 }
 
 export default function Benefits() {
-  const [tab, setTab] = useState<'plans' | 'enrollments'>('plans')
+  const [tab, setTab] = useState('plans')
   const [plans, setPlans] = useState<BenefitPlan[]>([])
   const [enrollments, setEnrollments] = useState<BenefitEnrollment[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
+  const [loading, setLoading] = useState(true)
+  const [submittingPlan, setSubmittingPlan] = useState(false)
+  const [submittingEnrollment, setSubmittingEnrollment] = useState(false)
   const [showAddPlan, setShowAddPlan] = useState(false)
   const [showAddEnrollment, setShowAddEnrollment] = useState(false)
   const [planForm, setPlanForm] = useState({ name: '', type: 'health', provider: '', description: '' })
   const [enrollForm, setEnrollForm] = useState({ employee_id: '', plan_id: '', start_date: '', coverage_level: 'employee', employee_contribution: '', employer_contribution: '' })
+  const toast = useToast()
 
   useEffect(() => {
-    fetchBenefitPlans().then(setPlans).catch(() => {})
-    fetchBenefitEnrollments().then(setEnrollments).catch(() => {})
-    fetchEmployees().then(r => setEmployees(r.employees)).catch(() => {})
+    Promise.all([
+      fetchBenefitPlans().then(setPlans),
+      fetchBenefitEnrollments().then(setEnrollments),
+      fetchEmployees().then(r => setEmployees(r.employees)),
+    ])
+      .catch(() => toast.error('Failed to load benefits data'))
+      .finally(() => setLoading(false))
   }, [])
 
   const activePlans = plans.filter(p => p.is_active)
@@ -48,35 +62,59 @@ export default function Benefits() {
 
   const handleAddPlan = async () => {
     if (!planForm.name || !planForm.type) return
-    await createBenefitPlan(planForm)
-    setShowAddPlan(false)
-    setPlanForm({ name: '', type: 'health', provider: '', description: '' })
-    fetchBenefitPlans().then(setPlans).catch(() => {})
+    setSubmittingPlan(true)
+    try {
+      await createBenefitPlan(planForm)
+      setShowAddPlan(false)
+      setPlanForm({ name: '', type: 'health', provider: '', description: '' })
+      toast.success('Benefit plan created')
+      fetchBenefitPlans().then(setPlans).catch(() => toast.error('Failed to refresh plans'))
+    } catch {
+      toast.error('Failed to create benefit plan')
+    } finally {
+      setSubmittingPlan(false)
+    }
   }
 
   const handleAddEnrollment = async () => {
     if (!enrollForm.employee_id || !enrollForm.plan_id || !enrollForm.start_date) return
-    await createBenefitEnrollment({
-      ...enrollForm,
-      employee_contribution: parseFloat(enrollForm.employee_contribution) || 0,
-      employer_contribution: parseFloat(enrollForm.employer_contribution) || 0,
-    })
-    setShowAddEnrollment(false)
-    setEnrollForm({ employee_id: '', plan_id: '', start_date: '', coverage_level: 'employee', employee_contribution: '', employer_contribution: '' })
-    fetchBenefitEnrollments().then(setEnrollments).catch(() => {})
-    fetchBenefitPlans().then(setPlans).catch(() => {})
+    setSubmittingEnrollment(true)
+    try {
+      await createBenefitEnrollment({
+        ...enrollForm,
+        employee_contribution: parseFloat(enrollForm.employee_contribution) || 0,
+        employer_contribution: parseFloat(enrollForm.employer_contribution) || 0,
+      })
+      setShowAddEnrollment(false)
+      setEnrollForm({ employee_id: '', plan_id: '', start_date: '', coverage_level: 'employee', employee_contribution: '', employer_contribution: '' })
+      toast.success('Employee enrolled successfully')
+      fetchBenefitEnrollments().then(setEnrollments).catch(() => toast.error('Failed to refresh enrollments'))
+      fetchBenefitPlans().then(setPlans).catch(() => {})
+    } catch {
+      toast.error('Failed to enroll employee')
+    } finally {
+      setSubmittingEnrollment(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-xl font-bold text-white">Benefits</h1>
+        </div>
+        <PageSkeleton />
+      </div>
+    )
   }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold text-white">Benefits</h1>
-        <button
-          onClick={() => tab === 'plans' ? setShowAddPlan(true) : setShowAddEnrollment(true)}
-          className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
-        >
+        <Button onClick={() => tab === 'plans' ? setShowAddPlan(true) : setShowAddEnrollment(true)}>
           {tab === 'plans' ? 'Add Plan' : 'Enroll Employee'}
-        </button>
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -86,143 +124,144 @@ export default function Benefits() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-4">
-        <button
-          onClick={() => setTab('plans')}
-          className={`px-3 py-1.5 text-sm rounded transition-colors ${
-            tab === 'plans' ? 'bg-blue-600/20 text-blue-400' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
-          }`}
-        >
-          Plans
-        </button>
-        <button
-          onClick={() => setTab('enrollments')}
-          className={`px-3 py-1.5 text-sm rounded transition-colors ${
-            tab === 'enrollments' ? 'bg-blue-600/20 text-blue-400' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
-          }`}
-        >
-          Enrollments
-        </button>
+      <div className="mb-4">
+        <Tabs
+          tabs={[
+            { key: 'plans', label: 'Plans', count: plans.length },
+            { key: 'enrollments', label: 'Enrollments', count: enrollments.length },
+          ]}
+          active={tab}
+          onChange={setTab}
+          variant="pills"
+        />
       </div>
 
       {/* Add Plan modal */}
-      {showAddPlan && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-lg font-semibold text-white mb-4">Add Benefit Plan</h2>
-            <div className="space-y-3">
-              <input
-                type="text"
-                value={planForm.name}
-                onChange={e => setPlanForm({ ...planForm, name: e.target.value })}
-                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
-                placeholder="Plan Name"
-              />
-              <select
-                value={planForm.type}
-                onChange={e => setPlanForm({ ...planForm, type: e.target.value })}
-                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
-              >
-                <option value="health">Health</option>
-                <option value="dental">Dental</option>
-                <option value="vision">Vision</option>
-                <option value="life">Life</option>
-                <option value="retirement">Retirement</option>
-                <option value="other">Other</option>
-              </select>
-              <input
-                type="text"
-                value={planForm.provider}
-                onChange={e => setPlanForm({ ...planForm, provider: e.target.value })}
-                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
-                placeholder="Provider (optional)"
-              />
-              <textarea
-                value={planForm.description}
-                onChange={e => setPlanForm({ ...planForm, description: e.target.value })}
-                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
-                placeholder="Description (optional)"
-                rows={2}
-              />
-            </div>
-            <div className="flex justify-end gap-2 mt-4">
-              <button onClick={() => setShowAddPlan(false)} className="px-3 py-1.5 text-sm text-gray-400 hover:text-white transition-colors">Cancel</button>
-              <button onClick={handleAddPlan} className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors">Save</button>
-            </div>
-          </div>
+      <Modal
+        open={showAddPlan}
+        onClose={() => setShowAddPlan(false)}
+        title="Add Benefit Plan"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowAddPlan(false)} disabled={submittingPlan}>Cancel</Button>
+            <Button onClick={handleAddPlan} loading={submittingPlan}>Save</Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <FormField label="Plan Name" required>
+            <Input
+              type="text"
+              value={planForm.name}
+              onChange={e => setPlanForm({ ...planForm, name: e.target.value })}
+              placeholder="Plan Name"
+            />
+          </FormField>
+          <FormField label="Type" required>
+            <Select
+              value={planForm.type}
+              onChange={e => setPlanForm({ ...planForm, type: e.target.value })}
+              options={[
+                { value: 'health', label: 'Health' },
+                { value: 'dental', label: 'Dental' },
+                { value: 'vision', label: 'Vision' },
+                { value: 'life', label: 'Life' },
+                { value: 'retirement', label: 'Retirement' },
+                { value: 'other', label: 'Other' },
+              ]}
+            />
+          </FormField>
+          <FormField label="Provider">
+            <Input
+              type="text"
+              value={planForm.provider}
+              onChange={e => setPlanForm({ ...planForm, provider: e.target.value })}
+              placeholder="Provider (optional)"
+            />
+          </FormField>
+          <FormField label="Description">
+            <Textarea
+              value={planForm.description}
+              onChange={e => setPlanForm({ ...planForm, description: e.target.value })}
+              placeholder="Description (optional)"
+              rows={2}
+            />
+          </FormField>
         </div>
-      )}
+      </Modal>
 
       {/* Add Enrollment modal */}
-      {showAddEnrollment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-lg font-semibold text-white mb-4">Enroll Employee</h2>
-            <div className="space-y-3">
-              <select
-                value={enrollForm.employee_id}
-                onChange={e => setEnrollForm({ ...enrollForm, employee_id: e.target.value })}
-                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
-              >
-                <option value="">Select Employee</option>
-                {employees.map(emp => (
-                  <option key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name}</option>
-                ))}
-              </select>
-              <select
-                value={enrollForm.plan_id}
-                onChange={e => setEnrollForm({ ...enrollForm, plan_id: e.target.value })}
-                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
-              >
-                <option value="">Select Plan</option>
-                {activePlans.map(plan => (
-                  <option key={plan.id} value={plan.id}>{plan.name} ({planTypeLabel[plan.type] || plan.type})</option>
-                ))}
-              </select>
-              <input
-                type="date"
-                value={enrollForm.start_date}
-                onChange={e => setEnrollForm({ ...enrollForm, start_date: e.target.value })}
-                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
+      <Modal
+        open={showAddEnrollment}
+        onClose={() => setShowAddEnrollment(false)}
+        title="Enroll Employee"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowAddEnrollment(false)} disabled={submittingEnrollment}>Cancel</Button>
+            <Button onClick={handleAddEnrollment} loading={submittingEnrollment}>Enroll</Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <FormField label="Employee" required>
+            <Select
+              value={enrollForm.employee_id}
+              onChange={e => setEnrollForm({ ...enrollForm, employee_id: e.target.value })}
+              placeholder="Select Employee"
+              options={employees.map(emp => ({ value: emp.id, label: `${emp.first_name} ${emp.last_name}` }))}
+            />
+          </FormField>
+          <FormField label="Plan" required>
+            <Select
+              value={enrollForm.plan_id}
+              onChange={e => setEnrollForm({ ...enrollForm, plan_id: e.target.value })}
+              placeholder="Select Plan"
+              options={activePlans.map(plan => ({ value: plan.id, label: `${plan.name} (${planTypeLabel[plan.type] || plan.type})` }))}
+            />
+          </FormField>
+          <FormField label="Start Date" required>
+            <Input
+              type="date"
+              value={enrollForm.start_date}
+              onChange={e => setEnrollForm({ ...enrollForm, start_date: e.target.value })}
+            />
+          </FormField>
+          <FormField label="Coverage Level">
+            <Select
+              value={enrollForm.coverage_level}
+              onChange={e => setEnrollForm({ ...enrollForm, coverage_level: e.target.value })}
+              options={[
+                { value: 'employee', label: 'Employee Only' },
+                { value: 'employee_spouse', label: 'Employee + Spouse' },
+                { value: 'family', label: 'Family' },
+              ]}
+            />
+          </FormField>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Employee $/mo">
+              <Input
+                type="number"
+                value={enrollForm.employee_contribution}
+                onChange={e => setEnrollForm({ ...enrollForm, employee_contribution: e.target.value })}
+                placeholder="Employee $/mo"
               />
-              <select
-                value={enrollForm.coverage_level}
-                onChange={e => setEnrollForm({ ...enrollForm, coverage_level: e.target.value })}
-                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
-              >
-                <option value="employee">Employee Only</option>
-                <option value="employee_spouse">Employee + Spouse</option>
-                <option value="family">Family</option>
-              </select>
-              <div className="grid grid-cols-2 gap-3">
-                <input
-                  type="number"
-                  value={enrollForm.employee_contribution}
-                  onChange={e => setEnrollForm({ ...enrollForm, employee_contribution: e.target.value })}
-                  className="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
-                  placeholder="Employee $/mo"
-                />
-                <input
-                  type="number"
-                  value={enrollForm.employer_contribution}
-                  onChange={e => setEnrollForm({ ...enrollForm, employer_contribution: e.target.value })}
-                  className="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
-                  placeholder="Employer $/mo"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 mt-4">
-              <button onClick={() => setShowAddEnrollment(false)} className="px-3 py-1.5 text-sm text-gray-400 hover:text-white transition-colors">Cancel</button>
-              <button onClick={handleAddEnrollment} className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors">Enroll</button>
-            </div>
+            </FormField>
+            <FormField label="Employer $/mo">
+              <Input
+                type="number"
+                value={enrollForm.employer_contribution}
+                onChange={e => setEnrollForm({ ...enrollForm, employer_contribution: e.target.value })}
+                placeholder="Employer $/mo"
+              />
+            </FormField>
           </div>
         </div>
-      )}
+      </Modal>
 
       {/* Plans tab */}
       {tab === 'plans' && (
         plans.length === 0 ? (
-          <EmptyState message="No benefit plans yet" />
+          <EmptyState message="No benefit plans yet" icon="🏥" action="Add Plan" onAction={() => setShowAddPlan(true)} />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {plans.map(plan => (
@@ -248,7 +287,7 @@ export default function Benefits() {
       {/* Enrollments tab */}
       {tab === 'enrollments' && (
         enrollments.length === 0 ? (
-          <EmptyState message="No enrollments yet" />
+          <EmptyState message="No enrollments yet" icon="📋" action="Enroll Employee" onAction={() => setShowAddEnrollment(true)} />
         ) : (
           <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
             <table className="w-full text-sm">

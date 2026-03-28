@@ -5,6 +5,11 @@ import type { CurrentCompensation, CompensationRecord } from '../modules/compens
 import type { Employee } from '../types'
 import StatCard from '../components/StatCard'
 import EmptyState from '../components/EmptyState'
+import Modal from '../components/Modal'
+import Button from '../components/Button'
+import { FormField, Input, Select, Textarea } from '../components/FormField'
+import { PageSkeleton } from '../components/Skeleton'
+import { useToast } from '../components/Toast'
 
 const frequencyLabel: Record<string, string> = {
   annual: 'Annual',
@@ -27,20 +32,29 @@ function formatCurrency(amount: number, currency: string) {
 export default function Compensation() {
   const [current, setCurrent] = useState<CurrentCompensation[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
   const [search, setSearch] = useState('')
   const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null)
   const [history, setHistory] = useState<CompensationRecord[]>([])
   const [showAdd, setShowAdd] = useState(false)
   const [form, setForm] = useState({ employee_id: '', effective_date: '', salary: '', currency: 'NZD', pay_frequency: 'annual', reason: '', notes: '' })
+  const toast = useToast()
 
   useEffect(() => {
-    fetchCurrentCompensation().then(setCurrent).catch(() => {})
-    fetchEmployees().then(r => setEmployees(r.employees)).catch(() => {})
+    Promise.all([
+      fetchCurrentCompensation().then(setCurrent),
+      fetchEmployees().then(r => setEmployees(r.employees)),
+    ])
+      .catch(() => toast.error('Failed to load compensation data'))
+      .finally(() => setLoading(false))
   }, [])
 
   useEffect(() => {
     if (selectedEmployee) {
-      fetchCompensation({ employee_id: selectedEmployee }).then(setHistory).catch(() => {})
+      fetchCompensation({ employee_id: selectedEmployee })
+        .then(setHistory)
+        .catch(() => toast.error('Failed to load compensation history'))
     }
   }, [selectedEmployee])
 
@@ -64,25 +78,39 @@ export default function Compensation() {
 
   const handleAdd = async () => {
     if (!form.employee_id || !form.effective_date || !form.salary) return
-    await createCompensation({ ...form, salary: parseFloat(form.salary) })
-    setShowAdd(false)
-    setForm({ employee_id: '', effective_date: '', salary: '', currency: 'NZD', pay_frequency: 'annual', reason: '', notes: '' })
-    fetchCurrentCompensation().then(setCurrent).catch(() => {})
-    if (selectedEmployee) {
-      fetchCompensation({ employee_id: selectedEmployee }).then(setHistory).catch(() => {})
+    setSubmitting(true)
+    try {
+      await createCompensation({ ...form, salary: parseFloat(form.salary) })
+      setShowAdd(false)
+      setForm({ employee_id: '', effective_date: '', salary: '', currency: 'NZD', pay_frequency: 'annual', reason: '', notes: '' })
+      toast.success('Compensation record added')
+      fetchCurrentCompensation().then(setCurrent).catch(() => toast.error('Failed to refresh data'))
+      if (selectedEmployee) {
+        fetchCompensation({ employee_id: selectedEmployee }).then(setHistory).catch(() => {})
+      }
+    } catch {
+      toast.error('Failed to add compensation record')
+    } finally {
+      setSubmitting(false)
     }
+  }
+
+  if (loading) {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-xl font-bold text-white">Compensation</h1>
+        </div>
+        <PageSkeleton />
+      </div>
+    )
   }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold text-white">Compensation</h1>
-        <button
-          onClick={() => setShowAdd(true)}
-          className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
-        >
-          Add Record
-        </button>
+        <Button onClick={() => setShowAdd(true)}>Add Record</Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -92,134 +120,136 @@ export default function Compensation() {
       </div>
 
       {/* Add compensation modal */}
-      {showAdd && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-lg font-semibold text-white mb-4">Add Compensation Record</h2>
-            <div className="space-y-3">
-              <select
-                value={form.employee_id}
-                onChange={e => setForm({ ...form, employee_id: e.target.value })}
-                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
-              >
-                <option value="">Select Employee</option>
-                {employees.map(emp => (
-                  <option key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name}</option>
-                ))}
-              </select>
-              <input
-                type="date"
-                value={form.effective_date}
-                onChange={e => setForm({ ...form, effective_date: e.target.value })}
-                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
-                placeholder="Effective Date"
+      <Modal
+        open={showAdd}
+        onClose={() => setShowAdd(false)}
+        title="Add Compensation Record"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowAdd(false)} disabled={submitting}>Cancel</Button>
+            <Button onClick={handleAdd} loading={submitting}>Save</Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <FormField label="Employee" required>
+            <Select
+              value={form.employee_id}
+              onChange={e => setForm({ ...form, employee_id: e.target.value })}
+              placeholder="Select Employee"
+              options={employees.map(emp => ({ value: emp.id, label: `${emp.first_name} ${emp.last_name}` }))}
+            />
+          </FormField>
+          <FormField label="Effective Date" required>
+            <Input
+              type="date"
+              value={form.effective_date}
+              onChange={e => setForm({ ...form, effective_date: e.target.value })}
+            />
+          </FormField>
+          <FormField label="Salary" required>
+            <Input
+              type="number"
+              value={form.salary}
+              onChange={e => setForm({ ...form, salary: e.target.value })}
+              placeholder="Salary"
+            />
+          </FormField>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Currency">
+              <Select
+                value={form.currency}
+                onChange={e => setForm({ ...form, currency: e.target.value })}
+                options={[
+                  { value: 'NZD', label: 'NZD' },
+                  { value: 'AUD', label: 'AUD' },
+                  { value: 'USD', label: 'USD' },
+                  { value: 'GBP', label: 'GBP' },
+                  { value: 'EUR', label: 'EUR' },
+                ]}
               />
-              <input
-                type="number"
-                value={form.salary}
-                onChange={e => setForm({ ...form, salary: e.target.value })}
-                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
-                placeholder="Salary"
+            </FormField>
+            <FormField label="Frequency">
+              <Select
+                value={form.pay_frequency}
+                onChange={e => setForm({ ...form, pay_frequency: e.target.value })}
+                options={[
+                  { value: 'annual', label: 'Annual' },
+                  { value: 'monthly', label: 'Monthly' },
+                  { value: 'hourly', label: 'Hourly' },
+                ]}
               />
-              <div className="grid grid-cols-2 gap-3">
-                <select
-                  value={form.currency}
-                  onChange={e => setForm({ ...form, currency: e.target.value })}
-                  className="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
-                >
-                  <option value="NZD">NZD</option>
-                  <option value="AUD">AUD</option>
-                  <option value="USD">USD</option>
-                  <option value="GBP">GBP</option>
-                  <option value="EUR">EUR</option>
-                </select>
-                <select
-                  value={form.pay_frequency}
-                  onChange={e => setForm({ ...form, pay_frequency: e.target.value })}
-                  className="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
-                >
-                  <option value="annual">Annual</option>
-                  <option value="monthly">Monthly</option>
-                  <option value="hourly">Hourly</option>
-                </select>
-              </div>
-              <select
-                value={form.reason}
-                onChange={e => setForm({ ...form, reason: e.target.value })}
-                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
-              >
-                <option value="">Reason (optional)</option>
-                <option value="hire">New Hire</option>
-                <option value="promotion">Promotion</option>
-                <option value="merit">Merit Increase</option>
-                <option value="adjustment">Adjustment</option>
-                <option value="market">Market Adjustment</option>
-              </select>
-              <textarea
-                value={form.notes}
-                onChange={e => setForm({ ...form, notes: e.target.value })}
-                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
-                placeholder="Notes (optional)"
-                rows={2}
-              />
-            </div>
-            <div className="flex justify-end gap-2 mt-4">
-              <button onClick={() => setShowAdd(false)} className="px-3 py-1.5 text-sm text-gray-400 hover:text-white transition-colors">Cancel</button>
-              <button onClick={handleAdd} className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors">Save</button>
-            </div>
+            </FormField>
           </div>
+          <FormField label="Reason">
+            <Select
+              value={form.reason}
+              onChange={e => setForm({ ...form, reason: e.target.value })}
+              placeholder="Reason (optional)"
+              options={[
+                { value: 'hire', label: 'New Hire' },
+                { value: 'promotion', label: 'Promotion' },
+                { value: 'merit', label: 'Merit Increase' },
+                { value: 'adjustment', label: 'Adjustment' },
+                { value: 'market', label: 'Market Adjustment' },
+              ]}
+            />
+          </FormField>
+          <FormField label="Notes">
+            <Textarea
+              value={form.notes}
+              onChange={e => setForm({ ...form, notes: e.target.value })}
+              placeholder="Notes (optional)"
+              rows={2}
+            />
+          </FormField>
         </div>
-      )}
+      </Modal>
 
       {/* History panel */}
-      {selectedEmployee && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-white">
-                Compensation History &mdash; {history[0]?.employee_name || 'Employee'}
-              </h2>
-              <button onClick={() => setSelectedEmployee(null)} className="text-gray-400 hover:text-white text-sm">Close</button>
-            </div>
-            {history.length === 0 ? (
-              <EmptyState message="No compensation history" />
-            ) : (
-              <div className="space-y-3">
-                {history.map(record => (
-                  <div key={record.id} className="bg-gray-800 border border-gray-700 rounded-lg p-3">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-white font-medium">
-                        {formatCurrency(record.salary, record.currency)}
-                        <span className="text-gray-500 text-xs ml-1">/ {frequencyLabel[record.pay_frequency] || record.pay_frequency}</span>
-                      </span>
-                      <span className="text-xs text-gray-500">{record.effective_date}</span>
-                    </div>
-                    {record.reason && (
-                      <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-blue-600/20 text-blue-400 mr-2">
-                        {reasonLabel[record.reason] || record.reason}
-                      </span>
-                    )}
-                    {record.notes && <p className="text-xs text-gray-500 mt-1">{record.notes}</p>}
-                  </div>
-                ))}
+      <Modal
+        open={!!selectedEmployee}
+        onClose={() => setSelectedEmployee(null)}
+        title={`Compensation History \u2014 ${history[0]?.employee_name || 'Employee'}`}
+        size="lg"
+      >
+        {history.length === 0 ? (
+          <EmptyState message="No compensation history" icon="📊" />
+        ) : (
+          <div className="space-y-3">
+            {history.map(record => (
+              <div key={record.id} className="bg-gray-800 border border-gray-700 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-white font-medium">
+                    {formatCurrency(record.salary, record.currency)}
+                    <span className="text-gray-500 text-xs ml-1">/ {frequencyLabel[record.pay_frequency] || record.pay_frequency}</span>
+                  </span>
+                  <span className="text-xs text-gray-500">{record.effective_date}</span>
+                </div>
+                {record.reason && (
+                  <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-blue-600/20 text-blue-400 mr-2">
+                    {reasonLabel[record.reason] || record.reason}
+                  </span>
+                )}
+                {record.notes && <p className="text-xs text-gray-500 mt-1">{record.notes}</p>}
               </div>
-            )}
+            ))}
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
       <div className="mb-4">
-        <input
+        <Input
           type="text"
           placeholder="Search by name, department, or position..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="w-full max-w-sm bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white placeholder-gray-500"
+          className="max-w-sm"
         />
       </div>
 
       {filtered.length === 0 ? (
-        <EmptyState message="No compensation records yet" />
+        <EmptyState message="No compensation records yet" icon="💰" action="Add Record" onAction={() => setShowAdd(true)} />
       ) : (
         <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
           <table className="w-full text-sm">
@@ -244,12 +274,9 @@ export default function Compensation() {
                   <td className="px-4 py-3 text-gray-400 hidden md:table-cell">{frequencyLabel[comp.pay_frequency] || comp.pay_frequency}</td>
                   <td className="px-4 py-3 text-gray-500 hidden lg:table-cell">{comp.effective_date}</td>
                   <td className="px-4 py-3">
-                    <button
-                      onClick={() => setSelectedEmployee(comp.employee_id)}
-                      className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => setSelectedEmployee(comp.employee_id)}>
                       History
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               ))}

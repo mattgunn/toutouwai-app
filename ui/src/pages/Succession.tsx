@@ -6,6 +6,12 @@ import type { Employee } from '../types'
 import type { Position } from '../modules/positions/types'
 import StatCard from '../components/StatCard'
 import EmptyState from '../components/EmptyState'
+import Modal from '../components/Modal'
+import Button from '../components/Button'
+import ConfirmDialog from '../components/ConfirmDialog'
+import { FormField, Select, Textarea } from '../components/FormField'
+import { PageSkeleton } from '../components/Skeleton'
+import { useToast } from '../components/Toast'
 
 const riskColors: Record<string, string> = {
   low: 'bg-emerald-600/20 text-emerald-400',
@@ -50,22 +56,34 @@ export default function Succession() {
   const [plans, setPlans] = useState<SuccessionPlan[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
   const [positions, setPositions] = useState<Position[]>([])
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [submittingCandidate, setSubmittingCandidate] = useState(false)
+  const [removingId, setRemovingId] = useState<string | null>(null)
+  const [confirmRemove, setConfirmRemove] = useState<string | null>(null)
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
   const [candidates, setCandidates] = useState<SuccessionCandidate[]>([])
   const [showAdd, setShowAdd] = useState(false)
   const [showAddCandidate, setShowAddCandidate] = useState(false)
   const [form, setForm] = useState({ position_id: '', incumbent_id: '', risk_of_loss: 'low', impact_of_loss: 'low', notes: '' })
   const [candidateForm, setCandidateForm] = useState({ employee_id: '', readiness: 'not_ready', notes: '' })
+  const toast = useToast()
 
   useEffect(() => {
-    fetchSuccessionPlans().then(setPlans).catch(() => {})
-    fetchEmployees().then(r => setEmployees(r.employees)).catch(() => {})
-    fetchPositions().then(setPositions).catch(() => {})
+    Promise.all([
+      fetchSuccessionPlans().then(setPlans),
+      fetchEmployees().then(r => setEmployees(r.employees)),
+      fetchPositions().then(setPositions),
+    ])
+      .catch(() => toast.error('Failed to load succession data'))
+      .finally(() => setLoading(false))
   }, [])
 
   useEffect(() => {
     if (selectedPlan) {
-      fetchSuccessionCandidates(selectedPlan).then(setCandidates).catch(() => {})
+      fetchSuccessionCandidates(selectedPlan)
+        .then(setCandidates)
+        .catch(() => toast.error('Failed to load candidates'))
     }
   }, [selectedPlan])
 
@@ -75,39 +93,70 @@ export default function Succession() {
 
   const handleAdd = async () => {
     if (!form.position_id) return
-    await createSuccessionPlan(form)
-    setShowAdd(false)
-    setForm({ position_id: '', incumbent_id: '', risk_of_loss: 'low', impact_of_loss: 'low', notes: '' })
-    fetchSuccessionPlans().then(setPlans).catch(() => {})
+    setSubmitting(true)
+    try {
+      await createSuccessionPlan(form)
+      setShowAdd(false)
+      setForm({ position_id: '', incumbent_id: '', risk_of_loss: 'low', impact_of_loss: 'low', notes: '' })
+      toast.success('Succession plan created')
+      fetchSuccessionPlans().then(setPlans).catch(() => toast.error('Failed to refresh plans'))
+    } catch {
+      toast.error('Failed to create succession plan')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleAddCandidate = async () => {
     if (!candidateForm.employee_id || !selectedPlan) return
-    await addSuccessionCandidate(selectedPlan, candidateForm)
-    setCandidateForm({ employee_id: '', readiness: 'not_ready', notes: '' })
-    setShowAddCandidate(false)
-    fetchSuccessionCandidates(selectedPlan).then(setCandidates).catch(() => {})
-    fetchSuccessionPlans().then(setPlans).catch(() => {})
+    setSubmittingCandidate(true)
+    try {
+      await addSuccessionCandidate(selectedPlan, candidateForm)
+      setCandidateForm({ employee_id: '', readiness: 'not_ready', notes: '' })
+      setShowAddCandidate(false)
+      toast.success('Candidate added')
+      fetchSuccessionCandidates(selectedPlan).then(setCandidates).catch(() => {})
+      fetchSuccessionPlans().then(setPlans).catch(() => {})
+    } catch {
+      toast.error('Failed to add candidate')
+    } finally {
+      setSubmittingCandidate(false)
+    }
   }
 
   const handleRemoveCandidate = async (candidateId: string) => {
-    await removeSuccessionCandidate(candidateId)
-    if (selectedPlan) {
-      fetchSuccessionCandidates(selectedPlan).then(setCandidates).catch(() => {})
-      fetchSuccessionPlans().then(setPlans).catch(() => {})
+    setRemovingId(candidateId)
+    try {
+      await removeSuccessionCandidate(candidateId)
+      toast.success('Candidate removed')
+      if (selectedPlan) {
+        fetchSuccessionCandidates(selectedPlan).then(setCandidates).catch(() => {})
+        fetchSuccessionPlans().then(setPlans).catch(() => {})
+      }
+    } catch {
+      toast.error('Failed to remove candidate')
+    } finally {
+      setRemovingId(null)
+      setConfirmRemove(null)
     }
+  }
+
+  if (loading) {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-xl font-bold text-white">Succession Planning</h1>
+        </div>
+        <PageSkeleton />
+      </div>
+    )
   }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold text-white">Succession Planning</h1>
-        <button
-          onClick={() => setShowAdd(true)}
-          className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
-        >
-          Add Plan
-        </button>
+        <Button onClick={() => setShowAdd(true)}>Add Plan</Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -118,156 +167,159 @@ export default function Succession() {
       </div>
 
       {/* Add Plan modal */}
-      {showAdd && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-lg font-semibold text-white mb-4">Add Succession Plan</h2>
-            <div className="space-y-3">
-              <select
-                value={form.position_id}
-                onChange={e => setForm({ ...form, position_id: e.target.value })}
-                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
-              >
-                <option value="">Select Position</option>
-                {positions.map(pos => (
-                  <option key={pos.id} value={pos.id}>{pos.title}</option>
-                ))}
-              </select>
-              <select
-                value={form.incumbent_id}
-                onChange={e => setForm({ ...form, incumbent_id: e.target.value })}
-                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
-              >
-                <option value="">Current Incumbent (optional)</option>
-                {employees.map(emp => (
-                  <option key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name}</option>
-                ))}
-              </select>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-gray-500 block mb-1">Risk of Loss</label>
-                  <select
-                    value={form.risk_of_loss}
-                    onChange={e => setForm({ ...form, risk_of_loss: e.target.value })}
-                    className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
-                  >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                    <option value="critical">Critical</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 block mb-1">Impact of Loss</label>
-                  <select
-                    value={form.impact_of_loss}
-                    onChange={e => setForm({ ...form, impact_of_loss: e.target.value })}
-                    className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
-                  >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                    <option value="critical">Critical</option>
-                  </select>
-                </div>
-              </div>
-              <textarea
-                value={form.notes}
-                onChange={e => setForm({ ...form, notes: e.target.value })}
-                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
-                placeholder="Notes (optional)"
-                rows={2}
+      <Modal
+        open={showAdd}
+        onClose={() => setShowAdd(false)}
+        title="Add Succession Plan"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowAdd(false)} disabled={submitting}>Cancel</Button>
+            <Button onClick={handleAdd} loading={submitting}>Save</Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <FormField label="Position" required>
+            <Select
+              value={form.position_id}
+              onChange={e => setForm({ ...form, position_id: e.target.value })}
+              placeholder="Select Position"
+              options={positions.map(pos => ({ value: pos.id, label: pos.title }))}
+            />
+          </FormField>
+          <FormField label="Current Incumbent">
+            <Select
+              value={form.incumbent_id}
+              onChange={e => setForm({ ...form, incumbent_id: e.target.value })}
+              placeholder="Current Incumbent (optional)"
+              options={employees.map(emp => ({ value: emp.id, label: `${emp.first_name} ${emp.last_name}` }))}
+            />
+          </FormField>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Risk of Loss">
+              <Select
+                value={form.risk_of_loss}
+                onChange={e => setForm({ ...form, risk_of_loss: e.target.value })}
+                options={[
+                  { value: 'low', label: 'Low' },
+                  { value: 'medium', label: 'Medium' },
+                  { value: 'high', label: 'High' },
+                  { value: 'critical', label: 'Critical' },
+                ]}
               />
-            </div>
-            <div className="flex justify-end gap-2 mt-4">
-              <button onClick={() => setShowAdd(false)} className="px-3 py-1.5 text-sm text-gray-400 hover:text-white transition-colors">Cancel</button>
-              <button onClick={handleAdd} className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors">Save</button>
-            </div>
+            </FormField>
+            <FormField label="Impact of Loss">
+              <Select
+                value={form.impact_of_loss}
+                onChange={e => setForm({ ...form, impact_of_loss: e.target.value })}
+                options={[
+                  { value: 'low', label: 'Low' },
+                  { value: 'medium', label: 'Medium' },
+                  { value: 'high', label: 'High' },
+                  { value: 'critical', label: 'Critical' },
+                ]}
+              />
+            </FormField>
           </div>
+          <FormField label="Notes">
+            <Textarea
+              value={form.notes}
+              onChange={e => setForm({ ...form, notes: e.target.value })}
+              placeholder="Notes (optional)"
+              rows={2}
+            />
+          </FormField>
         </div>
-      )}
+      </Modal>
 
       {/* Candidates panel */}
-      {selectedPlan && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-white">Succession Candidates</h2>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setShowAddCandidate(true)}
-                  className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
-                >
-                  + Add
-                </button>
-                <button onClick={() => setSelectedPlan(null)} className="text-gray-400 hover:text-white text-sm">Close</button>
+      <Modal
+        open={!!selectedPlan}
+        onClose={() => setSelectedPlan(null)}
+        title="Succession Candidates"
+        size="lg"
+        footer={
+          <Button variant="secondary" size="sm" onClick={() => setShowAddCandidate(true)}>
+            + Add Candidate
+          </Button>
+        }
+      >
+        {/* Add candidate form */}
+        {showAddCandidate && (
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 mb-4">
+            <div className="space-y-2">
+              <FormField label="Employee" required>
+                <Select
+                  value={candidateForm.employee_id}
+                  onChange={e => setCandidateForm({ ...candidateForm, employee_id: e.target.value })}
+                  placeholder="Select Employee"
+                  options={employees.map(emp => ({ value: emp.id, label: `${emp.first_name} ${emp.last_name}` }))}
+                />
+              </FormField>
+              <FormField label="Readiness">
+                <Select
+                  value={candidateForm.readiness}
+                  onChange={e => setCandidateForm({ ...candidateForm, readiness: e.target.value })}
+                  options={[
+                    { value: 'ready_now', label: 'Ready Now' },
+                    { value: 'ready_1_year', label: 'Ready in 1 Year' },
+                    { value: 'ready_2_years', label: 'Ready in 2 Years' },
+                    { value: 'not_ready', label: 'Not Ready' },
+                  ]}
+                />
+              </FormField>
+              <div className="flex justify-end gap-2">
+                <Button variant="ghost" size="sm" onClick={() => setShowAddCandidate(false)}>Cancel</Button>
+                <Button size="sm" onClick={handleAddCandidate} loading={submittingCandidate}>Add</Button>
               </div>
             </div>
+          </div>
+        )}
 
-            {/* Add candidate form */}
-            {showAddCandidate && (
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 mb-4">
-                <div className="space-y-2">
-                  <select
-                    value={candidateForm.employee_id}
-                    onChange={e => setCandidateForm({ ...candidateForm, employee_id: e.target.value })}
-                    className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm text-white"
-                  >
-                    <option value="">Select Employee</option>
-                    {employees.map(emp => (
-                      <option key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name}</option>
-                    ))}
-                  </select>
-                  <select
-                    value={candidateForm.readiness}
-                    onChange={e => setCandidateForm({ ...candidateForm, readiness: e.target.value })}
-                    className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm text-white"
-                  >
-                    <option value="ready_now">Ready Now</option>
-                    <option value="ready_1_year">Ready in 1 Year</option>
-                    <option value="ready_2_years">Ready in 2 Years</option>
-                    <option value="not_ready">Not Ready</option>
-                  </select>
-                  <div className="flex justify-end gap-2">
-                    <button onClick={() => setShowAddCandidate(false)} className="text-xs text-gray-400 hover:text-white">Cancel</button>
-                    <button onClick={handleAddCandidate} className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700">Add</button>
+        {candidates.length === 0 ? (
+          <EmptyState message="No candidates identified yet" icon="👤" action="Add Candidate" onAction={() => setShowAddCandidate(true)} />
+        ) : (
+          <div className="space-y-2">
+            {candidates.map(candidate => (
+              <div key={candidate.id} className="bg-gray-800 border border-gray-700 rounded-lg p-3 flex items-center justify-between">
+                <div>
+                  <p className="text-white text-sm font-medium">{candidate.employee_name}</p>
+                  {candidate.current_position && (
+                    <p className="text-xs text-gray-500">{candidate.current_position}</p>
+                  )}
+                  <div className="mt-1">
+                    <ReadinessBadge readiness={candidate.readiness} />
                   </div>
                 </div>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => setConfirmRemove(candidate.id)}
+                  loading={removingId === candidate.id}
+                >
+                  Remove
+                </Button>
               </div>
-            )}
-
-            {candidates.length === 0 ? (
-              <EmptyState message="No candidates identified yet" />
-            ) : (
-              <div className="space-y-2">
-                {candidates.map(candidate => (
-                  <div key={candidate.id} className="bg-gray-800 border border-gray-700 rounded-lg p-3 flex items-center justify-between">
-                    <div>
-                      <p className="text-white text-sm font-medium">{candidate.employee_name}</p>
-                      {candidate.current_position && (
-                        <p className="text-xs text-gray-500">{candidate.current_position}</p>
-                      )}
-                      <div className="mt-1">
-                        <ReadinessBadge readiness={candidate.readiness} />
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleRemoveCandidate(candidate.id)}
-                      className="text-xs text-red-400 hover:text-red-300 transition-colors"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+            ))}
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
+
+      {/* Confirm remove candidate */}
+      <ConfirmDialog
+        open={!!confirmRemove}
+        onClose={() => setConfirmRemove(null)}
+        onConfirm={() => confirmRemove && handleRemoveCandidate(confirmRemove)}
+        title="Remove Candidate"
+        message="Are you sure you want to remove this candidate from the succession plan?"
+        confirmLabel="Remove"
+        variant="danger"
+        loading={!!removingId}
+      />
 
       {/* Plans grid */}
       {plans.length === 0 ? (
-        <EmptyState message="No succession plans yet" />
+        <EmptyState message="No succession plans yet" icon="📊" action="Add Plan" onAction={() => setShowAdd(true)} />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {plans.map(plan => (

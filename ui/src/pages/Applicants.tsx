@@ -3,20 +3,36 @@ import { fetchApplicants } from '../api'
 import type { Applicant } from '../types'
 import StatusBadge from '../components/StatusBadge'
 import EmptyState from '../components/EmptyState'
+import { SkeletonTable } from '../components/Skeleton'
+import { useToast } from '../components/Toast'
 
 export default function Applicants() {
   const [applicants, setApplicants] = useState<Applicant[]>([])
+  const [loading, setLoading] = useState(true)
+  const toast = useToast()
 
   useEffect(() => {
-    fetchApplicants().then(setApplicants).catch(() => {})
+    fetchApplicants()
+      .then(setApplicants)
+      .catch(() => toast.error('Failed to load applicants'))
+      .finally(() => setLoading(false))
   }, [])
+
+  if (loading) {
+    return (
+      <div>
+        <h1 className="text-xl font-bold text-white mb-4">Applicants</h1>
+        <SkeletonTable rows={5} cols={5} />
+      </div>
+    )
+  }
 
   return (
     <div>
       <h1 className="text-xl font-bold text-white mb-4">Applicants</h1>
 
       {applicants.length === 0 ? (
-        <EmptyState message="No applicants yet" />
+        <EmptyState icon="👤" message="No applicants yet" />
       ) : (
         <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
           <table className="w-full text-sm">

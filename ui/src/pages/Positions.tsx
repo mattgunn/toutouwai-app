@@ -2,13 +2,31 @@ import { useState, useEffect } from 'react'
 import { fetchPositions } from '../api'
 import type { Position } from '../types'
 import EmptyState from '../components/EmptyState'
+import { SkeletonTable } from '../components/Skeleton'
+import { useToast } from '../components/Toast'
 
 export default function Positions() {
   const [positions, setPositions] = useState<Position[]>([])
+  const [loading, setLoading] = useState(true)
+  const toast = useToast()
 
   useEffect(() => {
-    fetchPositions().then(setPositions).catch(() => {})
+    fetchPositions()
+      .then(setPositions)
+      .catch(() => toast.error('Failed to load positions'))
+      .finally(() => setLoading(false))
   }, [])
+
+  if (loading) {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-xl font-bold text-white">Positions</h1>
+        </div>
+        <SkeletonTable rows={6} cols={4} />
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -17,7 +35,7 @@ export default function Positions() {
       </div>
 
       {positions.length === 0 ? (
-        <EmptyState message="No positions yet" />
+        <EmptyState message="No positions yet" icon="💼" />
       ) : (
         <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
           <table className="w-full text-sm">

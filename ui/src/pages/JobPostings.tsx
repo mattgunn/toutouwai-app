@@ -3,13 +3,31 @@ import { fetchJobPostings } from '../api'
 import type { JobPosting } from '../types'
 import StatusBadge from '../components/StatusBadge'
 import EmptyState from '../components/EmptyState'
+import { SkeletonCards } from '../components/Skeleton'
+import { useToast } from '../components/Toast'
 
 export default function JobPostings() {
   const [postings, setPostings] = useState<JobPosting[]>([])
+  const [loading, setLoading] = useState(true)
+  const toast = useToast()
 
   useEffect(() => {
-    fetchJobPostings().then(setPostings).catch(() => {})
+    fetchJobPostings()
+      .then(setPostings)
+      .catch(() => toast.error('Failed to load job postings'))
+      .finally(() => setLoading(false))
   }, [])
+
+  if (loading) {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-xl font-bold text-white">Job Postings</h1>
+        </div>
+        <SkeletonCards count={6} />
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -18,7 +36,7 @@ export default function JobPostings() {
       </div>
 
       {postings.length === 0 ? (
-        <EmptyState message="No job postings yet" />
+        <EmptyState icon="💼" message="No job postings yet" />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {postings.map(posting => (

@@ -9,14 +9,20 @@ import type { OnboardingTemplate, OnboardingTemplateTask, OnboardingChecklist } 
 import type { Employee } from '../types'
 import StatusBadge from '../components/StatusBadge'
 import EmptyState from '../components/EmptyState'
-
-type Tab = 'checklists' | 'templates'
+import Tabs from '../components/Tabs'
+import Modal from '../components/Modal'
+import Button from '../components/Button'
+import { FormField, Input, Select } from '../components/FormField'
+import { SkeletonTable } from '../components/Skeleton'
+import ConfirmDialog from '../components/ConfirmDialog'
+import { useToast } from '../components/Toast'
 
 export default function Onboarding() {
-  const [tab, setTab] = useState<Tab>('checklists')
+  const [tab, setTab] = useState('checklists')
   const [templates, setTemplates] = useState<OnboardingTemplate[]>([])
   const [checklists, setChecklists] = useState<OnboardingChecklist[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
+  const [loading, setLoading] = useState(true)
 
   // Template tasks drill-down
   const [selectedTemplate, setSelectedTemplate] = useState<OnboardingTemplate | null>(null)
@@ -26,73 +32,128 @@ export default function Onboarding() {
   const [showTemplateForm, setShowTemplateForm] = useState(false)
   const [showTaskForm, setShowTaskForm] = useState(false)
   const [showChecklistForm, setShowChecklistForm] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+
+  // Delete confirmation
+  const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  const toast = useToast()
 
   useEffect(() => {
-    fetchOnboardingTemplates().then(setTemplates).catch(() => {})
-    fetchOnboardingChecklists().then(setChecklists).catch(() => {})
-    fetchEmployees().then(r => setEmployees(r.employees)).catch(() => {})
+    setLoading(true)
+    Promise.all([
+      fetchOnboardingTemplates().then(setTemplates),
+      fetchOnboardingChecklists().then(setChecklists),
+      fetchEmployees().then(r => setEmployees(r.employees)),
+    ]).catch(() => {
+      toast.error('Failed to load onboarding data')
+    }).finally(() => setLoading(false))
   }, [])
 
   const loadTemplateTasks = (t: OnboardingTemplate) => {
     setSelectedTemplate(t)
-    fetchTemplateTasks(t.id).then(setTemplateTasks).catch(() => {})
+    fetchTemplateTasks(t.id).then(setTemplateTasks).catch(() => {
+      toast.error('Failed to load template tasks')
+    })
   }
 
   const handleCreateTemplate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    const fd = new FormData(e.currentTarget)
-    const tpl = await createOnboardingTemplate({
-      name: fd.get('name'),
-      description: fd.get('description') || null,
-      department_id: fd.get('department_id') || null,
-    })
-    setTemplates(prev => [...prev, tpl])
-    setShowTemplateForm(false)
+    setSubmitting(true)
+    try {
+      const fd = new FormData(e.currentTarget)
+      const tpl = await createOnboardingTemplate({
+        name: fd.get('name'),
+        description: fd.get('description') || null,
+        department_id: fd.get('department_id') || null,
+      })
+      setTemplates(prev => [...prev, tpl])
+      setShowTemplateForm(false)
+      toast.success('Template created')
+    } catch {
+      toast.error('Failed to create template')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleCreateTask = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!selectedTemplate) return
-    const fd = new FormData(e.currentTarget)
-    const task = await createTemplateTask(selectedTemplate.id, {
-      title: fd.get('title'),
-      description: fd.get('description') || null,
-      assigned_to_role: fd.get('assigned_to_role') || 'hr',
-      due_days: parseInt(fd.get('due_days') as string) || 0,
-    })
-    setTemplateTasks(prev => [...prev, task])
-    setShowTaskForm(false)
+    setSubmitting(true)
+    try {
+      const fd = new FormData(e.currentTarget)
+      const task = await createTemplateTask(selectedTemplate.id, {
+        title: fd.get('title'),
+        description: fd.get('description') || null,
+        assigned_to_role: fd.get('assigned_to_role') || 'hr',
+        due_days: parseInt(fd.get('due_days') as string) || 0,
+      })
+      setTemplateTasks(prev => [...prev, task])
+      setShowTaskForm(false)
+      toast.success('Task added')
+    } catch {
+      toast.error('Failed to add task')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
-  const handleDeleteTask = async (taskId: string) => {
-    await deleteTemplateTask(taskId)
-    setTemplateTasks(prev => prev.filter(t => t.id !== taskId))
+  const handleDeleteTask = async () => {
+    if (!deleteTaskId) return
+    setDeleting(true)
+    try {
+      await deleteTemplateTask(deleteTaskId)
+      setTemplateTasks(prev => prev.filter(t => t.id !== deleteTaskId))
+      toast.success('Task removed')
+    } catch {
+      toast.error('Failed to remove task')
+    } finally {
+      setDeleting(false)
+      setDeleteTaskId(null)
+    }
   }
 
   const handleCreateChecklist = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    const fd = new FormData(e.currentTarget)
-    const cl = await createOnboardingChecklist({
-      employee_id: fd.get('employee_id'),
-      template_id: fd.get('template_id') || null,
-    })
-    setChecklists(prev => [cl, ...prev])
-    setShowChecklistForm(false)
+    setSubmitting(true)
+    try {
+      const fd = new FormData(e.currentTarget)
+      const cl = await createOnboardingChecklist({
+        employee_id: fd.get('employee_id'),
+        template_id: fd.get('template_id') || null,
+      })
+      setChecklists(prev => [cl, ...prev])
+      setShowChecklistForm(false)
+      toast.success('Onboarding started')
+    } catch {
+      toast.error('Failed to start onboarding')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleToggleTask = async (taskId: string, currentStatus: string) => {
-    const newStatus = currentStatus === 'completed' ? 'pending' : 'completed'
-    await updateOnboardingTask(taskId, { status: newStatus })
-    // Refresh checklists
-    fetchOnboardingChecklists().then(setChecklists).catch(() => {})
+    try {
+      const newStatus = currentStatus === 'completed' ? 'pending' : 'completed'
+      await updateOnboardingTask(taskId, { status: newStatus })
+      // Refresh checklists
+      fetchOnboardingChecklists().then(setChecklists).catch(() => {})
+      toast.success('Task updated')
+    } catch {
+      toast.error('Failed to update task')
+    }
   }
 
-  const tabClass = (t: Tab) =>
-    `px-4 py-2 text-sm font-medium transition-colors ${
-      tab === t
-        ? 'text-blue-400 border-b-2 border-blue-400'
-        : 'text-gray-400 hover:text-gray-200'
-    }`
+  if (loading) {
+    return (
+      <div>
+        <h1 className="text-xl font-bold text-white mb-4">Onboarding</h1>
+        <SkeletonTable rows={5} cols={3} />
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -101,55 +162,64 @@ export default function Onboarding() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-gray-800 mb-4">
-        <button className={tabClass('checklists')} onClick={() => setTab('checklists')}>Active Checklists</button>
-        <button className={tabClass('templates')} onClick={() => setTab('templates')}>Templates</button>
+      <div className="mb-4">
+        <Tabs
+          tabs={[
+            { key: 'checklists', label: 'Active Checklists', count: checklists.length },
+            { key: 'templates', label: 'Templates', count: templates.length },
+          ]}
+          active={tab}
+          onChange={setTab}
+        />
       </div>
 
       {/* ── Active Checklists ─────────────────────────────────── */}
       {tab === 'checklists' && (
         <div>
           <div className="flex justify-end mb-4">
-            <button
-              onClick={() => setShowChecklistForm(true)}
-              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
-            >
+            <Button onClick={() => setShowChecklistForm(true)}>
               Start Onboarding
-            </button>
+            </Button>
           </div>
 
-          {showChecklistForm && (
-            <div className="bg-gray-900 border border-gray-800 rounded-lg p-4 mb-4">
-              <h3 className="text-sm font-semibold text-white mb-3">Start Onboarding for Employee</h3>
-              <form onSubmit={handleCreateChecklist} className="flex flex-wrap gap-3 items-end">
-                <div className="flex-1 min-w-48">
-                  <label className="block text-xs text-gray-500 mb-1">Employee</label>
-                  <select name="employee_id" required className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white">
-                    <option value="">Select employee...</option>
-                    {employees.map(emp => (
-                      <option key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex-1 min-w-48">
-                  <label className="block text-xs text-gray-500 mb-1">Template</label>
-                  <select name="template_id" className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white">
-                    <option value="">No template</option>
-                    {templates.filter(t => t.is_active).map(t => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex gap-2">
-                  <button type="submit" className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors">Create</button>
-                  <button type="button" onClick={() => setShowChecklistForm(false)} className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded transition-colors">Cancel</button>
-                </div>
-              </form>
-            </div>
-          )}
+          <Modal
+            open={showChecklistForm}
+            onClose={() => setShowChecklistForm(false)}
+            title="Start Onboarding for Employee"
+            size="lg"
+            footer={
+              <>
+                <Button variant="secondary" onClick={() => setShowChecklistForm(false)} disabled={submitting}>Cancel</Button>
+                <Button type="submit" form="checklist-form" loading={submitting}>Create</Button>
+              </>
+            }
+          >
+            <form id="checklist-form" onSubmit={handleCreateChecklist} className="space-y-4">
+              <FormField label="Employee" required>
+                <Select
+                  name="employee_id"
+                  required
+                  placeholder="Select employee..."
+                  options={employees.map(emp => ({ value: emp.id, label: `${emp.first_name} ${emp.last_name}` }))}
+                />
+              </FormField>
+              <FormField label="Template">
+                <Select
+                  name="template_id"
+                  placeholder="No template"
+                  options={templates.filter(t => t.is_active).map(t => ({ value: t.id, label: t.name }))}
+                />
+              </FormField>
+            </form>
+          </Modal>
 
           {checklists.length === 0 ? (
-            <EmptyState message="No active onboarding checklists" />
+            <EmptyState
+              icon="📋"
+              message="No active onboarding checklists"
+              action="Start Onboarding"
+              onAction={() => setShowChecklistForm(true)}
+            />
           ) : (
             <div className="space-y-4">
               {checklists.map(cl => (
@@ -219,39 +289,43 @@ export default function Onboarding() {
       {tab === 'templates' && (
         <div>
           <div className="flex justify-end mb-4">
-            <button
-              onClick={() => setShowTemplateForm(true)}
-              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
-            >
+            <Button onClick={() => setShowTemplateForm(true)}>
               New Template
-            </button>
+            </Button>
           </div>
 
-          {showTemplateForm && (
-            <div className="bg-gray-900 border border-gray-800 rounded-lg p-4 mb-4">
-              <h3 className="text-sm font-semibold text-white mb-3">Create Template</h3>
-              <form onSubmit={handleCreateTemplate} className="flex flex-wrap gap-3 items-end">
-                <div className="flex-1 min-w-48">
-                  <label className="block text-xs text-gray-500 mb-1">Name</label>
-                  <input name="name" required className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white placeholder-gray-500" placeholder="e.g. Engineering Onboarding" />
-                </div>
-                <div className="flex-1 min-w-48">
-                  <label className="block text-xs text-gray-500 mb-1">Description</label>
-                  <input name="description" className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white placeholder-gray-500" placeholder="Optional description" />
-                </div>
-                <div className="flex gap-2">
-                  <button type="submit" className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors">Create</button>
-                  <button type="button" onClick={() => setShowTemplateForm(false)} className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded transition-colors">Cancel</button>
-                </div>
-              </form>
-            </div>
-          )}
+          <Modal
+            open={showTemplateForm}
+            onClose={() => setShowTemplateForm(false)}
+            title="Create Template"
+            size="lg"
+            footer={
+              <>
+                <Button variant="secondary" onClick={() => setShowTemplateForm(false)} disabled={submitting}>Cancel</Button>
+                <Button type="submit" form="template-form" loading={submitting}>Create</Button>
+              </>
+            }
+          >
+            <form id="template-form" onSubmit={handleCreateTemplate} className="space-y-4">
+              <FormField label="Name" required>
+                <Input name="name" required placeholder="e.g. Engineering Onboarding" />
+              </FormField>
+              <FormField label="Description">
+                <Input name="description" placeholder="Optional description" />
+              </FormField>
+            </form>
+          </Modal>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Template List */}
             <div>
               {templates.length === 0 ? (
-                <EmptyState message="No onboarding templates" />
+                <EmptyState
+                  icon="📝"
+                  message="No onboarding templates"
+                  action="New Template"
+                  onAction={() => setShowTemplateForm(true)}
+                />
               ) : (
                 <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
                   <table className="w-full text-sm">
@@ -291,31 +365,46 @@ export default function Onboarding() {
                       <h3 className="text-sm font-semibold text-white">{selectedTemplate.name} Tasks</h3>
                       <p className="text-xs text-gray-500">{selectedTemplate.description || 'No description'}</p>
                     </div>
-                    <button
-                      onClick={() => setShowTaskForm(true)}
-                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
-                    >
+                    <Button size="sm" onClick={() => setShowTaskForm(true)}>
                       Add Task
-                    </button>
+                    </Button>
                   </div>
 
-                  {showTaskForm && (
-                    <form onSubmit={handleCreateTask} className="bg-gray-800 rounded p-3 mb-3 space-y-2">
-                      <input name="title" required placeholder="Task title" className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-1.5 text-sm text-white placeholder-gray-500" />
-                      <input name="description" placeholder="Description (optional)" className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-1.5 text-sm text-white placeholder-gray-500" />
-                      <div className="flex gap-2">
-                        <select name="assigned_to_role" className="bg-gray-700 border border-gray-600 rounded px-3 py-1.5 text-sm text-white">
-                          <option value="hr">HR</option>
-                          <option value="manager">Manager</option>
-                          <option value="employee">Employee</option>
-                          <option value="it">IT</option>
-                        </select>
-                        <input name="due_days" type="number" defaultValue={0} placeholder="Due days" className="w-24 bg-gray-700 border border-gray-600 rounded px-3 py-1.5 text-sm text-white" />
-                        <button type="submit" className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors">Add</button>
-                        <button type="button" onClick={() => setShowTaskForm(false)} className="px-3 py-1.5 bg-gray-600 hover:bg-gray-500 text-white text-sm rounded transition-colors">Cancel</button>
-                      </div>
+                  <Modal
+                    open={showTaskForm}
+                    onClose={() => setShowTaskForm(false)}
+                    title="Add Task"
+                    size="md"
+                    footer={
+                      <>
+                        <Button variant="secondary" onClick={() => setShowTaskForm(false)} disabled={submitting}>Cancel</Button>
+                        <Button type="submit" form="task-form" loading={submitting}>Add</Button>
+                      </>
+                    }
+                  >
+                    <form id="task-form" onSubmit={handleCreateTask} className="space-y-4">
+                      <FormField label="Title" required>
+                        <Input name="title" required placeholder="Task title" />
+                      </FormField>
+                      <FormField label="Description">
+                        <Input name="description" placeholder="Description (optional)" />
+                      </FormField>
+                      <FormField label="Assigned To">
+                        <Select
+                          name="assigned_to_role"
+                          options={[
+                            { value: 'hr', label: 'HR' },
+                            { value: 'manager', label: 'Manager' },
+                            { value: 'employee', label: 'Employee' },
+                            { value: 'it', label: 'IT' },
+                          ]}
+                        />
+                      </FormField>
+                      <FormField label="Due Days After Start">
+                        <Input name="due_days" type="number" defaultValue={0} />
+                      </FormField>
                     </form>
-                  )}
+                  </Modal>
 
                   {templateTasks.length === 0 ? (
                     <p className="text-sm text-gray-500 py-4 text-center">No tasks in this template</p>
@@ -329,12 +418,13 @@ export default function Onboarding() {
                               {task.assigned_to_role} \u00B7 {task.due_days} day{task.due_days !== 1 ? 's' : ''} after start
                             </p>
                           </div>
-                          <button
-                            onClick={() => handleDeleteTask(task.id)}
-                            className="text-xs text-gray-500 hover:text-red-400 transition-colors"
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDeleteTaskId(task.id)}
                           >
                             Remove
-                          </button>
+                          </Button>
                         </div>
                       ))}
                     </div>
@@ -347,6 +437,16 @@ export default function Onboarding() {
               )}
             </div>
           </div>
+
+          <ConfirmDialog
+            open={!!deleteTaskId}
+            onClose={() => setDeleteTaskId(null)}
+            onConfirm={handleDeleteTask}
+            title="Remove Task"
+            message="Are you sure you want to remove this task from the template?"
+            confirmLabel="Remove"
+            loading={deleting}
+          />
         </div>
       )}
     </div>

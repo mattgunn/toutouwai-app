@@ -9,23 +9,47 @@ import {
 import type { WorkflowDefinition, WorkflowApproval } from '../modules/workflows/types'
 import StatusBadge from '../components/StatusBadge'
 import EmptyState from '../components/EmptyState'
-
-type View = 'definitions' | 'approvals'
+import Tabs from '../components/Tabs'
+import Modal from '../components/Modal'
+import Button from '../components/Button'
+import { FormField, Input, Select, Textarea } from '../components/FormField'
+import { SkeletonTable } from '../components/Skeleton'
+import { useToast } from '../components/Toast'
 
 export default function Workflows() {
-  const [view, setView] = useState<View>('approvals')
+  const [view, setView] = useState('approvals')
   const [approvals, setApprovals] = useState<WorkflowApproval[]>([])
   const [definitions, setDefinitions] = useState<WorkflowDefinition[]>([])
   const [showForm, setShowForm] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const toast = useToast()
 
   useEffect(() => {
-    fetchMyApprovals().then(setApprovals).catch(() => {})
-    fetchWorkflowDefinitions().then(setDefinitions).catch(() => {})
+    setLoading(true)
+    Promise.all([
+      fetchMyApprovals().then(setApprovals),
+      fetchWorkflowDefinitions().then(setDefinitions),
+    ]).catch(() => {
+      toast.error('Failed to load workflows')
+    }).finally(() => setLoading(false))
   }, [])
 
   const reload = () => {
-    fetchMyApprovals().then(setApprovals).catch(() => {})
-    fetchWorkflowDefinitions().then(setDefinitions).catch(() => {})
+    fetchMyApprovals().then(setApprovals).catch(() => {
+      toast.error('Failed to reload approvals')
+    })
+    fetchWorkflowDefinitions().then(setDefinitions).catch(() => {
+      toast.error('Failed to reload definitions')
+    })
+  }
+
+  if (loading) {
+    return (
+      <div>
+        <h1 className="text-xl font-bold text-white mb-4">Workflows</h1>
+        <SkeletonTable rows={5} cols={4} />
+      </div>
+    )
   }
 
   return (
@@ -33,41 +57,22 @@ export default function Workflows() {
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold text-white">Workflows</h1>
         {view === 'definitions' && (
-          <button
-            onClick={() => setShowForm(true)}
-            className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
-          >
+          <Button onClick={() => setShowForm(true)}>
             New Definition
-          </button>
+          </Button>
         )}
       </div>
 
-      <div className="flex gap-1 mb-6">
-        <button
-          onClick={() => setView('approvals')}
-          className={`px-4 py-2 text-sm rounded transition-colors ${
-            view === 'approvals'
-              ? 'bg-blue-600/20 text-blue-400'
-              : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
-          }`}
-        >
-          My Approvals
-          {approvals.length > 0 && (
-            <span className="ml-2 px-1.5 py-0.5 bg-amber-600/20 text-amber-400 text-xs rounded">
-              {approvals.length}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setView('definitions')}
-          className={`px-4 py-2 text-sm rounded transition-colors ${
-            view === 'definitions'
-              ? 'bg-blue-600/20 text-blue-400'
-              : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
-          }`}
-        >
-          Definitions
-        </button>
+      <div className="mb-6">
+        <Tabs
+          variant="pills"
+          tabs={[
+            { key: 'approvals', label: 'My Approvals', count: approvals.length },
+            { key: 'definitions', label: 'Definitions' },
+          ]}
+          active={view}
+          onChange={setView}
+        />
       </div>
 
       {view === 'approvals' && <ApprovalsView approvals={approvals} onAction={reload} />}
@@ -86,21 +91,40 @@ export default function Workflows() {
 function ApprovalsView({ approvals, onAction }: { approvals: WorkflowApproval[]; onAction: () => void }) {
   const [rejectId, setRejectId] = useState<string | null>(null)
   const [comments, setComments] = useState('')
+  const [approving, setApproving] = useState<string | null>(null)
+  const [rejecting, setRejecting] = useState(false)
+  const toast = useToast()
 
   const handleApprove = async (id: string) => {
-    await approveWorkflow(id)
-    onAction()
+    setApproving(id)
+    try {
+      await approveWorkflow(id)
+      toast.success('Workflow approved')
+      onAction()
+    } catch {
+      toast.error('Failed to approve workflow')
+    } finally {
+      setApproving(null)
+    }
   }
 
   const handleReject = async (id: string) => {
-    await rejectWorkflow(id, comments)
-    setRejectId(null)
-    setComments('')
-    onAction()
+    setRejecting(true)
+    try {
+      await rejectWorkflow(id, comments)
+      setRejectId(null)
+      setComments('')
+      toast.success('Workflow rejected')
+      onAction()
+    } catch {
+      toast.error('Failed to reject workflow')
+    } finally {
+      setRejecting(false)
+    }
   }
 
   if (approvals.length === 0) {
-    return <EmptyState message="No pending approvals" />
+    return <EmptyState icon="✅" message="No pending approvals" />
   }
 
   return (
@@ -121,42 +145,48 @@ function ApprovalsView({ approvals, onAction }: { approvals: WorkflowApproval[];
 
           {rejectId === approval.id ? (
             <div className="mt-3 space-y-2">
-              <textarea
-                value={comments}
-                onChange={e => setComments(e.target.value)}
-                placeholder="Reason for rejection..."
-                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white placeholder-gray-500"
-                rows={2}
-              />
+              <FormField label="Reason for rejection">
+                <Textarea
+                  value={comments}
+                  onChange={e => setComments(e.target.value)}
+                  placeholder="Reason for rejection..."
+                  rows={2}
+                />
+              </FormField>
               <div className="flex gap-2">
-                <button
+                <Button
+                  variant="danger"
+                  size="sm"
                   onClick={() => handleReject(approval.id)}
-                  className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
+                  loading={rejecting}
                 >
                   Confirm Reject
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={() => { setRejectId(null); setComments('') }}
-                  className="px-3 py-1.5 bg-gray-700 text-gray-300 text-xs rounded hover:bg-gray-600 transition-colors"
                 >
                   Cancel
-                </button>
+                </Button>
               </div>
             </div>
           ) : (
             <div className="flex gap-2 mt-3">
-              <button
+              <Button
+                size="sm"
                 onClick={() => handleApprove(approval.id)}
-                className="px-3 py-1.5 bg-emerald-600 text-white text-xs rounded hover:bg-emerald-700 transition-colors"
+                loading={approving === approval.id}
               >
                 Approve
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => setRejectId(approval.id)}
-                className="px-3 py-1.5 bg-gray-700 text-gray-300 text-xs rounded hover:bg-gray-600 transition-colors"
               >
                 Reject
-              </button>
+              </Button>
             </div>
           )}
         </div>
@@ -180,79 +210,88 @@ function DefinitionsView({
   const [triggerEntity, setTriggerEntity] = useState('leave_request')
   const [triggerAction, setTriggerAction] = useState('create')
   const [description, setDescription] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const toast = useToast()
 
   const handleCreate = async () => {
-    await createWorkflowDefinition({
-      name,
-      trigger_entity: triggerEntity,
-      trigger_action: triggerAction,
-      description: description || null,
-    })
-    setName('')
-    setTriggerEntity('leave_request')
-    setTriggerAction('create')
-    setDescription('')
-    onCloseForm()
-    onCreated()
+    setSubmitting(true)
+    try {
+      await createWorkflowDefinition({
+        name,
+        trigger_entity: triggerEntity,
+        trigger_action: triggerAction,
+        description: description || null,
+      })
+      setName('')
+      setTriggerEntity('leave_request')
+      setTriggerAction('create')
+      setDescription('')
+      onCloseForm()
+      toast.success('Workflow definition created')
+      onCreated()
+    } catch {
+      toast.error('Failed to create workflow definition')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
     <>
-      {showForm && (
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-4 mb-4">
-          <h2 className="text-sm font-semibold text-white mb-3">New Workflow Definition</h2>
-          <div className="grid md:grid-cols-2 gap-3">
-            <input
+      <Modal
+        open={showForm}
+        onClose={onCloseForm}
+        title="New Workflow Definition"
+        size="lg"
+        footer={
+          <>
+            <Button variant="secondary" onClick={onCloseForm} disabled={submitting}>Cancel</Button>
+            <Button onClick={handleCreate} disabled={!name} loading={submitting}>Create</Button>
+          </>
+        }
+      >
+        <div className="grid md:grid-cols-2 gap-4">
+          <FormField label="Name" required>
+            <Input
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="Workflow name"
-              className="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white placeholder-gray-500"
             />
-            <select
+          </FormField>
+          <FormField label="Trigger Entity">
+            <Select
               value={triggerEntity}
               onChange={e => setTriggerEntity(e.target.value)}
-              className="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
-            >
-              <option value="leave_request">Leave Request</option>
-              <option value="employee">Employee</option>
-              <option value="compensation">Compensation</option>
-            </select>
-            <select
+              options={[
+                { value: 'leave_request', label: 'Leave Request' },
+                { value: 'employee', label: 'Employee' },
+                { value: 'compensation', label: 'Compensation' },
+              ]}
+            />
+          </FormField>
+          <FormField label="Trigger Action">
+            <Select
               value={triggerAction}
               onChange={e => setTriggerAction(e.target.value)}
-              className="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
-            >
-              <option value="create">Create</option>
-              <option value="update">Update</option>
-              <option value="status_change">Status Change</option>
-            </select>
-            <input
+              options={[
+                { value: 'create', label: 'Create' },
+                { value: 'update', label: 'Update' },
+                { value: 'status_change', label: 'Status Change' },
+              ]}
+            />
+          </FormField>
+          <FormField label="Description">
+            <Input
               value={description}
               onChange={e => setDescription(e.target.value)}
               placeholder="Description (optional)"
-              className="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white placeholder-gray-500"
             />
-          </div>
-          <div className="flex gap-2 mt-3">
-            <button
-              onClick={handleCreate}
-              disabled={!name}
-              className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
-            >
-              Create
-            </button>
-            <button
-              onClick={onCloseForm}
-              className="px-3 py-1.5 bg-gray-700 text-gray-300 text-sm rounded hover:bg-gray-600 transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
+          </FormField>
         </div>
-      )}
+      </Modal>
 
       {definitions.length === 0 ? (
-        <EmptyState message="No workflow definitions" />
+        <EmptyState icon="🔄" message="No workflow definitions" />
       ) : (
         <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
           <table className="w-full text-sm">

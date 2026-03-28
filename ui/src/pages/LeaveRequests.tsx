@@ -3,13 +3,31 @@ import { fetchLeaveRequests } from '../api'
 import type { LeaveRequest } from '../types'
 import StatusBadge from '../components/StatusBadge'
 import EmptyState from '../components/EmptyState'
+import { SkeletonTable } from '../components/Skeleton'
+import { useToast } from '../components/Toast'
 
 export default function LeaveRequests() {
   const [requests, setRequests] = useState<LeaveRequest[]>([])
+  const [loading, setLoading] = useState(true)
+  const toast = useToast()
 
   useEffect(() => {
-    fetchLeaveRequests().then(setRequests).catch(() => {})
+    fetchLeaveRequests()
+      .then(setRequests)
+      .catch(() => toast.error('Failed to load leave requests'))
+      .finally(() => setLoading(false))
   }, [])
+
+  if (loading) {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-xl font-bold text-white">Leave Requests</h1>
+        </div>
+        <SkeletonTable rows={5} cols={6} />
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -18,7 +36,7 @@ export default function LeaveRequests() {
       </div>
 
       {requests.length === 0 ? (
-        <EmptyState message="No leave requests" />
+        <EmptyState icon="🏖" message="No leave requests" />
       ) : (
         <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
           <table className="w-full text-sm">

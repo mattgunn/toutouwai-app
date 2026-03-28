@@ -5,14 +5,22 @@ import StatusBadge from '../components/StatusBadge'
 import SortableHeader, { compareValues, nextSort } from '../components/SortableHeader'
 import EmptyState from '../components/EmptyState'
 import Avatar from '../components/Avatar'
+import { Input } from '../components/FormField'
+import { SkeletonTable } from '../components/Skeleton'
+import { useToast } from '../components/Toast'
 
 export default function Employees() {
   const [employees, setEmployees] = useState<Employee[]>([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState<{ key: string; dir: 'asc' | 'desc' } | null>(null)
+  const toast = useToast()
 
   useEffect(() => {
-    fetchEmployees().then(r => setEmployees(r.employees)).catch(() => {})
+    fetchEmployees()
+      .then(r => setEmployees(r.employees))
+      .catch(() => toast.error('Failed to load employees'))
+      .finally(() => setLoading(false))
   }, [])
 
   const filtered = employees.filter(e => {
@@ -30,6 +38,17 @@ export default function Employees() {
 
   const handleSort = (key: string) => setSort(nextSort(sort, key))
 
+  if (loading) {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-xl font-bold text-white">Employee Directory</h1>
+        </div>
+        <SkeletonTable rows={8} cols={5} />
+      </div>
+    )
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -37,17 +56,17 @@ export default function Employees() {
       </div>
 
       <div className="mb-4">
-        <input
+        <Input
           type="text"
           placeholder="Search employees..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="w-full max-w-sm bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white placeholder-gray-500"
+          className="max-w-sm"
         />
       </div>
 
       {sorted.length === 0 ? (
-        <EmptyState message="No employees found" />
+        <EmptyState message="No employees found" icon="👥" />
       ) : (
         <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
           <table className="w-full text-sm">

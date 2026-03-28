@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react'
 import { fetchAuditLog } from '../modules/audit/api'
 import type { AuditEntry } from '../modules/audit/types'
 import EmptyState from '../components/EmptyState'
+import Button from '../components/Button'
+import { Select, Input } from '../components/FormField'
+import { SkeletonTable } from '../components/Skeleton'
+import { useToast } from '../components/Toast'
 
 const ENTITY_TYPES = ['', 'employee', 'department', 'position', 'leave_request', 'time_entry', 'job_posting', 'applicant', 'review', 'goal']
 
@@ -12,10 +16,13 @@ export default function AuditLog() {
   const [entityType, setEntityType] = useState('')
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
+  const [loading, setLoading] = useState(true)
+  const toast = useToast()
 
   const perPage = 50
 
   useEffect(() => {
+    setLoading(true)
     const params: Record<string, string> = { page: String(page), per_page: String(perPage) }
     if (entityType) params.entity_type = entityType
     if (fromDate) params.from = fromDate
@@ -23,7 +30,9 @@ export default function AuditLog() {
     fetchAuditLog(params).then(r => {
       setEntries(r.entries)
       setTotal(r.total)
-    }).catch(() => {})
+    }).catch(() => {
+      toast.error('Failed to load audit log')
+    }).finally(() => setLoading(false))
   }, [page, entityType, fromDate, toDate])
 
   const totalPages = Math.ceil(total / perPage)
@@ -54,35 +63,32 @@ export default function AuditLog() {
       <h1 className="text-xl font-bold text-white mb-4">Audit Log</h1>
 
       <div className="flex flex-wrap gap-3 mb-4">
-        <select
+        <Select
           value={entityType}
           onChange={e => { setEntityType(e.target.value); setPage(1) }}
-          className="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
-        >
-          <option value="">All entity types</option>
-          {ENTITY_TYPES.filter(Boolean).map(t => (
-            <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>
-          ))}
-        </select>
-
-        <input
+          options={ENTITY_TYPES.filter(Boolean).map(t => ({ value: t, label: t.replace(/_/g, ' ') }))}
+          placeholder="All entity types"
+        />
+        <Input
           type="date"
           value={fromDate}
           onChange={e => { setFromDate(e.target.value); setPage(1) }}
-          className="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
           placeholder="From date"
+          className="w-auto"
         />
-        <input
+        <Input
           type="date"
           value={toDate}
           onChange={e => { setToDate(e.target.value); setPage(1) }}
-          className="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
           placeholder="To date"
+          className="w-auto"
         />
       </div>
 
-      {entries.length === 0 ? (
-        <EmptyState message="No audit entries found" />
+      {loading ? (
+        <SkeletonTable rows={8} cols={7} />
+      ) : entries.length === 0 ? (
+        <EmptyState icon="📜" message="No audit entries found" />
       ) : (
         <>
           <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
@@ -120,23 +126,25 @@ export default function AuditLog() {
             <div className="flex items-center justify-between mt-4">
               <p className="text-xs text-gray-500">{total} total entries</p>
               <div className="flex gap-2">
-                <button
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page <= 1}
-                  className="px-3 py-1 text-xs bg-gray-800 border border-gray-700 rounded text-gray-400 hover:text-white disabled:opacity-50"
                 >
                   Previous
-                </button>
+                </Button>
                 <span className="px-3 py-1 text-xs text-gray-400">
                   Page {page} of {totalPages}
                 </span>
-                <button
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                   disabled={page >= totalPages}
-                  className="px-3 py-1 text-xs bg-gray-800 border border-gray-700 rounded text-gray-400 hover:text-white disabled:opacity-50"
                 >
                   Next
-                </button>
+                </Button>
               </div>
             </div>
           )}

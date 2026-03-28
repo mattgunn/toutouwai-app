@@ -3,13 +3,31 @@ import { fetchGoals } from '../api'
 import type { Goal } from '../types'
 import StatusBadge from '../components/StatusBadge'
 import EmptyState from '../components/EmptyState'
+import { SkeletonCards } from '../components/Skeleton'
+import { useToast } from '../components/Toast'
 
 export default function Goals() {
   const [goals, setGoals] = useState<Goal[]>([])
+  const [loading, setLoading] = useState(true)
+  const toast = useToast()
 
   useEffect(() => {
-    fetchGoals().then(setGoals).catch(() => {})
+    setLoading(true)
+    fetchGoals().then(setGoals).catch(() => {
+      toast.error('Failed to load goals')
+    }).finally(() => setLoading(false))
   }, [])
+
+  if (loading) {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-xl font-bold text-white">Goals</h1>
+        </div>
+        <SkeletonCards count={4} />
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -18,7 +36,7 @@ export default function Goals() {
       </div>
 
       {goals.length === 0 ? (
-        <EmptyState message="No goals yet" />
+        <EmptyState icon="🎯" message="No goals yet" />
       ) : (
         <div className="space-y-3">
           {goals.map(goal => (
