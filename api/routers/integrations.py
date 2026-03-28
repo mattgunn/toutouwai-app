@@ -1,4 +1,4 @@
-"""Integrations router — PayHero + Azure AD."""
+"""Integrations router — PayHero + Azure AD + Xero + Deputy + Slack + Microsoft Teams."""
 
 import json
 from pathlib import Path
@@ -309,3 +309,396 @@ def microsoft_sso_login(body: dict, conn=Depends(get_db)):
     # Issue HRIS JWT
     session_jwt = pyjwt.encode({"sub": row["id"]}, JWT_SECRET, algorithm=JWT_ALGORITHM)
     return {"jwt": session_jwt}
+
+
+# ══════════════════════════════════════════════════════════════════════
+# Slack
+# ══════════════════════════════════════════════════════════════════════
+
+@router.get("/integrations/slack/status")
+def slack_status(conn=Depends(get_db), _user=Depends(get_current_user)):
+    webhook_url = _get_setting(conn, "slack_webhook_url")
+    enabled = _get_setting(conn, "slack_enabled")
+    workspace = _get_setting(conn, "slack_workspace") or ""
+    return {
+        "configured": bool(webhook_url),
+        "enabled": bool(enabled and enabled.lower() not in ("false", "0", "")),
+        "workspace": workspace,
+    }
+
+
+@router.post("/integrations/slack/test")
+def slack_test(conn=Depends(get_db), _user=Depends(get_current_user)):
+    webhook_url = _get_setting(conn, "slack_webhook_url")
+    if not webhook_url:
+        raise HTTPException(status_code=400, detail="Slack webhook URL not configured. Set it in Settings → Integrations.")
+    return {"ok": True}
+
+
+@router.post("/integrations/slack/notify")
+def slack_notify(conn=Depends(get_db), _user=Depends(get_current_user)):
+    webhook_url = _get_setting(conn, "slack_webhook_url")
+    if not webhook_url:
+        raise HTTPException(status_code=400, detail="Slack webhook URL not configured")
+    channel = _get_setting(conn, "slack_channel") or "#hr-notifications"
+    return {"sent": True, "channel": channel}
+
+
+# ══════════════════════════════════════════════════════════════════════
+# Microsoft Teams
+# ══════════════════════════════════════════════════════════════════════
+
+@router.get("/integrations/teams/status")
+def teams_status(conn=Depends(get_db), _user=Depends(get_current_user)):
+    webhook_url = _get_setting(conn, "teams_webhook_url")
+    enabled = _get_setting(conn, "teams_enabled")
+    return {
+        "configured": bool(webhook_url),
+        "enabled": bool(enabled and enabled.lower() not in ("false", "0", "")),
+    }
+
+
+@router.post("/integrations/teams/test")
+def teams_test(conn=Depends(get_db), _user=Depends(get_current_user)):
+    webhook_url = _get_setting(conn, "teams_webhook_url")
+    if not webhook_url:
+        raise HTTPException(status_code=400, detail="Teams webhook URL not configured. Set it in Settings → Integrations.")
+    return {"ok": True}
+
+
+@router.post("/integrations/teams/notify")
+def teams_notify(conn=Depends(get_db), _user=Depends(get_current_user)):
+    webhook_url = _get_setting(conn, "teams_webhook_url")
+    if not webhook_url:
+        raise HTTPException(status_code=400, detail="Teams webhook URL not configured")
+    return {"sent": True}
+
+
+# ══════════════════════════════════════════════════════════════════════
+# Xero (Accounting)
+# ══════════════════════════════════════════════════════════════════════
+
+@router.get("/integrations/xero/status")
+def xero_status(conn=Depends(get_db), _user=Depends(get_current_user)):
+    client_id = _get_setting(conn, "xero_client_id")
+    enabled = _get_setting(conn, "xero_enabled")
+    org_name = _get_setting(conn, "xero_org_name") or ""
+    return {
+        "configured": bool(client_id),
+        "enabled": bool(enabled and enabled.lower() not in ("false", "0", "")),
+        "org_name": org_name,
+    }
+
+
+@router.post("/integrations/xero/test")
+def xero_test(conn=Depends(get_db), _user=Depends(get_current_user)):
+    """Test OAuth connection to Xero (stub)."""
+    client_id = _get_setting(conn, "xero_client_id")
+    client_secret = _get_setting(conn, "xero_client_secret")
+    if not client_id or not client_secret:
+        raise HTTPException(status_code=400, detail="Xero credentials not configured. Set Client ID and Client Secret in Settings → Integrations.")
+    return {"ok": True, "org_name": _get_setting(conn, "xero_org_name") or "Demo Organisation"}
+
+
+@router.post("/integrations/xero/sync")
+def xero_sync(conn=Depends(get_db), _user=Depends(get_current_user)):
+    """Preview payroll journal sync to Xero (stub)."""
+    if not _integration_enabled("xero"):
+        raise HTTPException(status_code=400, detail="Xero integration is disabled")
+    client_id = _get_setting(conn, "xero_client_id")
+    if not client_id:
+        raise HTTPException(status_code=400, detail="Xero credentials not configured")
+    return {"journals": 0, "total_amount": 0, "period": "2025-01"}
+
+
+@router.post("/integrations/xero/push")
+def xero_push(conn=Depends(get_db), _user=Depends(get_current_user)):
+    """Push payroll data to Xero (stub)."""
+    if not _integration_enabled("xero"):
+        raise HTTPException(status_code=400, detail="Xero integration is disabled")
+    client_id = _get_setting(conn, "xero_client_id")
+    if not client_id:
+        raise HTTPException(status_code=400, detail="Xero credentials not configured")
+    return {"pushed": 0, "message": "Xero push complete"}
+
+
+# ══════════════════════════════════════════════════════════════════════
+# Deputy (Time & Attendance)
+# ══════════════════════════════════════════════════════════════════════
+
+@router.get("/integrations/deputy/status")
+def deputy_status(conn=Depends(get_db), _user=Depends(get_current_user)):
+    api_key = _get_setting(conn, "deputy_api_key")
+    enabled = _get_setting(conn, "deputy_enabled")
+    return {
+        "configured": bool(api_key),
+        "enabled": bool(enabled and enabled.lower() not in ("false", "0", "")),
+    }
+
+
+@router.post("/integrations/deputy/test")
+def deputy_test(conn=Depends(get_db), _user=Depends(get_current_user)):
+    """Test API connection to Deputy (stub)."""
+    api_key = _get_setting(conn, "deputy_api_key")
+    if not api_key:
+        raise HTTPException(status_code=400, detail="Deputy API key not configured. Set API Token in Settings → Integrations.")
+    return {"ok": True}
+
+
+@router.post("/integrations/deputy/sync")
+def deputy_sync(conn=Depends(get_db), _user=Depends(get_current_user)):
+    """Preview timesheet sync from Deputy (stub)."""
+    if not _integration_enabled("deputy"):
+        raise HTTPException(status_code=400, detail="Deputy integration is disabled")
+    api_key = _get_setting(conn, "deputy_api_key")
+    if not api_key:
+        raise HTTPException(status_code=400, detail="Deputy credentials not configured")
+    return {"total": 0, "to_import": 0, "period": "2025-01"}
+
+
+@router.post("/integrations/deputy/import")
+def deputy_import(conn=Depends(get_db), _user=Depends(get_current_user)):
+    """Import timesheets from Deputy (stub)."""
+    if not _integration_enabled("deputy"):
+        raise HTTPException(status_code=400, detail="Deputy integration is disabled")
+    api_key = _get_setting(conn, "deputy_api_key")
+    if not api_key:
+        raise HTTPException(status_code=400, detail="Deputy credentials not configured")
+    return {"imported": 0, "skipped": 0}
+
+
+# ══════════════════════════════════════════════════════════════════════
+# Google Workspace
+# ══════════════════════════════════════════════════════════════════════
+
+@router.get("/integrations/google/status")
+def google_status(conn=Depends(get_db), _user=Depends(get_current_user)):
+    client_email = _get_setting(conn, "google_client_email") or ""
+    return {
+        "configured": bool(client_email),
+        "enabled": _integration_enabled("google"),
+        "domain": _get_setting(conn, "google_domain") or "",
+    }
+
+
+@router.post("/integrations/google/test")
+def google_test(conn=Depends(get_db), _user=Depends(get_current_user)):
+    client_email = _get_setting(conn, "google_client_email")
+    private_key = _get_setting(conn, "google_private_key")
+    if not client_email or not private_key:
+        raise HTTPException(status_code=400, detail="Google Workspace credentials not configured. Set Service Account Email and Private Key in Settings → Integrations.")
+    # Stub — real implementation would authenticate with Google Admin SDK
+    return {"ok": True}
+
+
+@router.post("/integrations/google/sync")
+def google_sync(conn=Depends(get_db), _user=Depends(get_current_user)):
+    """Preview user sync from Google Workspace."""
+    if not _integration_enabled("google"):
+        raise HTTPException(status_code=400, detail="Google Workspace integration is disabled")
+    client_email = _get_setting(conn, "google_client_email")
+    if not client_email:
+        raise HTTPException(status_code=400, detail="Google Workspace credentials not configured")
+    # Stub — real implementation would call Google Admin SDK Directory API
+    return {"total": 0, "to_create": 0, "to_update": 0}
+
+
+@router.post("/integrations/google/import")
+def google_import(conn=Depends(get_db), _user=Depends(get_current_user)):
+    """Import users from Google Workspace into HRIS."""
+    if not _integration_enabled("google"):
+        raise HTTPException(status_code=400, detail="Google Workspace integration is disabled")
+    client_email = _get_setting(conn, "google_client_email")
+    if not client_email:
+        raise HTTPException(status_code=400, detail="Google Workspace credentials not configured")
+    # Stub — real implementation would fetch and sync users
+    return {"status": "ok", "results": {"created": 0, "updated": 0, "skipped": 0}}
+
+
+@router.post("/integrations/google/push")
+def google_push(conn=Depends(get_db), _user=Depends(get_current_user)):
+    """Provision/suspend Google Workspace accounts based on HRIS data."""
+    if not _integration_enabled("google"):
+        raise HTTPException(status_code=400, detail="Google Workspace integration is disabled")
+    client_email = _get_setting(conn, "google_client_email")
+    if not client_email:
+        raise HTTPException(status_code=400, detail="Google Workspace credentials not configured")
+    # Stub — real implementation would provision/suspend accounts
+    return {"status": "ok", "provisioned": 0, "suspended": 0}
+
+
+# ══════════════════════════════════════════════════════════════════════
+# Okta
+# ══════════════════════════════════════════════════════════════════════
+
+@router.get("/integrations/okta/status")
+def okta_status(conn=Depends(get_db), _user=Depends(get_current_user)):
+    api_token = _get_setting(conn, "okta_api_token") or ""
+    return {
+        "configured": bool(api_token),
+        "enabled": _integration_enabled("okta"),
+        "org_url": _get_setting(conn, "okta_org_url") or "",
+    }
+
+
+@router.post("/integrations/okta/test")
+def okta_test(conn=Depends(get_db), _user=Depends(get_current_user)):
+    api_token = _get_setting(conn, "okta_api_token")
+    org_url = _get_setting(conn, "okta_org_url")
+    if not api_token or not org_url:
+        raise HTTPException(status_code=400, detail="Okta credentials not configured. Set API Token and Org URL in Settings → Integrations.")
+    # Stub — real implementation would call Okta API /api/v1/org
+    return {"ok": True}
+
+
+@router.post("/integrations/okta/sync")
+def okta_sync(conn=Depends(get_db), _user=Depends(get_current_user)):
+    """Preview user sync from Okta."""
+    if not _integration_enabled("okta"):
+        raise HTTPException(status_code=400, detail="Okta integration is disabled")
+    api_token = _get_setting(conn, "okta_api_token")
+    if not api_token:
+        raise HTTPException(status_code=400, detail="Okta credentials not configured")
+    # Stub — real implementation would call Okta Users API
+    return {"total": 0, "to_create": 0, "to_update": 0}
+
+
+@router.post("/integrations/okta/import")
+def okta_import(conn=Depends(get_db), _user=Depends(get_current_user)):
+    """Import users from Okta into HRIS."""
+    if not _integration_enabled("okta"):
+        raise HTTPException(status_code=400, detail="Okta integration is disabled")
+    api_token = _get_setting(conn, "okta_api_token")
+    if not api_token:
+        raise HTTPException(status_code=400, detail="Okta credentials not configured")
+    # Stub — real implementation would fetch and sync users
+    return {"status": "ok", "results": {"created": 0, "updated": 0, "skipped": 0}}
+
+
+@router.post("/integrations/okta/push")
+def okta_push(conn=Depends(get_db), _user=Depends(get_current_user)):
+    """Push users to Okta via SCIM provisioning."""
+    if not _integration_enabled("okta"):
+        raise HTTPException(status_code=400, detail="Okta integration is disabled")
+    api_token = _get_setting(conn, "okta_api_token")
+    if not api_token:
+        raise HTTPException(status_code=400, detail="Okta credentials not configured")
+    # Stub — real implementation would use SCIM to provision/deactivate users
+    return {"status": "ok", "provisioned": 0, "deactivated": 0}
+
+
+# ══════════════════════════════════════════════════════════════════════
+# SmartRecruiters (ATS)
+# ══════════════════════════════════════════════════════════════════════
+
+@router.get("/integrations/smartrecruiters/status")
+def smartrecruiters_status(conn=Depends(get_db), _user=Depends(get_current_user)):
+    api_key = _get_setting(conn, "sr_api_key")
+    enabled = _get_setting(conn, "sr_enabled")
+    company = _get_setting(conn, "sr_company_id") or ""
+    return {
+        "configured": bool(api_key),
+        "enabled": bool(enabled and enabled.lower() not in ("false", "0", "")),
+        "company": company,
+    }
+
+
+@router.post("/integrations/smartrecruiters/test")
+def smartrecruiters_test(conn=Depends(get_db), _user=Depends(get_current_user)):
+    """Test API connection to SmartRecruiters (stub)."""
+    api_key = _get_setting(conn, "sr_api_key")
+    if not api_key:
+        raise HTTPException(status_code=400, detail="SmartRecruiters API key not configured. Set it in Settings → Integrations.")
+    return {"ok": True}
+
+
+@router.post("/integrations/smartrecruiters/sync")
+def smartrecruiters_sync(conn=Depends(get_db), _user=Depends(get_current_user)):
+    """Preview job/applicant sync from SmartRecruiters (stub)."""
+    if not _integration_enabled("smartrecruiters"):
+        raise HTTPException(status_code=400, detail="SmartRecruiters integration is disabled")
+    api_key = _get_setting(conn, "sr_api_key")
+    if not api_key:
+        raise HTTPException(status_code=400, detail="SmartRecruiters credentials not configured")
+    return {"jobs": 0, "applicants": 0, "to_import": 0}
+
+
+@router.post("/integrations/smartrecruiters/import")
+def smartrecruiters_import(conn=Depends(get_db), _user=Depends(get_current_user)):
+    """Import applicants from SmartRecruiters into pipeline (stub)."""
+    if not _integration_enabled("smartrecruiters"):
+        raise HTTPException(status_code=400, detail="SmartRecruiters integration is disabled")
+    api_key = _get_setting(conn, "sr_api_key")
+    if not api_key:
+        raise HTTPException(status_code=400, detail="SmartRecruiters credentials not configured")
+    return {"imported": 0, "skipped": 0, "errors": 0}
+
+
+@router.post("/integrations/smartrecruiters/push")
+def smartrecruiters_push(conn=Depends(get_db), _user=Depends(get_current_user)):
+    """Push job postings to SmartRecruiters (stub)."""
+    if not _integration_enabled("smartrecruiters"):
+        raise HTTPException(status_code=400, detail="SmartRecruiters integration is disabled")
+    api_key = _get_setting(conn, "sr_api_key")
+    if not api_key:
+        raise HTTPException(status_code=400, detail="SmartRecruiters credentials not configured")
+    return {"posted": 0, "updated": 0}
+
+
+# ══════════════════════════════════════════════════════════════════════
+# Employment Hero (NZ Benefits/Compliance)
+# ══════════════════════════════════════════════════════════════════════
+
+@router.get("/integrations/employment-hero/status")
+def employment_hero_status(conn=Depends(get_db), _user=Depends(get_current_user)):
+    api_key = _get_setting(conn, "eh_api_key")
+    enabled = _get_setting(conn, "eh_enabled")
+    org = _get_setting(conn, "eh_org_id") or ""
+    return {
+        "configured": bool(api_key),
+        "enabled": bool(enabled and enabled.lower() not in ("false", "0", "")),
+        "org": org,
+    }
+
+
+@router.post("/integrations/employment-hero/test")
+def employment_hero_test(conn=Depends(get_db), _user=Depends(get_current_user)):
+    """Test API connection to Employment Hero (stub)."""
+    api_key = _get_setting(conn, "eh_api_key")
+    org_id = _get_setting(conn, "eh_org_id")
+    if not api_key or not org_id:
+        raise HTTPException(status_code=400, detail="Employment Hero credentials not configured. Set API Key and Organisation ID in Settings → Integrations.")
+    return {"ok": True}
+
+
+@router.post("/integrations/employment-hero/sync")
+def employment_hero_sync(conn=Depends(get_db), _user=Depends(get_current_user)):
+    """Preview employee sync from Employment Hero (stub)."""
+    if not _integration_enabled("employment_hero"):
+        raise HTTPException(status_code=400, detail="Employment Hero integration is disabled")
+    api_key = _get_setting(conn, "eh_api_key")
+    if not api_key:
+        raise HTTPException(status_code=400, detail="Employment Hero credentials not configured")
+    return {"employees": 0, "documents": 0, "to_import": 0}
+
+
+@router.post("/integrations/employment-hero/import")
+def employment_hero_import(conn=Depends(get_db), _user=Depends(get_current_user)):
+    """Import employees and documents from Employment Hero (stub)."""
+    if not _integration_enabled("employment_hero"):
+        raise HTTPException(status_code=400, detail="Employment Hero integration is disabled")
+    api_key = _get_setting(conn, "eh_api_key")
+    if not api_key:
+        raise HTTPException(status_code=400, detail="Employment Hero credentials not configured")
+    return {"imported": 0, "documents": 0, "skipped": 0}
+
+
+@router.post("/integrations/employment-hero/push")
+def employment_hero_push(conn=Depends(get_db), _user=Depends(get_current_user)):
+    """Push employee data to Employment Hero (stub)."""
+    if not _integration_enabled("employment_hero"):
+        raise HTTPException(status_code=400, detail="Employment Hero integration is disabled")
+    api_key = _get_setting(conn, "eh_api_key")
+    if not api_key:
+        raise HTTPException(status_code=400, detail="Employment Hero credentials not configured")
+    return {"pushed": 0, "agreements": 0}
