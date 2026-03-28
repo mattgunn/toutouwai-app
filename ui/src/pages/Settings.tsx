@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAdminPrefs } from '../hooks/useAdminPrefs'
 import { updateSettings, authFetch } from '../api'
-import { INTEGRATIONS } from '../modules/integrations/registry'
+import { INTEGRATIONS, INTEGRATION_CATEGORIES, type IntegrationCategory } from '../modules/integrations/registry'
 import { useToast } from '../components/Toast'
 import Button from '../components/Button'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -19,6 +19,7 @@ export default function Settings() {
   const [clearing, setClearing] = useState(false)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [seedResult, setSeedResult] = useState<Record<string, number> | null>(null)
+  const [activeCategory, setActiveCategory] = useState<IntegrationCategory | 'all'>('all')
 
   const handleIntegrationChange = (updates: Record<string, unknown>) => {
     const merged = { ...integrationSettings, ...updates }
@@ -57,17 +58,20 @@ export default function Settings() {
     }
   }
 
-  const tabs: { key: Tab; label: string }[] = [
-    { key: 'appearance', label: 'Appearance' },
-    { key: 'integrations', label: 'Integrations' },
-    { key: 'developer', label: 'Developer' },
+  const filteredIntegrations = activeCategory === 'all'
+    ? INTEGRATIONS
+    : INTEGRATIONS.filter(i => i.category === activeCategory)
+
+  const tabs = [
+    { key: 'appearance' as const, label: 'Appearance' },
+    { key: 'integrations' as const, label: 'Integrations', count: INTEGRATIONS.length },
+    { key: 'developer' as const, label: 'Developer' },
   ]
 
   return (
     <div>
       <PageHeader title="Settings" />
 
-      {/* Tab bar */}
       <div className="mb-6">
         <Tabs
           tabs={tabs}
@@ -76,23 +80,23 @@ export default function Settings() {
         />
       </div>
 
-      {/* Appearance tab */}
+      {/* ── Appearance Tab ── */}
       {tab === 'appearance' && (
         <div className="space-y-6 max-w-2xl">
-          <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
-            <h2 className="text-sm font-semibold text-white mb-4">Appearance</h2>
-
-            <div className="space-y-4">
+          {/* Theme */}
+          <div className="bg-gray-900 border border-gray-800 rounded-lg p-5">
+            <h2 className="text-sm font-semibold text-white mb-4">Theme & Layout</h2>
+            <div className="space-y-5">
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Theme</label>
+                <label className="block text-xs font-medium text-gray-500 mb-2">Theme</label>
                 <div className="flex gap-2">
                   {(['dark', 'light', 'katana', 'workday'] as const).map(t => (
                     <button
                       key={t}
                       onClick={() => prefs.setTheme(t)}
-                      className={`px-3 py-1.5 text-sm rounded capitalize transition-colors ${
+                      className={`px-4 py-2 text-sm rounded-lg capitalize transition-all ${
                         prefs.theme === t
-                          ? 'bg-blue-600/20 text-blue-400'
+                          ? 'bg-blue-600/20 text-blue-400 ring-1 ring-blue-500/30'
                           : 'text-gray-400 hover:text-gray-200 bg-gray-800 hover:bg-gray-700'
                       }`}
                     >
@@ -103,15 +107,15 @@ export default function Settings() {
               </div>
 
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Navigation Layout</label>
+                <label className="block text-xs font-medium text-gray-500 mb-2">Navigation Layout</label>
                 <div className="flex gap-2">
                   {(['sidebar', 'topbar'] as const).map(l => (
                     <button
                       key={l}
                       onClick={() => prefs.setNavLayout(l)}
-                      className={`px-3 py-1.5 text-sm rounded capitalize transition-colors ${
+                      className={`px-4 py-2 text-sm rounded-lg capitalize transition-all ${
                         prefs.navLayout === l
-                          ? 'bg-blue-600/20 text-blue-400'
+                          ? 'bg-blue-600/20 text-blue-400 ring-1 ring-blue-500/30'
                           : 'text-gray-400 hover:text-gray-200 bg-gray-800 hover:bg-gray-700'
                       }`}
                     >
@@ -120,99 +124,174 @@ export default function Settings() {
                   ))}
                 </div>
               </div>
+            </div>
+          </div>
 
+          {/* Branding */}
+          <div className="bg-gray-900 border border-gray-800 rounded-lg p-5">
+            <h2 className="text-sm font-semibold text-white mb-4">Branding</h2>
+            <div className="space-y-4">
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Instance Label</label>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Instance Label</label>
                 <input
                   type="text"
                   value={prefs.instanceLabel}
                   onChange={e => prefs.setInstanceLabel(e.target.value)}
                   placeholder="HRIS"
-                  className="w-full max-w-xs bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white placeholder-gray-500"
+                  className="w-full max-w-xs bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500"
                 />
               </div>
 
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Nav Color</label>
-                <input
-                  type="color"
-                  value={prefs.navColor || '#1f2937'}
-                  onChange={e => prefs.setNavColor(e.target.value)}
-                  className="w-10 h-8 border border-gray-700 rounded cursor-pointer"
-                />
-                {prefs.navColor && (
-                  <button
-                    onClick={() => prefs.setNavColor('')}
-                    className="ml-2 text-xs text-gray-500 hover:text-gray-300"
-                  >
-                    Reset
-                  </button>
-                )}
-              </div>
+              <div className="flex gap-6">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Nav Color</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={prefs.navColor || '#1f2937'}
+                      onChange={e => prefs.setNavColor(e.target.value)}
+                      className="w-10 h-8 border border-gray-700 rounded cursor-pointer"
+                    />
+                    {prefs.navColor && (
+                      <button onClick={() => prefs.setNavColor('')} className="text-xs text-gray-500 hover:text-gray-300">
+                        Reset
+                      </button>
+                    )}
+                  </div>
+                </div>
 
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Favicon Color</label>
-                <input
-                  type="color"
-                  value={prefs.faviconColor || '#2563eb'}
-                  onChange={e => prefs.setFaviconColor(e.target.value)}
-                  className="w-10 h-8 border border-gray-700 rounded cursor-pointer"
-                />
-                {prefs.faviconColor && (
-                  <button
-                    onClick={() => prefs.setFaviconColor('')}
-                    className="ml-2 text-xs text-gray-500 hover:text-gray-300"
-                  >
-                    Reset
-                  </button>
-                )}
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Favicon Color</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={prefs.faviconColor || '#2563eb'}
+                      onChange={e => prefs.setFaviconColor(e.target.value)}
+                      className="w-10 h-8 border border-gray-700 rounded cursor-pointer"
+                    />
+                    {prefs.faviconColor && (
+                      <button onClick={() => prefs.setFaviconColor('')} className="text-xs text-gray-500 hover:text-gray-300">
+                        Reset
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Integrations tab */}
+      {/* ── Integrations Tab ── */}
       {tab === 'integrations' && (
-        <div className="space-y-4 max-w-2xl">
-          {INTEGRATIONS.map(integration => {
-            const Component = integration.component
-            return (
-              <Component
-                key={integration.key}
-                settings={integrationSettings}
-                onSettingsChange={handleIntegrationChange}
-              />
-            )
-          })}
+        <div className="flex gap-6">
+          {/* Category sidebar */}
+          <div className="hidden md:block w-48 shrink-0">
+            <nav className="sticky top-6 space-y-1">
+              <button
+                onClick={() => setActiveCategory('all')}
+                className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
+                  activeCategory === 'all'
+                    ? 'bg-blue-600/20 text-blue-400 font-medium'
+                    : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
+                }`}
+              >
+                All Integrations
+                <span className="ml-2 text-xs text-gray-500">{INTEGRATIONS.length}</span>
+              </button>
+              {INTEGRATION_CATEGORIES.map(cat => {
+                const count = INTEGRATIONS.filter(i => i.category === cat.key).length
+                return (
+                  <button
+                    key={cat.key}
+                    onClick={() => setActiveCategory(cat.key)}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
+                      activeCategory === cat.key
+                        ? 'bg-blue-600/20 text-blue-400 font-medium'
+                        : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
+                    }`}
+                  >
+                    <span className="mr-2">{cat.icon}</span>
+                    {cat.label}
+                    <span className="ml-2 text-xs text-gray-500">{count}</span>
+                  </button>
+                )
+              })}
+            </nav>
+          </div>
+
+          {/* Mobile category pills */}
+          <div className="md:hidden flex flex-wrap gap-2 mb-4 w-full">
+            <button
+              onClick={() => setActiveCategory('all')}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                activeCategory === 'all' ? 'bg-blue-600/20 text-blue-400' : 'bg-gray-800 text-gray-400'
+              }`}
+            >
+              All
+            </button>
+            {INTEGRATION_CATEGORIES.map(cat => (
+              <button
+                key={cat.key}
+                onClick={() => setActiveCategory(cat.key)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                  activeCategory === cat.key ? 'bg-blue-600/20 text-blue-400' : 'bg-gray-800 text-gray-400'
+                }`}
+              >
+                {cat.icon} {cat.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Integration cards */}
+          <div className="flex-1 space-y-4 max-w-2xl">
+            {activeCategory !== 'all' && (
+              <div className="mb-2">
+                <h2 className="text-sm font-semibold text-white">
+                  {INTEGRATION_CATEGORIES.find(c => c.key === activeCategory)?.icon}{' '}
+                  {INTEGRATION_CATEGORIES.find(c => c.key === activeCategory)?.label}
+                </h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {filteredIntegrations.length} integration{filteredIntegrations.length !== 1 ? 's' : ''}
+                </p>
+              </div>
+            )}
+            {filteredIntegrations.map(integration => {
+              const Component = integration.component
+              return (
+                <Component
+                  key={integration.key}
+                  settings={integrationSettings}
+                  onSettingsChange={handleIntegrationChange}
+                />
+              )
+            })}
+          </div>
         </div>
       )}
 
-      {/* Developer tab */}
+      {/* ── Developer Tab ── */}
       {tab === 'developer' && (
         <div className="space-y-6 max-w-2xl">
-          {/* Mode indicator */}
-          <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
-            <h2 className="text-sm font-semibold text-white mb-2">Environment</h2>
-            <p className="text-xs text-gray-500 mb-3">
-              Development tools for testing and populating the application with sample data.
-            </p>
-            <div className="flex items-center gap-2">
+          <div className="bg-gray-900 border border-gray-800 rounded-lg p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-white">Environment</h2>
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-600/20 text-amber-400">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                Development Mode
+                Development
               </span>
             </div>
+            <p className="text-xs text-gray-500">
+              Development tools for testing and populating the application with sample data.
+            </p>
           </div>
 
-          {/* Seed data */}
-          <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-lg p-5">
             <h2 className="text-sm font-semibold text-white mb-2">Seed Database</h2>
             <p className="text-xs text-gray-500 mb-4">
-              Populate the database with realistic NZ-based dummy data across all modules:
-              departments, employees, leave, timesheets, recruitment, reviews, goals,
-              compensation, benefits, succession plans, onboarding, documents, surveys,
-              workflows, and audit logs.
+              Populate with realistic NZ-based dummy data across all modules — departments, employees,
+              leave, timesheets, recruitment, reviews, goals, compensation, benefits, succession,
+              onboarding, documents, surveys, workflows, and audit logs.
             </p>
 
             <div className="flex gap-3">
@@ -225,13 +304,13 @@ export default function Settings() {
             </div>
 
             {seedResult && (
-              <div className="mt-4 bg-gray-800 rounded-lg p-3">
-                <h3 className="text-xs font-semibold text-emerald-400 mb-2">Seed Complete</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <div className="mt-4 bg-gray-800 rounded-lg p-4">
+                <h3 className="text-xs font-semibold text-emerald-400 mb-3">Seed Complete</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1.5">
                   {Object.entries(seedResult).map(([table, count]) => (
                     <div key={table} className="flex justify-between text-xs">
-                      <span className="text-gray-400">{table.replace(/_/g, ' ')}</span>
-                      <span className="text-white font-mono">{count}</span>
+                      <span className="text-gray-400 capitalize">{table.replace(/_/g, ' ')}</span>
+                      <span className="text-white font-mono tabular-nums">{count}</span>
                     </div>
                   ))}
                 </div>
@@ -239,20 +318,24 @@ export default function Settings() {
             )}
           </div>
 
-          {/* API info */}
-          <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
-            <h2 className="text-sm font-semibold text-white mb-2">API Documentation</h2>
-            <p className="text-xs text-gray-500 mb-3">
-              FastAPI auto-generated docs are available at:
-            </p>
-            <div className="space-y-1">
+          <div className="bg-gray-900 border border-gray-800 rounded-lg p-5">
+            <h2 className="text-sm font-semibold text-white mb-3">API Documentation</h2>
+            <div className="flex gap-3">
               <a href="/api/docs" target="_blank" rel="noopener noreferrer"
-                className="block text-xs text-blue-400 hover:text-blue-300">
-                /api/docs — Swagger UI
+                className="flex-1 flex items-center gap-2 px-4 py-3 bg-gray-800 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-gray-700 transition-all">
+                <span className="text-lg">📖</span>
+                <div>
+                  <p className="font-medium">Swagger UI</p>
+                  <p className="text-xs text-gray-500">/api/docs</p>
+                </div>
               </a>
               <a href="/api/redoc" target="_blank" rel="noopener noreferrer"
-                className="block text-xs text-blue-400 hover:text-blue-300">
-                /api/redoc — ReDoc
+                className="flex-1 flex items-center gap-2 px-4 py-3 bg-gray-800 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-gray-700 transition-all">
+                <span className="text-lg">📚</span>
+                <div>
+                  <p className="font-medium">ReDoc</p>
+                  <p className="text-xs text-gray-500">/api/redoc</p>
+                </div>
               </a>
             </div>
           </div>
