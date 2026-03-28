@@ -10,6 +10,7 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import { FormField, Input, Select, Textarea } from '../components/FormField'
 import { useToast } from '../components/Toast'
 import { formatDate } from '../utils/format'
+import EmployeeLink from '../components/EmployeeLink'
 
 const EMPTY_FORM = {
   employee_id: '',
@@ -136,7 +137,7 @@ export default function Timesheets() {
   }
 
   const columns = [
-    { key: 'employee_name', header: 'Employee', render: (entry: TimeEntry) => <span className="text-white">{entry.employee_name || '\u2014'}</span> },
+    { key: 'employee_name', header: 'Employee', render: (entry: TimeEntry) => entry.employee_id ? <EmployeeLink employeeId={entry.employee_id} name={entry.employee_name || 'Unknown'} /> : <span className="text-white">{'\u2014'}</span> },
     { key: 'date', header: 'Date', render: (entry: TimeEntry) => <span className="text-gray-400">{formatDate(entry.date)}</span> },
     { key: 'hours', header: 'Hours', render: (entry: TimeEntry) => <span className="text-white font-medium">{entry.hours}h</span> },
     { key: 'project', header: 'Project', className: 'hidden md:table-cell', render: (entry: TimeEntry) => <span className="text-gray-400">{entry.project || '\u2014'}</span> },
@@ -216,7 +217,7 @@ export default function Timesheets() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-xs text-gray-500 mb-1">Employee</p>
-                <p className="text-sm text-white">{selectedEntry.employee_name || '\u2014'}</p>
+                <p className="text-sm">{selectedEntry.employee_id ? <EmployeeLink employeeId={selectedEntry.employee_id} name={selectedEntry.employee_name || 'Unknown'} /> : <span className="text-white">{'\u2014'}</span>}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-500 mb-1">Date</p>

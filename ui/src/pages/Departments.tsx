@@ -11,6 +11,7 @@ import StatusBadge from '../components/StatusBadge'
 import { FormField, Input, Textarea } from '../components/FormField'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { useToast } from '../components/Toast'
+import EmployeeLink from '../components/EmployeeLink'
 
 const EMPTY_FORM = { name: '', description: '' }
 
@@ -106,7 +107,7 @@ export default function Departments() {
   }
 
   const employeeColumns = [
-    { key: 'name', header: 'Name', render: (emp: Employee) => <span className="text-white font-medium">{emp.first_name} {emp.last_name}</span> },
+    { key: 'name', header: 'Name', render: (emp: Employee) => <EmployeeLink employeeId={emp.id} name={`${emp.first_name} ${emp.last_name}`} className="font-medium" /> },
     { key: 'position_title', header: 'Position', render: (emp: Employee) => <span className="text-gray-400">{emp.position_title || '\u2014'}</span>, className: 'hidden md:table-cell' },
     { key: 'email', header: 'Email', render: (emp: Employee) => <span className="text-gray-400">{emp.email}</span>, className: 'hidden lg:table-cell' },
     { key: 'status', header: 'Status', render: (emp: Employee) => <StatusBadge status={emp.status} /> },

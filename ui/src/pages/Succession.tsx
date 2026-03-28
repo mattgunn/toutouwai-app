@@ -13,6 +13,7 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import { FormField, Select, Textarea } from '../components/FormField'
 import { PageSkeleton } from '../components/Skeleton'
 import { useToast } from '../components/Toast'
+import EmployeeLink from '../components/EmployeeLink'
 
 const riskColors: Record<string, string> = {
   low: 'bg-emerald-600/20 text-emerald-400',
@@ -172,7 +173,7 @@ export default function Succession() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
               <p className="text-xs text-gray-500 mb-1">Incumbent</p>
-              <p className="text-sm text-white">{selectedPlan.incumbent_name || '\u2014'}</p>
+              <p className="text-sm">{selectedPlan.incumbent_id ? <EmployeeLink employeeId={selectedPlan.incumbent_id} name={selectedPlan.incumbent_name || 'Unknown'} /> : <span className="text-white">{'\u2014'}</span>}</p>
             </div>
             <div>
               <p className="text-xs text-gray-500 mb-1">Risk of Loss</p>
@@ -251,7 +252,7 @@ export default function Succession() {
             {candidates.map(candidate => (
               <div key={candidate.id} className="bg-gray-900 border border-gray-800 rounded-lg p-4 flex items-center justify-between">
                 <div>
-                  <p className="text-white text-sm font-medium">{candidate.employee_name}</p>
+                  <p className="text-sm font-medium">{candidate.employee_id ? <EmployeeLink employeeId={candidate.employee_id} name={candidate.employee_name || 'Unknown'} className="font-medium" /> : <span className="text-white">{candidate.employee_name}</span>}</p>
                   {candidate.current_position && (
                     <p className="text-xs text-gray-500">{candidate.current_position}</p>
                   )}
@@ -386,7 +387,7 @@ export default function Succession() {
               </div>
 
               {plan.incumbent_name && (
-                <p className="text-sm text-gray-400 mb-2">Incumbent: {plan.incumbent_name}</p>
+                <p className="text-sm text-gray-400 mb-2">Incumbent: {plan.incumbent_id ? <EmployeeLink employeeId={plan.incumbent_id} name={plan.incumbent_name || 'Unknown'} /> : plan.incumbent_name}</p>
               )}
 
               <div className="flex gap-2 mb-2">

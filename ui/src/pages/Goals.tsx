@@ -10,6 +10,7 @@ import Button from '../components/Button'
 import { FormField, Input, Select } from '../components/FormField'
 import { SkeletonCards } from '../components/Skeleton'
 import { useToast } from '../components/Toast'
+import EmployeeLink from '../components/EmployeeLink'
 
 const STATUS_OPTIONS = [
   { value: 'not_started', label: 'Not Started' },
@@ -64,7 +65,7 @@ export default function Goals() {
     { key: 'title', header: 'Goal', render: (goal: Goal) => (
       <div>
         <span className="text-white font-medium">{goal.title}</span>
-        <p className="text-xs text-gray-500 mt-0.5">{goal.employee_name || '\u2014'}</p>
+        <p className="text-xs mt-0.5">{goal.employee_id ? <EmployeeLink employeeId={goal.employee_id} name={goal.employee_name || 'Unknown'} /> : <span className="text-gray-500">{'\u2014'}</span>}</p>
       </div>
     )},
     { key: 'description', header: 'Description', className: 'hidden md:table-cell', render: (goal: Goal) => <span className="text-gray-400 text-sm">{goal.description || '\u2014'}</span> },
@@ -116,7 +117,7 @@ export default function Goals() {
           <div className="space-y-4">
             <div>
               <p className="text-xs text-gray-500 mb-1">Employee</p>
-              <p className="text-sm text-white">{selectedGoal.employee_name || '\u2014'}</p>
+              <p className="text-sm">{selectedGoal.employee_id ? <EmployeeLink employeeId={selectedGoal.employee_id} name={selectedGoal.employee_name || 'Unknown'} /> : <span className="text-white">{'\u2014'}</span>}</p>
             </div>
             <div>
               <p className="text-xs text-gray-500 mb-1">Title</p>

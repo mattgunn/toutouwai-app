@@ -13,6 +13,7 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import { useToast } from '../components/Toast'
 import PageHeader from '../components/PageHeader'
 import DataTable from '../components/DataTable'
+import EmployeeLink from '../components/EmployeeLink'
 
 const CATEGORIES = [
   { value: '', label: 'All Categories' },
@@ -230,7 +231,7 @@ export default function Documents() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-xs text-gray-500 mb-1">Employee</p>
-                <p className="text-sm text-white">{selectedDoc.employee_name || 'Company-wide'}</p>
+                <p className="text-sm">{selectedDoc.employee_id ? <EmployeeLink employeeId={selectedDoc.employee_id} name={selectedDoc.employee_name || 'Unknown'} /> : <span className="text-white">Company-wide</span>}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-500 mb-1">Category</p>
@@ -304,7 +305,10 @@ export default function Documents() {
                 </div>
               )
             }},
-            { key: 'employee_name', header: 'Employee', render: (row) => <span className="text-gray-400">{String(row.employee_name || 'Company')}</span> },
+            { key: 'employee_name', header: 'Employee', render: (row) => {
+              const doc = row as unknown as Document
+              return doc.employee_id ? <EmployeeLink employeeId={doc.employee_id} name={String(doc.employee_name || 'Unknown')} /> : <span className="text-gray-400">Company</span>
+            }},
             { key: 'category', header: 'Category', render: (row) => <CategoryBadge category={String(row.category)} />, className: 'hidden md:table-cell' },
             { key: 'uploaded_by_name', header: 'Uploaded By', render: (row) => <span className="text-gray-400">{String(row.uploaded_by_name || '\u2014')}</span>, className: 'hidden lg:table-cell' },
             { key: 'expiry_date', header: 'Expiry', render: (row) => {

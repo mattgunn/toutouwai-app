@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { fetchEmployees, fetchDepartments, fetchPositions, createEmployee, updateEmployee, fetchDocuments, fetchLeaveRequests, fetchTimeEntries } from '../api'
 import { fetchCompensation } from '../modules/compensation/api'
 import type { Employee, Department, Position, LeaveRequest, TimeEntry } from '../types'
@@ -249,7 +250,20 @@ export default function Employees() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [submitting, setSubmitting] = useState(false)
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
   const toast = useToast()
+
+  // Auto-select employee from URL query param (e.g. /employees?id=xxx)
+  useEffect(() => {
+    const id = searchParams.get('id')
+    if (id && employees.length > 0) {
+      const emp = employees.find(e => e.id === id)
+      if (emp) {
+        setSelectedEmployee(emp)
+        setSearchParams({}, { replace: true })
+      }
+    }
+  }, [employees, searchParams])
 
   const loadData = () => {
     setLoading(true)

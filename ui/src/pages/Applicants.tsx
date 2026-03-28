@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { fetchApplicants, updateApplicantStage } from '../api'
+import { useNavigate, Link } from 'react-router-dom'
+import { fetchApplicants, updateApplicantStage, createEmployee, fetchJobPosting } from '../api'
 import { formatDate } from '../utils/format'
 import type { Applicant } from '../types'
 import StatusBadge from '../components/StatusBadge'
@@ -26,7 +27,9 @@ export default function Applicants() {
   const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(null)
   const [stageUpdate, setStageUpdate] = useState('')
   const [updatingStage, setUpdatingStage] = useState(false)
+  const [converting, setConverting] = useState(false)
   const toast = useToast()
+  const navigate = useNavigate()
 
   const loadData = () => {
     setLoading(true)
@@ -54,10 +57,41 @@ export default function Applicants() {
     }
   }
 
+  const handleConvertToEmployee = async () => {
+    if (!selectedApplicant) return
+    setConverting(true)
+    try {
+      let department_id: string | null = null
+      if (selectedApplicant.job_posting_id) {
+        try {
+          const posting = await fetchJobPosting(selectedApplicant.job_posting_id)
+          department_id = posting.department_id ?? null
+        } catch { /* ignore */ }
+      }
+      const body: Record<string, unknown> = {
+        first_name: selectedApplicant.first_name,
+        last_name: selectedApplicant.last_name,
+        email: selectedApplicant.email,
+        phone: selectedApplicant.phone,
+        status: 'active',
+        start_date: new Date().toISOString().slice(0, 10),
+      }
+      if (department_id) body.department_id = department_id
+      const emp = await createEmployee(body)
+      toast.success('Employee created from applicant')
+      setSelectedApplicant(null)
+      navigate(`/employees?id=${emp.id}`)
+    } catch {
+      toast.error('Failed to convert applicant to employee')
+    } finally {
+      setConverting(false)
+    }
+  }
+
   const applicantColumns = [
     { key: 'name', header: 'Name', render: (app: Applicant) => <span className="text-white font-medium">{app.first_name} {app.last_name}</span> },
     { key: 'email', header: 'Email', render: (app: Applicant) => <span className="text-gray-400">{app.email}</span> },
-    { key: 'job_title', header: 'Job', className: 'hidden md:table-cell', render: (app: Applicant) => <span className="text-gray-400">{app.job_title || '\u2014'}</span> },
+    { key: 'job_title', header: 'Job', className: 'hidden md:table-cell', render: (app: Applicant) => app.job_posting_id && app.job_title ? <Link to={`/job-postings?id=${app.job_posting_id}`} className="text-blue-400 hover:text-blue-300 hover:underline" onClick={e => e.stopPropagation()}>{app.job_title}</Link> : <span className="text-gray-400">{app.job_title || '\u2014'}</span> },
     { key: 'stage', header: 'Stage', render: (app: Applicant) => <StatusBadge status={app.stage} /> },
     { key: 'rating', header: 'Rating', className: 'hidden md:table-cell', render: (app: Applicant) => (
       app.rating ? (
@@ -118,6 +152,16 @@ export default function Applicants() {
               >
                 Update Stage
               </Button>
+              {selectedApplicant.stage === 'hired' && (
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={handleConvertToEmployee}
+                  loading={converting}
+                >
+                  Convert to Employee
+                </Button>
+              )}
             </div>
           ) : undefined
         }

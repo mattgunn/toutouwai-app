@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { fetchApplicants, updateApplicantStage } from '../api'
 import type { Applicant } from '../types'
 import PageHeader from '../components/PageHeader'
@@ -74,7 +75,7 @@ export default function Pipeline() {
               <div className="space-y-2">
                 {stageApplicants.map(app => (
                   <div key={app.id} className="bg-gray-900 border border-gray-800 rounded p-3 shadow-sm hover:shadow-md transition-all">
-                    <p className="text-sm text-white font-medium">{app.first_name} {app.last_name}</p>
+                    <Link to="/applicants" className="text-sm text-white font-medium hover:text-blue-400 transition-colors">{app.first_name} {app.last_name}</Link>
                     <p className="text-xs text-gray-500 mt-1">{app.job_title || 'No position'}</p>
                     {app.rating != null && app.rating > 0 && (
                       <p className="text-xs text-amber-400 mt-1">{'★'.repeat(app.rating)}</p>

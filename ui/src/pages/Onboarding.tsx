@@ -19,6 +19,7 @@ import { SkeletonTable } from '../components/Skeleton'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { useToast } from '../components/Toast'
 import PageHeader from '../components/PageHeader'
+import EmployeeLink from '../components/EmployeeLink'
 
 export default function Onboarding() {
   const [tab, setTab] = useState('checklists')
@@ -223,7 +224,7 @@ export default function Onboarding() {
                 <div key={cl.id} className="bg-gray-900 border border-gray-800 rounded-lg p-4">
                   <div className="flex items-center justify-between mb-3">
                     <div>
-                      <h3 className="text-sm font-semibold text-white">{cl.employee_name}</h3>
+                      <h3 className="text-sm font-semibold">{cl.employee_id ? <EmployeeLink employeeId={cl.employee_id} name={cl.employee_name || 'Unknown'} className="font-semibold" /> : <span className="text-white">{cl.employee_name}</span>}</h3>
                       <p className="text-xs text-gray-500">
                         {cl.template_name ? `Template: ${cl.template_name}` : 'Custom checklist'}
                         {' \u00B7 '}Started {formatDate(cl.started_at)}

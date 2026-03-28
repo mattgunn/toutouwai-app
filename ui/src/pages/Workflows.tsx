@@ -20,6 +20,7 @@ import { FormField, Input, Select, Textarea } from '../components/FormField'
 import { SkeletonTable } from '../components/Skeleton'
 import { useToast } from '../components/Toast'
 import PageHeader from '../components/PageHeader'
+import EmployeeLink from '../components/EmployeeLink'
 
 export default function Workflows() {
   const [view, setView] = useState('approvals')
@@ -377,7 +378,7 @@ function DefinitionsView({
               <DataTable
                 columns={[
                   { key: 'entity_type', header: 'Entity', render: (inst: WorkflowInstance) => <span className="text-gray-400 capitalize">{(inst.entity_type || '').replace(/_/g, ' ')}</span> },
-                  { key: 'initiated_by_name', header: 'Initiated By', render: (inst: WorkflowInstance) => <span className="text-white">{inst.initiated_by_name || '\u2014'}</span> },
+                  { key: 'initiated_by_name', header: 'Initiated By', render: (inst: WorkflowInstance) => inst.initiated_by ? <EmployeeLink employeeId={inst.initiated_by} name={inst.initiated_by_name || 'Unknown'} /> : <span className="text-white">{'\u2014'}</span> },
                   { key: 'current_step', header: 'Step', render: (inst: WorkflowInstance) => <span className="text-gray-400">{inst.current_step}</span> },
                   { key: 'status', header: 'Status', render: (inst: WorkflowInstance) => <StatusBadge status={inst.status} /> },
                   { key: 'created_at', header: 'Created', render: (inst: WorkflowInstance) => <span className="text-gray-400">{formatDate(inst.created_at)}</span> },

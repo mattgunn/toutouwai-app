@@ -14,6 +14,7 @@ import Tabs from '../components/Tabs'
 import { FormField, Input, Select, Textarea } from '../components/FormField'
 import { PageSkeleton, SkeletonTable } from '../components/Skeleton'
 import { useToast } from '../components/Toast'
+import EmployeeLink from '../components/EmployeeLink'
 
 const planTypeLabel: Record<string, string> = {
   health: 'Health',
@@ -114,7 +115,7 @@ export default function Benefits() {
   }
 
   const enrollmentColumns = [
-    { key: 'employee_name', header: 'Employee', render: (e: BenefitEnrollment) => <span className="text-white">{e.employee_name || '\u2014'}</span> },
+    { key: 'employee_name', header: 'Employee', render: (e: BenefitEnrollment) => e.employee_id ? <EmployeeLink employeeId={e.employee_id} name={e.employee_name || 'Unknown'} /> : <span className="text-white">{'\u2014'}</span> },
     { key: 'plan_name', header: 'Plan', render: (e: BenefitEnrollment) => (
       <span className="text-gray-400">
         {e.plan_name || '\u2014'}
@@ -132,7 +133,7 @@ export default function Benefits() {
   ]
 
   const planEnrollmentColumns = [
-    { key: 'employee_name', header: 'Employee', render: (e: BenefitEnrollment) => <span className="text-white font-medium">{e.employee_name || '\u2014'}</span> },
+    { key: 'employee_name', header: 'Employee', render: (e: BenefitEnrollment) => e.employee_id ? <EmployeeLink employeeId={e.employee_id} name={e.employee_name || 'Unknown'} className="font-medium" /> : <span className="text-white font-medium">{'\u2014'}</span> },
     { key: 'coverage_level', header: 'Coverage', render: (e: BenefitEnrollment) => <span className="text-gray-400">{coverageLabel[e.coverage_level] || e.coverage_level}</span> },
     { key: 'employee_contribution', header: 'Employee $', className: 'hidden md:table-cell', render: (e: BenefitEnrollment) => <span className="text-gray-400">{formatCurrency(e.employee_contribution)}</span> },
     { key: 'employer_contribution', header: 'Employer $', className: 'hidden md:table-cell', render: (e: BenefitEnrollment) => <span className="text-gray-400">{formatCurrency(e.employer_contribution)}</span> },

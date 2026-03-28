@@ -10,6 +10,7 @@ import Button from '../components/Button'
 import { FormField, Textarea } from '../components/FormField'
 import { useToast } from '../components/Toast'
 import { formatDate } from '../utils/format'
+import EmployeeLink from '../components/EmployeeLink'
 
 const STATUS_FILTERS = ['all', 'pending', 'approved', 'rejected'] as const
 
@@ -69,7 +70,7 @@ export default function LeaveRequests() {
     : requests.filter(r => r.status === statusFilter)
 
   const columns = [
-    { key: 'employee_name', header: 'Employee', render: (req: LeaveRequest) => <span className="text-white">{req.employee_name || '\u2014'}</span> },
+    { key: 'employee_name', header: 'Employee', render: (req: LeaveRequest) => req.employee_id ? <EmployeeLink employeeId={req.employee_id} name={req.employee_name || 'Unknown'} /> : <span className="text-white">{'\u2014'}</span> },
     { key: 'leave_type_name', header: 'Type', render: (req: LeaveRequest) => <span className="text-gray-400">{req.leave_type_name || '\u2014'}</span> },
     { key: 'start_date', header: 'Start', render: (req: LeaveRequest) => <span className="text-gray-400">{formatDate(req.start_date)}</span> },
     { key: 'end_date', header: 'End', render: (req: LeaveRequest) => <span className="text-gray-400">{formatDate(req.end_date)}</span> },
@@ -156,7 +157,7 @@ export default function LeaveRequests() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-xs text-gray-500 mb-1">Employee</p>
-                <p className="text-sm text-white">{selectedRequest.employee_name || '\u2014'}</p>
+                <p className="text-sm">{selectedRequest.employee_id ? <EmployeeLink employeeId={selectedRequest.employee_id} name={selectedRequest.employee_name || 'Unknown'} /> : <span className="text-white">{'\u2014'}</span>}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-500 mb-1">Leave Type</p>

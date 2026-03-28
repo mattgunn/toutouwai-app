@@ -9,6 +9,7 @@ import Button from '../components/Button'
 import Modal from '../components/Modal'
 import { SkeletonTable } from '../components/Skeleton'
 import { formatDate } from '../utils/format'
+import EmployeeLink from '../components/EmployeeLink'
 
 export default function Reviews() {
   const [cycles, setCycles] = useState<ReviewCycle[]>([])
@@ -36,8 +37,8 @@ export default function Reviews() {
   }, [selectedCycle])
 
   const reviewColumns = [
-    { key: 'employee_name', header: 'Employee', render: (r: Review) => <span className="text-white">{r.employee_name || '\u2014'}</span> },
-    { key: 'reviewer_name', header: 'Reviewer', render: (r: Review) => <span className="text-gray-400">{r.reviewer_name || '\u2014'}</span> },
+    { key: 'employee_name', header: 'Employee', render: (r: Review) => r.employee_id ? <EmployeeLink employeeId={r.employee_id} name={r.employee_name || 'Unknown'} /> : <span className="text-white">{'\u2014'}</span> },
+    { key: 'reviewer_name', header: 'Reviewer', render: (r: Review) => r.reviewer_id ? <EmployeeLink employeeId={r.reviewer_id} name={r.reviewer_name || 'Unknown'} /> : <span className="text-gray-400">{'\u2014'}</span> },
     { key: 'rating', header: 'Rating', render: (r: Review) => <span className="text-amber-400">{r.rating ?? '\u2014'}</span> },
     { key: 'status', header: 'Status', render: (r: Review) => <StatusBadge status={r.status} /> },
   ]
@@ -97,11 +98,11 @@ export default function Reviews() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Employee</p>
-                <p className="text-white font-medium">{selectedReview.employee_name || '\u2014'}</p>
+                <p className="font-medium">{selectedReview.employee_id ? <EmployeeLink employeeId={selectedReview.employee_id} name={selectedReview.employee_name || 'Unknown'} className="font-medium" /> : <span className="text-white">{'\u2014'}</span>}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Reviewer</p>
-                <p className="text-white font-medium">{selectedReview.reviewer_name || '\u2014'}</p>
+                <p className="font-medium">{selectedReview.reviewer_id ? <EmployeeLink employeeId={selectedReview.reviewer_id} name={selectedReview.reviewer_name || 'Unknown'} className="font-medium" /> : <span className="text-white">{'\u2014'}</span>}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Cycle</p>

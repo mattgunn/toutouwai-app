@@ -13,6 +13,7 @@ import DataTable from '../components/DataTable'
 import { FormField, Input, Select, Textarea } from '../components/FormField'
 import { PageSkeleton } from '../components/Skeleton'
 import { useToast } from '../components/Toast'
+import EmployeeLink from '../components/EmployeeLink'
 
 const frequencyLabel: Record<string, string> = {
   annual: 'Annual',
@@ -98,7 +99,7 @@ export default function Compensation() {
   }
 
   const compColumns = [
-    { key: 'employee_name', header: 'Employee', render: (comp: CurrentCompensation) => <span className="text-white">{comp.employee_name || '\u2014'}</span> },
+    { key: 'employee_name', header: 'Employee', render: (comp: CurrentCompensation) => comp.employee_id ? <EmployeeLink employeeId={comp.employee_id} name={comp.employee_name || 'Unknown'} /> : <span className="text-white">{'\u2014'}</span> },
     { key: 'department_name', header: 'Department', className: 'hidden md:table-cell', render: (comp: CurrentCompensation) => <span className="text-gray-400">{comp.department_name || '\u2014'}</span> },
     { key: 'position_title', header: 'Position', className: 'hidden lg:table-cell', render: (comp: CurrentCompensation) => <span className="text-gray-400">{comp.position_title || '\u2014'}</span> },
     { key: 'salary', header: 'Salary', render: (comp: CurrentCompensation) => <span className="text-emerald-400 font-medium">{formatCurrency(comp.salary, comp.currency)}</span> },
@@ -126,7 +127,7 @@ export default function Compensation() {
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-xl font-semibold text-white">{selectedEmployee.employee_name || 'Employee'}</h2>
+              <h2 className="text-xl font-semibold">{selectedEmployee.employee_id ? <EmployeeLink employeeId={selectedEmployee.employee_id} name={selectedEmployee.employee_name || 'Employee'} className="text-xl font-semibold" /> : <span className="text-white">{selectedEmployee.employee_name || 'Employee'}</span>}</h2>
               <p className="text-sm text-gray-400">
                 {selectedEmployee.position_title || 'No position'}
                 {selectedEmployee.department_name ? ` \u00B7 ${selectedEmployee.department_name}` : ''}

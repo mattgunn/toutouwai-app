@@ -9,6 +9,7 @@ import { Select, Input } from '../components/FormField'
 import { SkeletonTable } from '../components/Skeleton'
 import PageHeader from '../components/PageHeader'
 import DataTable from '../components/DataTable'
+import EmployeeLink from '../components/EmployeeLink'
 const ENTITY_TYPES = ['', 'employee', 'department', 'position', 'leave_request', 'time_entry', 'job_posting', 'applicant', 'review', 'goal']
 
 export default function AuditLog() {
@@ -86,7 +87,7 @@ export default function AuditLog() {
           <DataTable
             columns={[
               { key: 'created_at', header: 'Timestamp', render: (row: AuditEntry) => <span className="text-gray-400 text-xs">{formatDate(row.created_at)}</span> },
-              { key: 'user_name', header: 'User', render: (row: AuditEntry) => <span className="text-white">{row.user_name || row.user_email || '\u2014'}</span> },
+              { key: 'user_name', header: 'User', render: (row: AuditEntry) => row.user_id ? <EmployeeLink employeeId={row.user_id} name={row.user_name || row.user_email || 'Unknown'} /> : <span className="text-white">{row.user_name || row.user_email || '\u2014'}</span> },
               { key: 'action', header: 'Action', render: (row: AuditEntry) => actionBadge(row.action) },
               { key: 'entity_type', header: 'Entity', render: (row: AuditEntry) => <span className="text-gray-400 capitalize">{(row.entity_type || '').replace(/_/g, ' ')}</span> },
               { key: 'field_name', header: 'Field', render: (row: AuditEntry) => <span className="text-gray-400">{row.field_name || '\u2014'}</span>, className: 'hidden md:table-cell' },
@@ -144,7 +145,7 @@ export default function AuditLog() {
               </div>
               <div>
                 <p className="text-xs text-gray-500 mb-1">User</p>
-                <p className="text-sm text-white">{selectedEntry.user_name || selectedEntry.user_email || '\u2014'}</p>
+                <p className="text-sm">{selectedEntry.user_id ? <EmployeeLink employeeId={selectedEntry.user_id} name={selectedEntry.user_name || selectedEntry.user_email || 'Unknown'} /> : <span className="text-white">{selectedEntry.user_name || selectedEntry.user_email || '\u2014'}</span>}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-500 mb-1">Action</p>

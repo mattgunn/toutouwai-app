@@ -5,6 +5,7 @@ import { formatDate } from '../utils/format'
 import type { DashboardData } from '../types'
 import { useAuth } from '../auth'
 import StatusBadge from '../components/StatusBadge'
+import EmployeeLink from '../components/EmployeeLink'
 import {
   UserCircleIcon,
   UsersIcon,
@@ -159,21 +160,22 @@ export default function Dashboard() {
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: 'Total Employees', value: data.total_employees, icon: <UsersIcon className="w-6 h-6" />, color: 'text-white' },
-            { label: 'Active',          value: data.active_employees, icon: <span className="text-2xl">✅</span>, color: 'text-emerald-400' },
-            { label: 'Pending Leave',   value: data.pending_leave_requests, icon: <CalendarDaysIcon className="w-6 h-6" />, color: 'text-blue-400' },
-            { label: 'Open Positions',  value: data.open_positions, icon: <BriefcaseIcon className="w-6 h-6" />, color: 'text-amber-400' },
+            { label: 'Total Employees', value: data.total_employees, icon: <UsersIcon className="w-6 h-6" />, color: 'text-white', to: '/employees' },
+            { label: 'Active',          value: data.active_employees, icon: <span className="text-2xl">✅</span>, color: 'text-emerald-400', to: '/employees' },
+            { label: 'Pending Leave',   value: data.pending_leave_requests, icon: <CalendarDaysIcon className="w-6 h-6" />, color: 'text-blue-400', to: '/leave-requests' },
+            { label: 'Open Positions',  value: data.open_positions, icon: <BriefcaseIcon className="w-6 h-6" />, color: 'text-amber-400', to: '/job-postings' },
           ].map(stat => (
-            <div
+            <Link
               key={stat.label}
-              className="rounded-xl border border-gray-800 bg-gray-900 p-4 flex items-start gap-3"
+              to={stat.to}
+              className="rounded-xl border border-gray-800 bg-gray-900 p-4 flex items-start gap-3 hover:border-blue-500/40 hover:bg-gray-800/70 transition-all duration-150"
             >
               <span className="text-gray-400 mt-0.5">{stat.icon}</span>
               <div>
                 <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
                 <p className="text-xs text-gray-500 mt-0.5">{stat.label}</p>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </div>
@@ -197,9 +199,7 @@ export default function Dashboard() {
                     {emp.first_name?.[0]}{emp.last_name?.[0]}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-white truncate">
-                      {emp.first_name} {emp.last_name}
-                    </p>
+                    <EmployeeLink employeeId={emp.id} name={`${emp.first_name} ${emp.last_name}`} className="text-sm font-medium" />
                     <p className="text-xs text-gray-500 truncate">
                       {emp.department_name || 'No department'} &middot; Started {formatDate(emp.start_date)}
                     </p>
@@ -226,8 +226,8 @@ export default function Dashboard() {
                     {req.employee_name?.split(' ').map(n => n?.[0] ?? '').join('').slice(0, 2)}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-white truncate">
-                      {req.employee_name}
+                    <p className="text-sm font-medium truncate">
+                      {req.employee_id ? <EmployeeLink employeeId={req.employee_id} name={req.employee_name || 'Unknown'} className="font-medium" /> : <span className="text-white">{req.employee_name}</span>}
                     </p>
                     <p className="text-xs text-gray-500 truncate">
                       {req.leave_type_name} &middot; {formatDate(req.start_date)} &ndash; {formatDate(req.end_date)}
@@ -252,7 +252,7 @@ export default function Dashboard() {
             <div className="flex items-start gap-3 text-sm">
               <span className="text-gray-500 shrink-0">👋</span>
               <p className="text-gray-400">
-                Welcome <span className="text-white font-medium">{data.recent_hires[0].first_name} {data.recent_hires[0].last_name}</span> who
+                Welcome <EmployeeLink employeeId={data.recent_hires[0].id} name={`${data.recent_hires[0].first_name} ${data.recent_hires[0].last_name}`} className="font-medium" /> who
                 recently joined{data.recent_hires[0].department_name ? ` the ${data.recent_hires[0].department_name} team` : ''}.
               </p>
             </div>

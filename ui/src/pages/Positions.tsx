@@ -10,6 +10,7 @@ import Button from '../components/Button'
 import { FormField, Input, Select, Textarea } from '../components/FormField'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { useToast } from '../components/Toast'
+import EmployeeLink from '../components/EmployeeLink'
 
 const EMPTY_FORM = { title: '', department_id: '', level: '', description: '' }
 
@@ -128,7 +129,7 @@ export default function Positions() {
   ]
 
   const employeeColumns = [
-    { key: 'name', header: 'Name', render: (emp: Employee) => <span className="text-white font-medium">{emp.first_name} {emp.last_name}</span> },
+    { key: 'name', header: 'Name', render: (emp: Employee) => <EmployeeLink employeeId={emp.id} name={`${emp.first_name} ${emp.last_name}`} className="font-medium" /> },
     { key: 'department_name', header: 'Department', render: (emp: Employee) => <span className="text-gray-400">{emp.department_name || '\u2014'}</span>, className: 'hidden md:table-cell' },
     { key: 'email', header: 'Email', render: (emp: Employee) => <span className="text-gray-400">{emp.email}</span>, className: 'hidden lg:table-cell' },
     { key: 'status', header: 'Status', render: (emp: Employee) => <StatusBadge status={emp.status} /> },
