@@ -42,4 +42,18 @@ export const MODULES: ModuleDef[] = [
     enabledKey: 'modules_compensation_enabled',
     navGroups: ['Compensation'],
   },
+  {
+    key: 'onboarding',
+    label: 'Onboarding & Documents',
+    description: 'New hire checklists, templates, and document management',
+    enabledKey: 'modules_onboarding_enabled',
+    navGroups: [],
+  },
+  {
+    key: 'admin',
+    label: 'Administration',
+    description: 'Audit log, workflow engine, and approval chains',
+    enabledKey: 'modules_admin_enabled',
+    navGroups: ['Admin'],
+  },
 ]

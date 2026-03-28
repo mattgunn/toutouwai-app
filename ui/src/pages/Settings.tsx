@@ -1,14 +1,15 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAdminPrefs } from '../hooks/useAdminPrefs'
-import { updateSettings, authFetch } from '../api'
+import { updateSettings, fetchSettings, authFetch } from '../api'
 import { INTEGRATIONS, INTEGRATION_CATEGORIES, type IntegrationCategory } from '../modules/integrations/registry'
+import { MODULES } from '../modules/modules/registry'
 import { useToast } from '../components/Toast'
 import Button from '../components/Button'
 import ConfirmDialog from '../components/ConfirmDialog'
 import PageHeader from '../components/PageHeader'
 import Tabs from '../components/Tabs'
 
-type Tab = 'appearance' | 'integrations' | 'developer'
+type Tab = 'appearance' | 'modules' | 'integrations' | 'developer'
 
 export default function Settings() {
   const prefs = useAdminPrefs()
@@ -20,6 +21,21 @@ export default function Settings() {
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [seedResult, setSeedResult] = useState<Record<string, number> | null>(null)
   const [activeCategory, setActiveCategory] = useState<IntegrationCategory | 'all'>('all')
+  const [moduleSettings, setModuleSettings] = useState<Record<string, unknown>>({})
+
+  useEffect(() => {
+    fetchSettings().then(s => {
+      setIntegrationSettings(s)
+      setModuleSettings(s)
+    }).catch(() => {})
+  }, [])
+
+  const handleModuleToggle = (enabledKey: string, enabled: boolean) => {
+    const updates = { [enabledKey]: enabled }
+    setModuleSettings(prev => ({ ...prev, ...updates }))
+    updateSettings(updates).catch(() => {})
+    toast.success(`Module ${enabled ? 'enabled' : 'disabled'}. Refresh to see nav changes.`)
+  }
 
   const handleIntegrationChange = (updates: Record<string, unknown>) => {
     const merged = { ...integrationSettings, ...updates }
@@ -62,8 +78,11 @@ export default function Settings() {
     ? INTEGRATIONS
     : INTEGRATIONS.filter(i => i.category === activeCategory)
 
+  const enabledModuleCount = MODULES.filter(m => moduleSettings[m.enabledKey] !== false).length
+
   const tabs = [
     { key: 'appearance' as const, label: 'Appearance' },
+    { key: 'modules' as const, label: 'Modules', count: enabledModuleCount },
     { key: 'integrations' as const, label: 'Integrations', count: INTEGRATIONS.length },
     { key: 'developer' as const, label: 'Developer' },
   ]
@@ -179,6 +198,57 @@ export default function Settings() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Modules Tab ── */}
+      {tab === 'modules' && (
+        <div className="space-y-4 max-w-2xl">
+          <p className="text-sm text-gray-500 mb-4">
+            Enable or disable modules to customise which features are available in the navigation and throughout the app.
+            Disabled modules are hidden from the sidebar but data is preserved.
+          </p>
+          {MODULES.map(mod => {
+            const enabled = moduleSettings[mod.enabledKey] !== false
+            return (
+              <div key={mod.key} className="bg-gray-900 border border-gray-800 rounded-lg p-5 flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-semibold text-white">{mod.label}</h3>
+                    {enabled ? (
+                      <span className="flex items-center gap-1 text-xs text-emerald-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        Active
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-xs text-gray-500">
+                        <span className="w-1.5 h-1.5 rounded-full bg-gray-500" />
+                        Disabled
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">{mod.description}</p>
+                  {mod.navGroups.length > 0 && (
+                    <p className="text-xs text-gray-600 mt-1">
+                      Nav sections: {mod.navGroups.join(', ')}
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={() => handleModuleToggle(mod.enabledKey, !enabled)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 ${
+                    enabled ? 'bg-blue-600' : 'bg-gray-700'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      enabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+            )
+          })}
         </div>
       )}
 
