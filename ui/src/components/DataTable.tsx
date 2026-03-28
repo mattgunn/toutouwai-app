@@ -106,7 +106,7 @@ export default function DataTable<T>({
               onClick={onRowClick ? () => onRowClick(row) : undefined}
               className={`border-t border-gray-800 hover:bg-gray-800/50 transition-colors${
                 onRowClick ? ' cursor-pointer' : ''
-              }${striped && rowIdx % 2 === 1 ? ' bg-gray-900/60' : ''}`}
+              }`}
             >
               {columns.map((col) => {
                 const align = alignClass[col.align ?? 'left']
