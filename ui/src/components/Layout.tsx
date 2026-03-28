@@ -386,14 +386,16 @@ export default function Layout({ children }: { children: ReactNode }) {
       <div className="flex flex-col h-screen bg-gray-950">
         {/* Desktop top navigation bar */}
         <nav
-          className={`hidden md:flex items-center h-12 px-4 border-b border-gray-800 shrink-0 ${!effectiveNavColor ? 'bg-gray-900' : ''} ${topbarClass}`}
+          className={`hidden md:flex items-center h-14 px-5 border-b border-gray-800 shrink-0 ${!effectiveNavColor ? 'bg-gray-900' : ''} ${topbarClass}`}
           style={navBg}
         >
-          <NavLink to="/dashboard" className="font-bold text-white text-sm tracking-tight mr-6 shrink-0 hover:opacity-80 transition-opacity">
+          {/* Brand */}
+          <NavLink to="/dashboard" className="font-bold text-white text-base tracking-tight mr-8 shrink-0 hover:opacity-80 transition-opacity">
             {isDev ? `DEV \u2014 ${prefs.instanceLabel || 'HRIS'}` : (prefs.instanceLabel || 'HRIS')}
           </NavLink>
 
-          <div className="flex items-center gap-1 flex-1 min-w-0">
+          {/* Module groups - center */}
+          <div className="flex items-center gap-0.5 flex-1 min-w-0">
             {filteredGroups.map((group, gi) => {
               if (!group.heading) {
                 return group.items.map(({ to, label, icon }) => (
@@ -401,9 +403,9 @@ export default function Layout({ children }: { children: ReactNode }) {
                     key={to}
                     to={to}
                     className={({ isActive }) =>
-                      `flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors whitespace-nowrap rounded ${
+                      `flex items-center gap-2 px-3.5 py-2 text-sm font-medium transition-all whitespace-nowrap rounded-lg ${
                         isActive
-                          ? 'bg-blue-600/20 text-blue-400'
+                          ? 'bg-blue-600/20 text-blue-400 shadow-sm'
                           : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
                       }`
                     }
@@ -422,10 +424,10 @@ export default function Layout({ children }: { children: ReactNode }) {
                   key={gi}
                   to={group.items[0].to}
                   className={
-                    `flex items-center gap-1.5 px-4 py-2 text-sm transition-colors whitespace-nowrap rounded-md ${
+                    `flex items-center gap-2 px-3.5 py-2 text-sm font-medium transition-all whitespace-nowrap rounded-lg ${
                       isGroupActive
-                        ? 'bg-blue-600/20 text-blue-400'
-                        : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
+                        ? 'bg-blue-600/20 text-blue-400 shadow-sm'
+                        : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/40'
                     }`
                   }
                 >
@@ -436,51 +438,57 @@ export default function Layout({ children }: { children: ReactNode }) {
             })}
           </div>
 
-          <div className="flex items-center gap-2 ml-4 shrink-0">
+          {/* Right side - search, icons, user */}
+          <div className="flex items-center gap-1 ml-4 shrink-0">
             <GlobalSearch navItems={allItems} />
-            {filteredGlobal.map(({ to, label, icon }) => (
-              <NavLink
-                key={to}
-                to={to}
-                className={({ isActive }) =>
-                  `flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors whitespace-nowrap rounded ${
-                    isActive
-                      ? 'bg-blue-600/20 text-blue-400'
-                      : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
-                  }`
-                }
+            <div className="flex items-center gap-0.5 ml-2">
+              {filteredGlobal.map(({ to, icon, label }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  title={label}
+                  className={({ isActive }) =>
+                    `flex items-center justify-center w-9 h-9 rounded-lg transition-all ${
+                      isActive
+                        ? 'bg-blue-600/20 text-blue-400'
+                        : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
+                    }`
+                  }
+                >
+                  {icon}
+                </NavLink>
+              ))}
+              <NotificationBell />
+            </div>
+            <div className="flex items-center gap-2 ml-3 pl-3 border-l border-gray-800">
+              {user && (
+                <Avatar name={user.name || user.email} size="sm" />
+              )}
+              <button
+                onClick={handleLogout}
+                className="text-xs text-gray-500 hover:text-red-400 transition-colors"
+                title="Sign out"
               >
-                {icon}
-                <span>{label}</span>
-              </NavLink>
-            ))}
-            <NotificationBell />
-            {user && (
-              <span className="text-xs text-gray-500 truncate max-w-32 ml-2" title={user.email}>
-                {displayName}
-              </span>
-            )}
-            <button
-              onClick={handleLogout}
-              className="text-xs text-gray-500 hover:text-gray-300 transition-colors ml-1"
-            >
-              Sign out
-            </button>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+                </svg>
+              </button>
+            </div>
           </div>
         </nav>
 
         {/* Sub-navigation (desktop) */}
         {showSubNav && (
-          <div className={`hidden md:flex items-center gap-0.5 px-4 h-10 border-b border-gray-800 bg-gray-900 shrink-0 katana-subnav ${workdayNav ? 'workday-subnav' : ''}`}>
+          <div className={`hidden md:flex items-center gap-1 px-5 h-11 border-b border-gray-800 bg-gray-900 shrink-0 katana-subnav ${workdayNav ? 'workday-subnav' : ''}`}>
             {activeGroup.items.map(({ to, label, icon }) => (
               <NavLink
                 key={to}
                 to={to}
                 className={({ isActive }) =>
-                  `flex items-center gap-2 px-4 py-2 text-sm transition-colors whitespace-nowrap ${
+                  `flex items-center gap-2 px-4 h-full text-sm transition-all whitespace-nowrap ${
                     isActive
-                      ? 'text-white border-b-3 border-blue-400 -mb-px font-medium'
-                      : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50 rounded-md'
+                      ? 'text-white border-b-3 border-blue-400 font-medium'
+                      : 'text-gray-400 hover:text-gray-200'
                   }`
                 }
               >
