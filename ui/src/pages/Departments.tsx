@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
-import { fetchDepartments, createDepartment, updateDepartment, deleteDepartment } from '../api'
-import type { Department } from '../types'
+import { fetchDepartments, createDepartment, updateDepartment, deleteDepartment, fetchEmployees } from '../api'
+import type { Department, Employee } from '../types'
 import EmptyState from '../components/EmptyState'
-import { SkeletonCards } from '../components/Skeleton'
+import { SkeletonCards, SkeletonTable } from '../components/Skeleton'
 import PageHeader from '../components/PageHeader'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
+import DataTable from '../components/DataTable'
+import StatusBadge from '../components/StatusBadge'
 import { FormField, Input, Textarea } from '../components/FormField'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { useToast } from '../components/Toast'
@@ -23,6 +25,11 @@ export default function Departments() {
   const [deleting, setDeleting] = useState(false)
   const toast = useToast()
 
+  // Detail view state
+  const [selectedDept, setSelectedDept] = useState<Department | null>(null)
+  const [deptEmployees, setDeptEmployees] = useState<Employee[]>([])
+  const [detailLoading, setDetailLoading] = useState(false)
+
   const loadData = () => {
     setLoading(true)
     fetchDepartments()
@@ -32,6 +39,16 @@ export default function Departments() {
   }
 
   useEffect(() => { loadData() }, [])
+
+  // Fetch employees when a department is selected
+  useEffect(() => {
+    if (!selectedDept) return
+    setDetailLoading(true)
+    fetchEmployees({ department: selectedDept.id })
+      .then(r => setDeptEmployees(r.employees))
+      .catch(() => setDeptEmployees([]))
+      .finally(() => setDetailLoading(false))
+  }, [selectedDept])
 
   const openCreate = () => {
     setEditing(null)
@@ -78,6 +95,7 @@ export default function Departments() {
       await deleteDepartment(deleteId)
       toast.success('Department deleted')
       closeModal()
+      setSelectedDept(null)
       loadData()
     } catch {
       toast.error('Failed to delete department')
@@ -86,6 +104,13 @@ export default function Departments() {
       setDeleteId(null)
     }
   }
+
+  const employeeColumns = [
+    { key: 'name', header: 'Name', render: (emp: Employee) => <span className="text-white font-medium">{emp.first_name} {emp.last_name}</span> },
+    { key: 'position_title', header: 'Position', render: (emp: Employee) => <span className="text-gray-400">{emp.position_title || '\u2014'}</span>, className: 'hidden md:table-cell' },
+    { key: 'email', header: 'Email', render: (emp: Employee) => <span className="text-gray-400">{emp.email}</span>, className: 'hidden lg:table-cell' },
+    { key: 'status', header: 'Status', render: (emp: Employee) => <StatusBadge status={emp.status} /> },
+  ]
 
   if (loading) {
     return (
@@ -110,8 +135,10 @@ export default function Departments() {
           {departments.map(dept => (
             <div
               key={dept.id}
-              onClick={() => openEdit(dept)}
-              className="bg-gray-900 border border-gray-800 rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+              onClick={() => setSelectedDept(dept)}
+              className={`bg-gray-900 border rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer ${
+                selectedDept?.id === dept.id ? 'border-blue-500 ring-1 ring-blue-500/30' : 'border-gray-800'
+              }`}
             >
               <h3 className="text-white font-semibold mb-1">{dept.name}</h3>
               {dept.description && (
@@ -123,6 +150,46 @@ export default function Departments() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Detail panel */}
+      {selectedDept && (
+        <div className="mt-6 bg-gray-900 border border-gray-800 rounded-xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="sm" onClick={() => setSelectedDept(null)}>
+                &larr; Back
+              </Button>
+              <h2 className="text-lg font-bold text-white">{selectedDept.name}</h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button size="sm" onClick={() => openEdit(selectedDept)}>Edit</Button>
+              <Button variant="danger" size="sm" onClick={() => setDeleteId(selectedDept.id)}>Delete</Button>
+            </div>
+          </div>
+
+          {selectedDept.description && (
+            <p className="text-gray-400 text-sm mb-4">{selectedDept.description}</p>
+          )}
+
+          <div className="flex items-center gap-6 text-sm text-gray-500 mb-4">
+            <span>{selectedDept.employee_count} employee{selectedDept.employee_count !== 1 ? 's' : ''}</span>
+            {selectedDept.head_name && <span>Head: {selectedDept.head_name}</span>}
+          </div>
+
+          <h3 className="text-sm font-semibold text-gray-300 mb-3">Employees in this department</h3>
+          {detailLoading ? (
+            <SkeletonTable rows={3} cols={4} />
+          ) : (
+            <DataTable
+              columns={employeeColumns}
+              data={deptEmployees}
+              keyField="id"
+              emptyMessage="No employees in this department"
+              emptyIcon="👥"
+            />
+          )}
         </div>
       )}
 

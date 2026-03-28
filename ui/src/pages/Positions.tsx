@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { fetchPositions, fetchDepartments, createPosition, updatePosition, deletePosition } from '../api'
-import type { Position, Department } from '../types'
+import { fetchPositions, fetchDepartments, createPosition, updatePosition, deletePosition, fetchEmployees } from '../api'
+import type { Position, Department, Employee } from '../types'
 import { SkeletonTable } from '../components/Skeleton'
 import PageHeader from '../components/PageHeader'
 import DataTable from '../components/DataTable'
+import StatusBadge from '../components/StatusBadge'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
 import { FormField, Input, Select, Textarea } from '../components/FormField'
@@ -24,6 +25,11 @@ export default function Positions() {
   const [deleting, setDeleting] = useState(false)
   const toast = useToast()
 
+  // Detail view state
+  const [selectedPos, setSelectedPos] = useState<Position | null>(null)
+  const [posEmployees, setPosEmployees] = useState<Employee[]>([])
+  const [detailLoading, setDetailLoading] = useState(false)
+
   const loadData = () => {
     setLoading(true)
     Promise.all([
@@ -35,6 +41,19 @@ export default function Positions() {
   }
 
   useEffect(() => { loadData() }, [])
+
+  // Fetch employees for selected position (client-side filter since backend doesn't support position filter)
+  useEffect(() => {
+    if (!selectedPos) return
+    setDetailLoading(true)
+    fetchEmployees({ per_page: '1000' })
+      .then(r => {
+        const filtered = r.employees.filter(emp => emp.position_id === selectedPos.id)
+        setPosEmployees(filtered)
+      })
+      .catch(() => setPosEmployees([]))
+      .finally(() => setDetailLoading(false))
+  }, [selectedPos])
 
   const openCreate = () => {
     setEditing(null)
@@ -91,6 +110,7 @@ export default function Positions() {
       await deletePosition(deleteId)
       toast.success('Position deleted')
       closeModal()
+      setSelectedPos(null)
       loadData()
     } catch {
       toast.error('Failed to delete position')
@@ -105,6 +125,13 @@ export default function Positions() {
     { key: 'department_name', header: 'Department', className: 'hidden md:table-cell', render: (pos: Position) => <span className="text-gray-400">{pos.department_name || '\u2014'}</span> },
     { key: 'level', header: 'Level', className: 'hidden lg:table-cell', render: (pos: Position) => <span className="text-gray-400">{pos.level || '\u2014'}</span> },
     { key: 'employee_count', header: 'Employees', render: (pos: Position) => <span className="text-gray-400">{pos.employee_count}</span> },
+  ]
+
+  const employeeColumns = [
+    { key: 'name', header: 'Name', render: (emp: Employee) => <span className="text-white font-medium">{emp.first_name} {emp.last_name}</span> },
+    { key: 'department_name', header: 'Department', render: (emp: Employee) => <span className="text-gray-400">{emp.department_name || '\u2014'}</span>, className: 'hidden md:table-cell' },
+    { key: 'email', header: 'Email', render: (emp: Employee) => <span className="text-gray-400">{emp.email}</span>, className: 'hidden lg:table-cell' },
+    { key: 'status', header: 'Status', render: (emp: Employee) => <StatusBadge status={emp.status} /> },
   ]
 
   if (loading) {
@@ -129,9 +156,54 @@ export default function Positions() {
         keyField="id"
         emptyIcon="💼"
         emptyMessage="No positions yet"
-        onRowClick={openEdit}
+        onRowClick={(pos) => setSelectedPos(pos)}
         striped
       />
+
+      {/* Detail panel */}
+      {selectedPos && (
+        <div className="mt-6 bg-gray-900 border border-gray-800 rounded-xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="sm" onClick={() => setSelectedPos(null)}>
+                &larr; Back
+              </Button>
+              <h2 className="text-lg font-bold text-white">{selectedPos.title}</h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button size="sm" onClick={() => openEdit(selectedPos)}>Edit</Button>
+              <Button variant="danger" size="sm" onClick={() => setDeleteId(selectedPos.id)}>Delete</Button>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-6 text-sm text-gray-400 mb-4">
+            {selectedPos.department_name && (
+              <span>Department: <span className="text-white">{selectedPos.department_name}</span></span>
+            )}
+            {selectedPos.level && (
+              <span>Level: <span className="text-white">{selectedPos.level}</span></span>
+            )}
+            <span>Employees: <span className="text-white">{selectedPos.employee_count}</span></span>
+          </div>
+
+          {selectedPos.description && (
+            <p className="text-gray-400 text-sm mb-4">{selectedPos.description}</p>
+          )}
+
+          <h3 className="text-sm font-semibold text-gray-300 mb-3">Employees in this position</h3>
+          {detailLoading ? (
+            <SkeletonTable rows={3} cols={4} />
+          ) : (
+            <DataTable
+              columns={employeeColumns}
+              data={posEmployees}
+              keyField="id"
+              emptyMessage="No employees in this position"
+              emptyIcon="👥"
+            />
+          )}
+        </div>
+      )}
 
       <Modal
         open={showModal}

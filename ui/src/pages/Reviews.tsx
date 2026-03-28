@@ -5,13 +5,20 @@ import StatusBadge from '../components/StatusBadge'
 import PageHeader from '../components/PageHeader'
 import DataTable from '../components/DataTable'
 import Tabs from '../components/Tabs'
+import Button from '../components/Button'
+import Modal from '../components/Modal'
 import { SkeletonTable } from '../components/Skeleton'
+import { formatDate } from '../utils/format'
+
 export default function Reviews() {
   const [cycles, setCycles] = useState<ReviewCycle[]>([])
   const [selectedCycle, setSelectedCycle] = useState<string | null>(null)
   const [reviews, setReviews] = useState<Review[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingReviews, setLoadingReviews] = useState(false)
+
+  // Detail view state
+  const [selectedReview, setSelectedReview] = useState<Review | null>(null)
 
   useEffect(() => {
     setLoading(true)
@@ -34,6 +41,8 @@ export default function Reviews() {
     { key: 'rating', header: 'Rating', render: (r: Review) => <span className="text-amber-400">{r.rating ?? '\u2014'}</span> },
     { key: 'status', header: 'Status', render: (r: Review) => <StatusBadge status={r.status} /> },
   ]
+
+  const currentCycle = cycles.find(c => c.id === selectedCycle)
 
   if (loading) {
     return (
@@ -70,7 +79,68 @@ export default function Reviews() {
         loading={loadingReviews}
         emptyMessage={cycles.length === 0 ? 'No review cycles yet' : 'No reviews in this cycle'}
         emptyIcon="📋"
+        onRowClick={(r) => setSelectedReview(r)}
       />
+
+      {/* Review detail modal */}
+      <Modal
+        open={!!selectedReview}
+        onClose={() => setSelectedReview(null)}
+        title="Review Details"
+        size="lg"
+        footer={
+          <Button variant="secondary" onClick={() => setSelectedReview(null)}>Close</Button>
+        }
+      >
+        {selectedReview && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Employee</p>
+                <p className="text-white font-medium">{selectedReview.employee_name || '\u2014'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Reviewer</p>
+                <p className="text-white font-medium">{selectedReview.reviewer_name || '\u2014'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Cycle</p>
+                <p className="text-gray-300">{selectedReview.cycle_name || currentCycle?.name || '\u2014'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Status</p>
+                <StatusBadge status={selectedReview.status} />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Rating</p>
+                {selectedReview.rating != null ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-amber-400 text-lg font-semibold">{selectedReview.rating}</span>
+                    <span className="text-gray-500 text-sm">/ 5</span>
+                  </div>
+                ) : (
+                  <p className="text-gray-500">{'\u2014'}</p>
+                )}
+              </div>
+              {selectedReview.submitted_at && (
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Submitted</p>
+                  <p className="text-gray-300">{formatDate(selectedReview.submitted_at)}</p>
+                </div>
+              )}
+            </div>
+
+            {selectedReview.feedback && (
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Feedback</p>
+                <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-3">
+                  <p className="text-gray-300 text-sm whitespace-pre-wrap">{selectedReview.feedback}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

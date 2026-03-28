@@ -12,7 +12,7 @@ import PageHeader from '../components/PageHeader'
 import DataTable from '../components/DataTable'
 import Tabs from '../components/Tabs'
 import { FormField, Input, Select, Textarea } from '../components/FormField'
-import { PageSkeleton } from '../components/Skeleton'
+import { PageSkeleton, SkeletonTable } from '../components/Skeleton'
 import { useToast } from '../components/Toast'
 
 const planTypeLabel: Record<string, string> = {
@@ -48,6 +48,11 @@ export default function Benefits() {
   const [enrollForm, setEnrollForm] = useState({ employee_id: '', plan_id: '', start_date: '', coverage_level: 'employee', employee_contribution: '', employer_contribution: '' })
   const toast = useToast()
 
+  // Plan detail view state
+  const [selectedPlan, setSelectedPlan] = useState<BenefitPlan | null>(null)
+  const [planEnrollments, setPlanEnrollments] = useState<BenefitEnrollment[]>([])
+  const [detailLoading, setDetailLoading] = useState(false)
+
   useEffect(() => {
     Promise.all([
       fetchBenefitPlans().then(setPlans).catch(() => {}),
@@ -56,6 +61,16 @@ export default function Benefits() {
     ])
       .finally(() => setLoading(false))
   }, [])
+
+  // Fetch enrollments for the selected plan
+  useEffect(() => {
+    if (!selectedPlan) return
+    setDetailLoading(true)
+    fetchBenefitEnrollments({ plan_id: selectedPlan.id })
+      .then(setPlanEnrollments)
+      .catch(() => setPlanEnrollments([]))
+      .finally(() => setDetailLoading(false))
+  }, [selectedPlan])
 
   const activePlans = plans.filter(p => p.is_active)
   const activeEnrollments = enrollments.filter(e => e.status === 'active')
@@ -116,6 +131,14 @@ export default function Benefits() {
     { key: 'status', header: 'Status', render: (e: BenefitEnrollment) => <StatusBadge status={e.status} /> },
   ]
 
+  const planEnrollmentColumns = [
+    { key: 'employee_name', header: 'Employee', render: (e: BenefitEnrollment) => <span className="text-white font-medium">{e.employee_name || '\u2014'}</span> },
+    { key: 'coverage_level', header: 'Coverage', render: (e: BenefitEnrollment) => <span className="text-gray-400">{coverageLabel[e.coverage_level] || e.coverage_level}</span> },
+    { key: 'employee_contribution', header: 'Employee $', className: 'hidden md:table-cell', render: (e: BenefitEnrollment) => <span className="text-gray-400">{formatCurrency(e.employee_contribution)}</span> },
+    { key: 'employer_contribution', header: 'Employer $', className: 'hidden md:table-cell', render: (e: BenefitEnrollment) => <span className="text-gray-400">{formatCurrency(e.employer_contribution)}</span> },
+    { key: 'status', header: 'Status', render: (e: BenefitEnrollment) => <StatusBadge status={e.status} /> },
+  ]
+
   if (loading) {
     return (
       <div>
@@ -150,7 +173,7 @@ export default function Benefits() {
             { key: 'enrollments', label: 'Enrollments', count: enrollments.length },
           ]}
           active={tab}
-          onChange={setTab}
+          onChange={(t) => { setTab(t); setSelectedPlan(null) }}
           variant="pills"
         />
       </div>
@@ -279,28 +302,78 @@ export default function Benefits() {
 
       {/* Plans tab */}
       {tab === 'plans' && (
-        plans.length === 0 ? (
-          <EmptyState message="No benefit plans yet" icon="🏥" action="Add Plan" onAction={() => setShowAddPlan(true)} />
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {plans.map(plan => (
-              <div key={plan.id} className="bg-gray-900 border border-gray-800 rounded-lg p-4 hover:shadow-md transition-all duration-200">
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <h3 className="text-white font-medium">{plan.name}</h3>
-                    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-purple-600/20 text-purple-400 mt-1">
-                      {planTypeLabel[plan.type] || plan.type}
-                    </span>
+        <>
+          {plans.length === 0 ? (
+            <EmptyState message="No benefit plans yet" icon="🏥" action="Add Plan" onAction={() => setShowAddPlan(true)} />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {plans.map(plan => (
+                <div
+                  key={plan.id}
+                  onClick={() => setSelectedPlan(plan)}
+                  className={`bg-gray-900 border rounded-lg p-4 hover:shadow-md transition-all duration-200 cursor-pointer ${
+                    selectedPlan?.id === plan.id ? 'border-blue-500 ring-1 ring-blue-500/30' : 'border-gray-800'
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <h3 className="text-white font-medium">{plan.name}</h3>
+                      <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-purple-600/20 text-purple-400 mt-1">
+                        {planTypeLabel[plan.type] || plan.type}
+                      </span>
+                    </div>
+                    <StatusBadge status={plan.is_active ? 'active' : 'inactive'} />
                   </div>
-                  <StatusBadge status={plan.is_active ? 'active' : 'inactive'} />
+                  {plan.provider && <p className="text-sm text-gray-400 mt-1">Provider: {plan.provider}</p>}
+                  {plan.description && <p className="text-xs text-gray-500 mt-1">{plan.description}</p>}
+                  <p className="text-xs text-gray-500 mt-2">{plan.active_enrollments} active enrollment{plan.active_enrollments !== 1 ? 's' : ''}</p>
                 </div>
-                {plan.provider && <p className="text-sm text-gray-400 mt-1">Provider: {plan.provider}</p>}
-                {plan.description && <p className="text-xs text-gray-500 mt-1">{plan.description}</p>}
-                <p className="text-xs text-gray-500 mt-2">{plan.active_enrollments} active enrollment{plan.active_enrollments !== 1 ? 's' : ''}</p>
+              ))}
+            </div>
+          )}
+
+          {/* Plan detail panel */}
+          {selectedPlan && (
+            <div className="mt-6 bg-gray-900 border border-gray-800 rounded-xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedPlan(null)}>
+                    &larr; Back
+                  </Button>
+                  <h2 className="text-lg font-bold text-white">{selectedPlan.name}</h2>
+                  <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-purple-600/20 text-purple-400">
+                    {planTypeLabel[selectedPlan.type] || selectedPlan.type}
+                  </span>
+                  <StatusBadge status={selectedPlan.is_active ? 'active' : 'inactive'} />
+                </div>
               </div>
-            ))}
-          </div>
-        )
+
+              <div className="flex flex-wrap items-center gap-6 text-sm text-gray-400 mb-4">
+                {selectedPlan.provider && (
+                  <span>Provider: <span className="text-white">{selectedPlan.provider}</span></span>
+                )}
+                <span>Active enrollments: <span className="text-white">{selectedPlan.active_enrollments}</span></span>
+              </div>
+
+              {selectedPlan.description && (
+                <p className="text-gray-400 text-sm mb-4">{selectedPlan.description}</p>
+              )}
+
+              <h3 className="text-sm font-semibold text-gray-300 mb-3">Enrolled employees</h3>
+              {detailLoading ? (
+                <SkeletonTable rows={3} cols={5} />
+              ) : (
+                <DataTable
+                  columns={planEnrollmentColumns}
+                  data={planEnrollments}
+                  keyField="id"
+                  emptyMessage="No enrollments for this plan"
+                  emptyIcon="📋"
+                />
+              )}
+            </div>
+          )}
+        </>
       )}
 
       {/* Enrollments tab */}
