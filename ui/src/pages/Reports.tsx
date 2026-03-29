@@ -243,7 +243,7 @@ function LeaveTab() {
         </div>
         <div>
           <h2 className="text-sm font-semibold text-white mb-3">Usage by Department</h2>
-          <DataTable columns={deptColumns} data={deptRows} emptyMessage="No data" />
+          <DataTable columns={deptColumns} data={deptRows} keyField="department" emptyMessage="No data" />
         </div>
       </div>
     </>
@@ -346,11 +346,11 @@ function CompensationTab() {
       <div className="grid md:grid-cols-2 gap-6">
         <div>
           <h2 className="text-sm font-semibold text-white mb-3">By Department &amp; Level</h2>
-          <DataTable columns={deptColumns} data={data.by_department} emptyMessage="No data" />
+          <DataTable columns={deptColumns} data={data.by_department} keyField="department" emptyMessage="No data" />
         </div>
         <div>
           <h2 className="text-sm font-semibold text-white mb-3">By Position</h2>
-          <DataTable columns={posColumns} data={data.by_position} emptyMessage="No data" />
+          <DataTable columns={posColumns} data={data.by_position} keyField="position" emptyMessage="No data" />
         </div>
       </div>
     </>

@@ -5,6 +5,7 @@ import { formatDate } from '../utils/format'
 import type { DashboardData } from '../types'
 import { useAuth } from '../auth'
 import StatusBadge from '../components/StatusBadge'
+import { useToast } from '../components/Toast'
 import EmployeeLink from '../components/EmployeeLink'
 import {
   UserCircleIcon,
@@ -49,11 +50,12 @@ export default function Dashboard() {
   const { user } = useAuth()
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
+  const toast = useToast()
 
   useEffect(() => {
     fetchDashboard()
       .then(setData)
-      .catch(() => {})
+      .catch(() => toast.error('Failed to load dashboard'))
       .finally(() => setLoading(false))
   }, [])
 

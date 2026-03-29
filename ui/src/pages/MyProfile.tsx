@@ -268,6 +268,7 @@ export default function MyProfile() {
               { key: 'status', header: 'Status', render: (lr: LeaveRequest) => <StatusBadge status={lr.status} /> },
             ]}
             data={leaveRequests}
+            keyField="id"
             emptyIcon="🏖️"
             emptyMessage="No leave requests"
           />
@@ -327,6 +328,7 @@ export default function MyProfile() {
               { key: 'description', header: 'Description', render: (te: TimeEntry) => <span className="text-gray-400">{te.description || '\u2014'}</span>, className: 'hidden md:table-cell' },
             ]}
             data={timeEntries}
+            keyField="id"
             emptyIcon="⏱️"
             emptyMessage="No time entries"
           />
@@ -344,6 +346,7 @@ export default function MyProfile() {
               { key: 'created_at', header: 'Uploaded', render: (doc: Document) => <span className="text-gray-400">{formatDate(doc.created_at)}</span>, className: 'hidden md:table-cell' },
             ]}
             data={documents}
+            keyField="id"
             emptyIcon="📄"
             emptyMessage="No documents"
           />

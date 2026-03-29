@@ -4,6 +4,7 @@ import EmployeeLink from '../components/EmployeeLink'
 import type { Employee } from '../types'
 import PageHeader from '../components/PageHeader'
 import Avatar from '../components/Avatar'
+import { useToast } from '../components/Toast'
 
 interface OrgNode {
   employee: Employee
@@ -83,6 +84,7 @@ export default function OrgChart() {
   const [tree, setTree] = useState<OrgNode[]>([])
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
+  const toast = useToast()
 
   useEffect(() => {
     setLoading(true)
@@ -107,7 +109,7 @@ export default function OrgChart() {
         walk(built, 0)
         setCollapsed(toCollapse)
       })
-      .catch(() => {})
+      .catch(() => toast.error('Failed to load employees'))
       .finally(() => setLoading(false))
   }, [])
 

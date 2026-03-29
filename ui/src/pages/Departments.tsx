@@ -49,7 +49,7 @@ export default function Departments() {
     setLoading(true)
     fetchDepartments()
       .then(setDepartments)
-      .catch(() => {})
+      .catch(() => toast.error('Failed to load data'))
       .finally(() => setLoading(false))
   }
 
@@ -151,7 +151,7 @@ export default function Departments() {
       if (selectedDept) {
         fetchEmployees({ department: selectedDept.id })
           .then(r => setDeptEmployees(r.employees))
-          .catch(() => {})
+          .catch(() => toast.error('Failed to load data'))
       }
     } catch {
       toast.error('Failed to reassign employee')
