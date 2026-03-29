@@ -29,6 +29,7 @@ import PageHeader from '../components/PageHeader'
 import EmployeeLink from '../components/EmployeeLink'
 
 export default function Workflows() {
+  const toast = useToast()
   const [view, setView] = useState('approvals')
   const [approvals, setApprovals] = useState<WorkflowApproval[]>([])
   const [definitions, setDefinitions] = useState<WorkflowDefinition[]>([])
@@ -38,8 +39,8 @@ export default function Workflows() {
   useEffect(() => {
     setLoading(true)
     Promise.all([
-      fetchMyApprovals().then(setApprovals).catch(() => {}),
-      fetchWorkflowDefinitions().then(setDefinitions).catch(() => {}),
+      fetchMyApprovals().then(setApprovals).catch(() => toast.error('Failed to load approvals')),
+      fetchWorkflowDefinitions().then(setDefinitions).catch(() => toast.error('Failed to load workflow definitions')),
     ]).finally(() => setLoading(false))
   }, [])
 
@@ -757,6 +758,7 @@ function DefinitionsView({
           { key: 'is_active', header: 'Status', render: (def: WorkflowDefinition) => <StatusBadge status={def.is_active ? 'active' : 'inactive'} /> },
         ]}
         data={definitions}
+        keyField="id"
         emptyIcon="🔄"
         emptyMessage="No workflow definitions"
         onRowClick={(def) => setSelectedDef(def)}

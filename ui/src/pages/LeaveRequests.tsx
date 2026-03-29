@@ -38,7 +38,7 @@ export default function LeaveRequests() {
       fetchEmployees({ per_page: '1000' }).then(r => setEmployees(r.employees)),
       fetchLeaveTypes().then(setLeaveTypes),
     ])
-      .catch(() => {})
+      .catch(() => toast.error('Failed to load data'))
       .finally(() => setLoading(false))
   }
 

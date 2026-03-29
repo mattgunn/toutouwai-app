@@ -48,7 +48,7 @@ export default function JobPostings() {
   const loadPostings = () => {
     fetchJobPostings()
       .then(setPostings)
-      .catch(() => {})
+      .catch(() => toast.error('Failed to load job postings'))
       .finally(() => setLoading(false))
   }
 

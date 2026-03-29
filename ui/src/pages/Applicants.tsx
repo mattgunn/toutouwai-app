@@ -35,7 +35,7 @@ export default function Applicants() {
     setLoading(true)
     fetchApplicants()
       .then(setApplicants)
-      .catch(() => {})
+      .catch(() => toast.error('Failed to load applicants'))
       .finally(() => setLoading(false))
   }
 

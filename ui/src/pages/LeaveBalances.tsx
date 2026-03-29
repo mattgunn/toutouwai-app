@@ -9,8 +9,10 @@ import Button from '../components/Button'
 import StatusBadge from '../components/StatusBadge'
 import { formatDate } from '../utils/format'
 import EmployeeLink from '../components/EmployeeLink'
+import { useToast } from '../components/Toast'
 
 export default function LeaveBalances() {
+  const toast = useToast()
   const [balances, setBalances] = useState<LeaveBalance[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -23,7 +25,7 @@ export default function LeaveBalances() {
   useEffect(() => {
     fetchLeaveBalances()
       .then(setBalances)
-      .catch(() => {})
+      .catch(() => toast.error('Failed to load leave balances'))
       .finally(() => setLoading(false))
   }, [])
 

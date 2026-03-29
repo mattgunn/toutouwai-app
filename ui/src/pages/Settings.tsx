@@ -27,7 +27,7 @@ export default function Settings() {
     fetchSettings().then(s => {
       setIntegrationSettings(s)
       setModuleSettings(s)
-    }).catch(() => {})
+    }).catch(() => toast.error('Failed to load settings'))
   }, [])
 
   const handleModuleToggle = (enabledKey: string, enabled: boolean) => {

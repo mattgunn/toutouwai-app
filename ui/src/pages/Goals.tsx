@@ -42,8 +42,8 @@ export default function Goals() {
   const loadData = () => {
     setLoading(true)
     Promise.all([
-      fetchGoals().then(setGoals).catch(() => {}),
-      fetchEmployees().then(r => setEmployees(r.employees)).catch(() => {}),
+      fetchGoals().then(setGoals).catch(() => toast.error('Failed to load goals')),
+      fetchEmployees().then(r => setEmployees(r.employees)).catch(() => toast.error('Failed to load employees')),
     ]).finally(() => setLoading(false))
   }
 

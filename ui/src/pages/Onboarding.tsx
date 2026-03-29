@@ -47,9 +47,9 @@ export default function Onboarding() {
   useEffect(() => {
     setLoading(true)
     Promise.all([
-      fetchOnboardingTemplates().then(setTemplates).catch(() => {}),
-      fetchOnboardingChecklists().then(setChecklists).catch(() => {}),
-      fetchEmployees().then(r => setEmployees(r.employees)).catch(() => {}),
+      fetchOnboardingTemplates().then(setTemplates).catch(() => toast.error('Failed to load templates')),
+      fetchOnboardingChecklists().then(setChecklists).catch(() => toast.error('Failed to load checklists')),
+      fetchEmployees().then(r => setEmployees(r.employees)).catch(() => toast.error('Failed to load employees')),
     ]).finally(() => setLoading(false))
   }, [])
 
@@ -349,6 +349,7 @@ export default function Onboarding() {
                   { key: 'is_active', header: 'Status', render: (t: OnboardingTemplate) => <StatusBadge status={t.is_active ? 'active' : 'inactive'} /> },
                 ]}
                 data={templates}
+                keyField="id"
                 onRowClick={(t) => loadTemplateTasks(t)}
                 emptyIcon="📝"
                 emptyMessage="No onboarding templates"

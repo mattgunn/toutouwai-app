@@ -21,6 +21,7 @@ import Tabs from '../components/Tabs'
 import DataTable from '../components/DataTable'
 import Button from '../components/Button'
 import { Input } from '../components/FormField'
+import { useToast } from '../components/Toast'
 
 type Tab = 'headcount' | 'turnover' | 'leave' | 'time' | 'compensation' | 'recruitment'
 
@@ -93,8 +94,9 @@ export default function Reports() {
 }
 
 function HeadcountTab() {
+  const toast = useToast()
   const [data, setData] = useState<HeadcountReport | null>(null)
-  useEffect(() => { fetchHeadcountReport().then(setData).catch(() => {}) }, [])
+  useEffect(() => { fetchHeadcountReport().then(setData).catch(() => toast.error('Failed to load headcount report')) }, [])
   if (!data) return <div className="text-gray-500 text-sm">Loading...</div>
 
   const totalActive = data.totals.find(t => t.status === 'active')?.count || 0
@@ -161,8 +163,9 @@ function HeadcountTab() {
 }
 
 function TurnoverTab() {
+  const toast = useToast()
   const [data, setData] = useState<TurnoverReport | null>(null)
-  useEffect(() => { fetchTurnoverReport().then(setData).catch(() => {}) }, [])
+  useEffect(() => { fetchTurnoverReport().then(setData).catch(() => toast.error('Failed to load turnover report')) }, [])
   if (!data) return <div className="text-gray-500 text-sm">Loading...</div>
 
   const handleExport = () => {
@@ -198,8 +201,9 @@ function TurnoverTab() {
 }
 
 function LeaveTab() {
+  const toast = useToast()
   const [data, setData] = useState<LeaveUtilizationReport | null>(null)
-  useEffect(() => { fetchLeaveUtilizationReport().then(setData).catch(() => {}) }, [])
+  useEffect(() => { fetchLeaveUtilizationReport().then(setData).catch(() => toast.error('Failed to load leave report')) }, [])
   if (!data) return <div className="text-gray-500 text-sm">Loading...</div>
 
   const approvedByType = data.by_type.filter(r => r.status === 'approved')
@@ -251,12 +255,13 @@ function LeaveTab() {
 }
 
 function TimeTab({ fromDate, toDate }: { fromDate: string; toDate: string }) {
+  const toast = useToast()
   const [data, setData] = useState<TimeSummaryReport | null>(null)
   useEffect(() => {
     const params: Record<string, string> = {}
     if (fromDate) params.from_date = fromDate
     if (toDate) params.to_date = toDate
-    fetchTimeSummaryReport(params).then(setData).catch(() => {})
+    fetchTimeSummaryReport(params).then(setData).catch(() => toast.error('Failed to load time report'))
   }, [fromDate, toDate])
   if (!data) return <div className="text-gray-500 text-sm">Loading...</div>
 
@@ -307,8 +312,9 @@ function TimeTab({ fromDate, toDate }: { fromDate: string; toDate: string }) {
 }
 
 function CompensationTab() {
+  const toast = useToast()
   const [data, setData] = useState<CompensationReport | null>(null)
-  useEffect(() => { fetchCompensationReport().then(setData).catch(() => {}) }, [])
+  useEffect(() => { fetchCompensationReport().then(setData).catch(() => toast.error('Failed to load compensation report')) }, [])
   if (!data) return <div className="text-gray-500 text-sm">Loading...</div>
 
   const totalEmployees = data.by_position.reduce((s, r) => s + r.employee_count, 0)
@@ -358,8 +364,9 @@ function CompensationTab() {
 }
 
 function RecruitmentTab() {
+  const toast = useToast()
   const [data, setData] = useState<RecruitmentReport | null>(null)
-  useEffect(() => { fetchRecruitmentReport().then(setData).catch(() => {}) }, [])
+  useEffect(() => { fetchRecruitmentReport().then(setData).catch(() => toast.error('Failed to load recruitment report')) }, [])
   if (!data) return <div className="text-gray-500 text-sm">Loading...</div>
 
   const handleExport = () => {

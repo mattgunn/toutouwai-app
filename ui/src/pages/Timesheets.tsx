@@ -50,7 +50,7 @@ export default function Timesheets() {
       loadEntries(dateFrom, dateTo),
       fetchEmployees().then(r => setEmployees(r.employees)),
     ])
-      .catch(() => {})
+      .catch(() => toast.error('Failed to load data'))
       .finally(() => setLoading(false))
   }
 

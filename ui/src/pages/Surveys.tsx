@@ -23,6 +23,7 @@ import PageHeader from '../components/PageHeader'
 import DataTable from '../components/DataTable'
 
 export default function Surveys() {
+  const toast = useToast()
   const [surveys, setSurveys] = useState<Survey[]>([])
   const [showForm, setShowForm] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -31,7 +32,7 @@ export default function Surveys() {
 
   useEffect(() => {
     setLoading(true)
-    fetchSurveys().then(setSurveys).catch(() => {}).finally(() => setLoading(false))
+    fetchSurveys().then(setSurveys).catch(() => toast.error('Failed to load surveys')).finally(() => setLoading(false))
   }, [])
 
   const reload = () => {

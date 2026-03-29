@@ -85,8 +85,8 @@ export default function Documents() {
     setLoading(true)
     Promise.all([
       loadDocuments(),
-      fetchEmployees().then(r => setEmployees(r.employees)).catch(() => {}),
-      fetchExpiringDocuments(30).then(setExpiringDocs).catch(() => {}),
+      fetchEmployees().then(r => setEmployees(r.employees)).catch(() => toast.error('Failed to load employees')),
+      fetchExpiringDocuments(30).then(setExpiringDocs).catch(() => toast.error('Failed to load expiring documents')),
     ]).finally(() => setLoading(false))
   }, [])
 

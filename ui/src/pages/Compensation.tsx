@@ -50,8 +50,8 @@ export default function Compensation() {
 
   useEffect(() => {
     Promise.all([
-      fetchCurrentCompensation().then(setCurrent).catch(() => {}),
-      fetchEmployees().then(r => setEmployees(r.employees)).catch(() => {}),
+      fetchCurrentCompensation().then(setCurrent).catch(() => toast.error('Failed to load compensation data')),
+      fetchEmployees().then(r => setEmployees(r.employees)).catch(() => toast.error('Failed to load employees')),
     ])
       .finally(() => setLoading(false))
   }, [])

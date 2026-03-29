@@ -45,7 +45,7 @@ export default function Reviews() {
     fetchReviewCycles().then(data => {
       setCycles(data)
       if (data.length > 0 && !selectedCycle) setSelectedCycle(data[0].id)
-    }).catch(() => {})
+    }).catch(() => toast.error('Failed to load review cycles'))
   }
 
   useEffect(() => {
@@ -54,8 +54,8 @@ export default function Reviews() {
       fetchReviewCycles().then(data => {
         setCycles(data)
         if (data.length > 0) setSelectedCycle(data[0].id)
-      }).catch(() => {}),
-      fetchEmployees().then(r => setEmployees(r.employees)).catch(() => {}),
+      }).catch(() => toast.error('Failed to load review cycles')),
+      fetchEmployees().then(r => setEmployees(r.employees)).catch(() => toast.error('Failed to load employees')),
     ]).finally(() => setLoading(false))
   }, [])
 

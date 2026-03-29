@@ -44,7 +44,7 @@ export default function Positions() {
       fetchDepartments().then(setDepartments),
       fetchEmployees({ per_page: '1000' }).then(r => setAllEmployees(r.employees)),
     ])
-      .catch(() => {})
+      .catch(() => toast.error('Failed to load data'))
       .finally(() => setLoading(false))
   }
 

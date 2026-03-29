@@ -10,9 +10,11 @@ import { SkeletonTable } from '../components/Skeleton'
 import PageHeader from '../components/PageHeader'
 import DataTable from '../components/DataTable'
 import EmployeeLink from '../components/EmployeeLink'
+import { useToast } from '../components/Toast'
 const ENTITY_TYPES = ['', 'employee', 'department', 'position', 'leave_request', 'time_entry', 'job_posting', 'applicant', 'review', 'goal']
 
 export default function AuditLog() {
+  const toast = useToast()
   const [entries, setEntries] = useState<AuditEntry[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -33,7 +35,7 @@ export default function AuditLog() {
     fetchAuditLog(params).then(r => {
       setEntries(r.entries)
       setTotal(r.total)
-    }).catch(() => {}).finally(() => setLoading(false))
+    }).catch(() => toast.error('Failed to load audit log')).finally(() => setLoading(false))
   }, [page, entityType, fromDate, toDate])
 
   const totalPages = Math.ceil(total / perPage)

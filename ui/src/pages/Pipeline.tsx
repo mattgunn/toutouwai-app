@@ -18,7 +18,7 @@ export default function Pipeline() {
   const loadApplicants = () => {
     fetchApplicants()
       .then(setApplicants)
-      .catch(() => {})
+      .catch(() => toast.error('Failed to load applicants'))
       .finally(() => setLoading(false))
   }
 

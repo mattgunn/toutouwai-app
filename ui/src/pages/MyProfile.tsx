@@ -49,19 +49,19 @@ export default function MyProfile() {
   }, [])
 
   const loadLeaveData = () => {
-    fetchMyLeave().then(setLeaveRequests).catch(() => {})
-    fetchMyLeaveBalances().then(setLeaveBalances).catch(() => {})
+    fetchMyLeave().then(setLeaveRequests).catch(() => toast.error('Failed to load leave requests'))
+    fetchMyLeaveBalances().then(setLeaveBalances).catch(() => toast.error('Failed to load leave balances'))
   }
 
   useEffect(() => {
     if (section === 'leave') {
       loadLeaveData()
     } else if (section === 'time') {
-      fetchMyTime().then(setTimeEntries).catch(() => {})
+      fetchMyTime().then(setTimeEntries).catch(() => toast.error('Failed to load time entries'))
     } else if (section === 'documents') {
-      fetchMyDocuments().then(setDocuments).catch(() => {})
+      fetchMyDocuments().then(setDocuments).catch(() => toast.error('Failed to load documents'))
     } else if (section === 'onboarding') {
-      fetchMyOnboarding().then(setOnboarding).catch(() => {})
+      fetchMyOnboarding().then(setOnboarding).catch(() => toast.error('Failed to load onboarding data'))
     }
   }, [section])
 

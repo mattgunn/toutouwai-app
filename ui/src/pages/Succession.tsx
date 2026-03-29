@@ -89,9 +89,9 @@ export default function Succession() {
 
   useEffect(() => {
     Promise.all([
-      fetchSuccessionPlans().then(setPlans).catch(() => {}),
-      fetchEmployees().then(r => setEmployees(r.employees)).catch(() => {}),
-      fetchPositions().then(setPositions).catch(() => {}),
+      fetchSuccessionPlans().then(setPlans).catch(() => toast.error('Failed to load succession plans')),
+      fetchEmployees().then(r => setEmployees(r.employees)).catch(() => toast.error('Failed to load employees')),
+      fetchPositions().then(setPositions).catch(() => toast.error('Failed to load positions')),
     ])
       .finally(() => setLoading(false))
   }, [])
