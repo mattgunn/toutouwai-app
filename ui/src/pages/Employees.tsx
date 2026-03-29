@@ -675,16 +675,63 @@ export default function Employees() {
     )
   }
 
+  const employeeModal = (
+    <Modal
+      open={showModal}
+      onClose={closeModal}
+      title={editing ? 'Edit Employee' : 'Add Employee'}
+      size="lg"
+      footer={
+        <>
+          <Button variant="secondary" onClick={closeModal} disabled={submitting}>Cancel</Button>
+          <Button type="submit" form="employee-form" loading={submitting}>
+            {editing ? 'Save Changes' : 'Add Employee'}
+          </Button>
+        </>
+      }
+    >
+      <form id="employee-form" onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <FormField label="First Name" required>
+          <Input value={form.first_name} onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))} required placeholder="First name" />
+        </FormField>
+        <FormField label="Last Name" required>
+          <Input value={form.last_name} onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))} required placeholder="Last name" />
+        </FormField>
+        <FormField label="Email" required>
+          <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required placeholder="email@company.com" />
+        </FormField>
+        <FormField label="Phone">
+          <Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="Phone number" />
+        </FormField>
+        <FormField label="Department">
+          <Select value={form.department_id} onChange={e => setForm(f => ({ ...f, department_id: e.target.value }))} placeholder="Select department" options={departments.map(d => ({ value: d.id, label: d.name }))} />
+        </FormField>
+        <FormField label="Position">
+          <Select value={form.position_id} onChange={e => setForm(f => ({ ...f, position_id: e.target.value }))} placeholder="Select position" options={positions.map(p => ({ value: p.id, label: p.title }))} />
+        </FormField>
+        <FormField label="Start Date">
+          <Input type="date" value={form.start_date} onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))} />
+        </FormField>
+        <FormField label="Status">
+          <Select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} options={STATUS_OPTIONS} />
+        </FormField>
+      </form>
+    </Modal>
+  )
+
   // Detail view
   if (selectedEmployee) {
     return (
-      <EmployeeDetail
-        employee={selectedEmployee}
-        onBack={() => setSelectedEmployee(null)}
-        onEdit={(emp) => {
-          openEdit(emp)
-        }}
-      />
+      <>
+        {employeeModal}
+        <EmployeeDetail
+          employee={selectedEmployee}
+          onBack={() => setSelectedEmployee(null)}
+          onEdit={(emp) => {
+            openEdit(emp)
+          }}
+        />
+      </>
     )
   }
 
@@ -715,85 +762,7 @@ export default function Employees() {
         striped
       />
 
-      <Modal
-        open={showModal}
-        onClose={closeModal}
-        title={editing ? 'Edit Employee' : 'Add Employee'}
-        size="lg"
-        footer={
-          <>
-            <Button variant="secondary" onClick={closeModal} disabled={submitting}>Cancel</Button>
-            <Button type="submit" form="employee-form" loading={submitting}>
-              {editing ? 'Save Changes' : 'Add Employee'}
-            </Button>
-          </>
-        }
-      >
-        <form id="employee-form" onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField label="First Name" required>
-            <Input
-              value={form.first_name}
-              onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))}
-              required
-              placeholder="First name"
-            />
-          </FormField>
-          <FormField label="Last Name" required>
-            <Input
-              value={form.last_name}
-              onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))}
-              required
-              placeholder="Last name"
-            />
-          </FormField>
-          <FormField label="Email" required>
-            <Input
-              type="email"
-              value={form.email}
-              onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-              required
-              placeholder="email@company.com"
-            />
-          </FormField>
-          <FormField label="Phone">
-            <Input
-              value={form.phone}
-              onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
-              placeholder="Phone number"
-            />
-          </FormField>
-          <FormField label="Department">
-            <Select
-              value={form.department_id}
-              onChange={e => setForm(f => ({ ...f, department_id: e.target.value }))}
-              placeholder="Select department"
-              options={departments.map(d => ({ value: d.id, label: d.name }))}
-            />
-          </FormField>
-          <FormField label="Position">
-            <Select
-              value={form.position_id}
-              onChange={e => setForm(f => ({ ...f, position_id: e.target.value }))}
-              placeholder="Select position"
-              options={positions.map(p => ({ value: p.id, label: p.title }))}
-            />
-          </FormField>
-          <FormField label="Start Date">
-            <Input
-              type="date"
-              value={form.start_date}
-              onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))}
-            />
-          </FormField>
-          <FormField label="Status">
-            <Select
-              value={form.status}
-              onChange={e => setForm(f => ({ ...f, status: e.target.value }))}
-              options={STATUS_OPTIONS}
-            />
-          </FormField>
-        </form>
-      </Modal>
+      {employeeModal}
     </div>
   )
 }
