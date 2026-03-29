@@ -36,7 +36,8 @@ def create_plan(body: dict, conn=Depends(get_db), _user=Depends(get_current_user
     conn.commit()
     row = conn.execute("""
         SELECT sp.*, p.title as position_title, d.name as department_name,
-               e.first_name || ' ' || e.last_name as incumbent_name
+               e.first_name || ' ' || e.last_name as incumbent_name,
+               (SELECT COUNT(*) FROM succession_candidates sc WHERE sc.plan_id = sp.id) as candidate_count
         FROM succession_plans sp
         JOIN positions p ON sp.position_id = p.id
         LEFT JOIN departments d ON p.department_id = d.id
@@ -62,7 +63,8 @@ def update_plan(plan_id: str, body: dict, conn=Depends(get_db), _user=Depends(ge
     conn.commit()
     row = conn.execute("""
         SELECT sp.*, p.title as position_title, d.name as department_name,
-               e.first_name || ' ' || e.last_name as incumbent_name
+               e.first_name || ' ' || e.last_name as incumbent_name,
+               (SELECT COUNT(*) FROM succession_candidates sc WHERE sc.plan_id = sp.id) as candidate_count
         FROM succession_plans sp
         JOIN positions p ON sp.position_id = p.id
         LEFT JOIN departments d ON p.department_id = d.id
@@ -92,6 +94,8 @@ def list_candidates(plan_id: str, conn=Depends(get_db), _user=Depends(get_curren
 
 @router.post("/succession/{plan_id}/candidates")
 def add_candidate(plan_id: str, body: dict, conn=Depends(get_db), _user=Depends(get_current_user)):
+    if not conn.execute("SELECT id FROM employees WHERE id = ?", (body["employee_id"],)).fetchone():
+        raise HTTPException(status_code=400, detail="employee_id does not exist")
     ts = now_iso()
     cid = new_id()
     conn.execute("""

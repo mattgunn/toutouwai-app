@@ -164,6 +164,8 @@ def list_checklists(
 
 @router.post("/onboarding/checklists")
 def create_checklist(body: dict, conn=Depends(get_db), _user=Depends(get_current_user)):
+    if not conn.execute("SELECT id FROM employees WHERE id = ?", (body["employee_id"],)).fetchone():
+        raise HTTPException(status_code=400, detail="employee_id does not exist")
     ts = now_iso()
     cid = new_id()
     employee_id = body["employee_id"]

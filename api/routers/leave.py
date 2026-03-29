@@ -41,6 +41,10 @@ def list_leave_requests(
 
 @router.post("/leave/requests")
 def create_leave_request(body: dict, conn=Depends(get_db), _user=Depends(get_current_user)):
+    if not conn.execute("SELECT id FROM employees WHERE id = ?", (body["employee_id"],)).fetchone():
+        raise HTTPException(status_code=400, detail="employee_id does not exist")
+    if not conn.execute("SELECT id FROM leave_types WHERE id = ?", (body["leave_type_id"],)).fetchone():
+        raise HTTPException(status_code=400, detail="leave_type_id does not exist")
     ts = now_iso()
     lid = new_id()
     conn.execute("""

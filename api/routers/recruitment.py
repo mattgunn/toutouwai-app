@@ -107,6 +107,8 @@ def get_applicant(applicant_id: str, conn=Depends(get_db), _user=Depends(get_cur
 
 @router.post("/recruitment/applicants")
 def create_applicant(body: dict, conn=Depends(get_db), _user=Depends(get_current_user)):
+    if not conn.execute("SELECT id FROM job_postings WHERE id = ?", (body["job_posting_id"],)).fetchone():
+        raise HTTPException(status_code=400, detail="job_posting_id does not exist")
     ts = now_iso()
     aid = new_id()
     conn.execute("""

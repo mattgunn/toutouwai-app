@@ -35,6 +35,9 @@ def list_documents(
 
 @router.post("/documents")
 def create_document(body: dict, conn=Depends(get_db), user=Depends(get_current_user)):
+    if body.get("employee_id"):
+        if not conn.execute("SELECT id FROM employees WHERE id = ?", (body["employee_id"],)).fetchone():
+            raise HTTPException(status_code=400, detail="employee_id does not exist")
     ts = now_iso()
     did = new_id()
     conn.execute("""

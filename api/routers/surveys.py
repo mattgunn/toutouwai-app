@@ -21,6 +21,8 @@ def list_surveys(conn=Depends(get_db), _user=Depends(get_current_user)):
 
 @router.post("/surveys")
 def create_survey(body: dict, conn=Depends(get_db), user=Depends(get_current_user)):
+    if not body.get("title"):
+        raise HTTPException(status_code=400, detail="title is required")
     ts = now_iso()
     sid = new_id()
     conn.execute("""
@@ -30,7 +32,14 @@ def create_survey(body: dict, conn=Depends(get_db), user=Depends(get_current_use
           body.get("anonymous", 1), body.get("start_date"), body.get("end_date"),
           user["id"], ts, ts))
     conn.commit()
-    row = conn.execute("SELECT * FROM surveys WHERE id = ?", (sid,)).fetchone()
+    row = conn.execute("""
+        SELECT s.*, u.name as created_by_name,
+               (SELECT COUNT(DISTINCT sr.employee_id) FROM survey_responses sr WHERE sr.survey_id = s.id) as response_count,
+               (SELECT COUNT(*) FROM survey_questions sq WHERE sq.survey_id = s.id) as question_count
+        FROM surveys s
+        LEFT JOIN users u ON s.created_by = u.id
+        WHERE s.id = ?
+    """, (sid,)).fetchone()
     return dict(row)
 
 
@@ -49,7 +58,14 @@ def update_survey(survey_id: str, body: dict, conn=Depends(get_db), _user=Depend
     values.append(survey_id)
     conn.execute(f"UPDATE surveys SET {', '.join(updates)} WHERE id = ?", values)
     conn.commit()
-    row = conn.execute("SELECT * FROM surveys WHERE id = ?", (survey_id,)).fetchone()
+    row = conn.execute("""
+        SELECT s.*, u.name as created_by_name,
+               (SELECT COUNT(DISTINCT sr.employee_id) FROM survey_responses sr WHERE sr.survey_id = s.id) as response_count,
+               (SELECT COUNT(*) FROM survey_questions sq WHERE sq.survey_id = s.id) as question_count
+        FROM surveys s
+        LEFT JOIN users u ON s.created_by = u.id
+        WHERE s.id = ?
+    """, (survey_id,)).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Survey not found")
     return dict(row)
@@ -78,6 +94,8 @@ def list_questions(survey_id: str, conn=Depends(get_db), _user=Depends(get_curre
 
 @router.post("/surveys/{survey_id}/questions")
 def create_question(survey_id: str, body: dict, conn=Depends(get_db), _user=Depends(get_current_user)):
+    if not body.get("question_text"):
+        raise HTTPException(status_code=400, detail="question_text is required")
     ts = now_iso()
     qid = new_id()
     options = json.dumps(body["options"]) if body.get("options") else None
@@ -152,6 +170,11 @@ def submit_responses(survey_id: str, body: dict, conn=Depends(get_db), user=Depe
         raise HTTPException(status_code=404, detail="Survey not found")
     if survey["status"] != "active":
         raise HTTPException(status_code=400, detail="Survey is not active")
+
+    # Validate each question_id belongs to this survey
+    for resp in body.get("responses", []):
+        if not conn.execute("SELECT id FROM survey_questions WHERE id = ? AND survey_id = ?", (resp["question_id"], survey_id)).fetchone():
+            raise HTTPException(status_code=400, detail=f"question_id {resp['question_id']} does not belong to this survey")
 
     ts = now_iso()
     employee_id = body.get("employee_id") if not survey["anonymous"] else None

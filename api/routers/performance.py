@@ -25,7 +25,11 @@ def create_cycle(body: dict, conn=Depends(get_db), _user=Depends(get_current_use
         (cid, body["name"], body["start_date"], body["end_date"], body.get("status", "draft"), ts, ts),
     )
     conn.commit()
-    return dict(conn.execute("SELECT * FROM review_cycles WHERE id = ?", (cid,)).fetchone())
+    row = conn.execute("""
+        SELECT rc.*, (SELECT COUNT(*) FROM reviews WHERE cycle_id = rc.id) as review_count
+        FROM review_cycles rc WHERE rc.id = ?
+    """, (cid,)).fetchone()
+    return dict(row)
 
 
 # ── Reviews ──────────────────────────────────────────────────────────
@@ -57,6 +61,12 @@ def list_reviews(cycle_id: str = "", employee_id: str = "", conn=Depends(get_db)
 
 @router.post("/performance/reviews")
 def create_review(body: dict, conn=Depends(get_db), _user=Depends(get_current_user)):
+    if not conn.execute("SELECT id FROM employees WHERE id = ?", (body["employee_id"],)).fetchone():
+        raise HTTPException(status_code=400, detail="employee_id does not exist")
+    if not conn.execute("SELECT id FROM employees WHERE id = ?", (body["reviewer_id"],)).fetchone():
+        raise HTTPException(status_code=400, detail="reviewer_id does not exist")
+    if not conn.execute("SELECT id FROM review_cycles WHERE id = ?", (body["cycle_id"],)).fetchone():
+        raise HTTPException(status_code=400, detail="cycle_id does not exist")
     ts = now_iso()
     rid = new_id()
     conn.execute("""
@@ -65,14 +75,19 @@ def create_review(body: dict, conn=Depends(get_db), _user=Depends(get_current_us
     """, (rid, body["employee_id"], body["reviewer_id"], body["cycle_id"],
           body.get("rating"), body.get("feedback"), body.get("status", "draft"), ts, ts))
     conn.commit()
-    rows = conn.execute("""
+    row = conn.execute("""
         SELECT r.*, e.first_name || ' ' || e.last_name as employee_name,
-               rv.first_name || ' ' || rv.last_name as reviewer_name, rc.name as cycle_name
-        FROM reviews r JOIN employees e ON r.employee_id = e.id
-        LEFT JOIN employees rv ON r.reviewer_id = rv.id JOIN review_cycles rc ON r.cycle_id = rc.id
+               rv.first_name || ' ' || rv.last_name as reviewer_name,
+               rc.name as cycle_name
+        FROM reviews r
+        JOIN employees e ON r.employee_id = e.id
+        LEFT JOIN employees rv ON r.reviewer_id = rv.id
+        JOIN review_cycles rc ON r.cycle_id = rc.id
         WHERE r.id = ?
     """, (rid,)).fetchone()
-    return dict(rows)
+    if not row:
+        raise HTTPException(status_code=404, detail="Review not found")
+    return dict(row)
 
 
 @router.put("/performance/reviews/{review_id}")
@@ -88,7 +103,16 @@ def update_review(review_id: str, body: dict, conn=Depends(get_db), _user=Depend
         values.extend([now_iso(), review_id])
         conn.execute(f"UPDATE reviews SET {', '.join(updates)} WHERE id = ?", values)
         conn.commit()
-    row = conn.execute("SELECT * FROM reviews WHERE id = ?", (review_id,)).fetchone()
+    row = conn.execute("""
+        SELECT r.*, e.first_name || ' ' || e.last_name as employee_name,
+               rv.first_name || ' ' || rv.last_name as reviewer_name,
+               rc.name as cycle_name
+        FROM reviews r
+        JOIN employees e ON r.employee_id = e.id
+        LEFT JOIN employees rv ON r.reviewer_id = rv.id
+        JOIN review_cycles rc ON r.cycle_id = rc.id
+        WHERE r.id = ?
+    """, (review_id,)).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Review not found")
     return dict(row)
@@ -118,6 +142,8 @@ def list_goals(employee_id: str = "", status: str = "", conn=Depends(get_db), _u
 
 @router.post("/performance/goals")
 def create_goal(body: dict, conn=Depends(get_db), _user=Depends(get_current_user)):
+    if not conn.execute("SELECT id FROM employees WHERE id = ?", (body["employee_id"],)).fetchone():
+        raise HTTPException(status_code=400, detail="employee_id does not exist")
     ts = now_iso()
     gid = new_id()
     conn.execute("""

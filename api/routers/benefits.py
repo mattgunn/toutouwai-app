@@ -30,7 +30,13 @@ def create_plan(body: dict, conn=Depends(get_db), _user=Depends(get_current_user
         body.get("description"), body.get("is_active", 1), ts, ts,
     ))
     conn.commit()
-    return dict(conn.execute("SELECT * FROM benefit_plans WHERE id = ?", (pid,)).fetchone())
+    row = conn.execute("""
+        SELECT bp.*,
+               (SELECT COUNT(*) FROM benefit_enrollments be WHERE be.plan_id = bp.id AND be.status = 'active') as active_enrollments
+        FROM benefit_plans bp
+        WHERE bp.id = ?
+    """, (pid,)).fetchone()
+    return dict(row)
 
 
 @router.put("/benefits/plans/{plan_id}")
@@ -47,7 +53,12 @@ def update_plan(plan_id: str, body: dict, conn=Depends(get_db), _user=Depends(ge
     values.extend([now_iso(), plan_id])
     conn.execute(f"UPDATE benefit_plans SET {', '.join(updates)} WHERE id = ?", values)
     conn.commit()
-    row = conn.execute("SELECT * FROM benefit_plans WHERE id = ?", (plan_id,)).fetchone()
+    row = conn.execute("""
+        SELECT bp.*,
+               (SELECT COUNT(*) FROM benefit_enrollments be WHERE be.plan_id = bp.id AND be.status = 'active') as active_enrollments
+        FROM benefit_plans bp
+        WHERE bp.id = ?
+    """, (plan_id,)).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Plan not found")
     return dict(row)
@@ -80,6 +91,10 @@ def list_enrollments(employee_id: str = "", plan_id: str = "", conn=Depends(get_
 
 @router.post("/benefits/enrollments")
 def create_enrollment(body: dict, conn=Depends(get_db), _user=Depends(get_current_user)):
+    if not conn.execute("SELECT id FROM employees WHERE id = ?", (body["employee_id"],)).fetchone():
+        raise HTTPException(status_code=400, detail="employee_id does not exist")
+    if not conn.execute("SELECT id FROM benefit_plans WHERE id = ?", (body["plan_id"],)).fetchone():
+        raise HTTPException(status_code=400, detail="plan_id does not exist")
     ts = now_iso()
     eid = new_id()
     conn.execute("""

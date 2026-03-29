@@ -44,6 +44,8 @@ def list_current_compensation(conn=Depends(get_db), _user=Depends(get_current_us
 
 @router.post("/compensation")
 def create_compensation(body: dict, conn=Depends(get_db), _user=Depends(get_current_user)):
+    if not conn.execute("SELECT id FROM employees WHERE id = ?", (body["employee_id"],)).fetchone():
+        raise HTTPException(status_code=400, detail="employee_id does not exist")
     ts = now_iso()
     cid = new_id()
     conn.execute("""

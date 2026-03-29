@@ -69,6 +69,8 @@ def get_own_leave(conn=Depends(get_db), user=Depends(get_current_user)):
 @router.post("/self-service/leave")
 def submit_own_leave(body: dict, conn=Depends(get_db), user=Depends(get_current_user)):
     emp = _get_employee_for_user(conn, user)
+    if not conn.execute("SELECT id FROM leave_types WHERE id = ?", (body["leave_type_id"],)).fetchone():
+        raise HTTPException(status_code=400, detail="leave_type_id does not exist")
     ts = now_iso()
     lid = new_id()
     conn.execute("""
