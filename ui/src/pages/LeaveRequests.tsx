@@ -31,10 +31,6 @@ export default function LeaveRequests() {
   const [createForm, setCreateForm] = useState({ employee_id: '', leave_type_id: '', start_date: '', end_date: '', notes: '' })
   const [creating, setCreating] = useState(false)
 
-  // Add notes state
-  const [editNotes, setEditNotes] = useState('')
-  const [editingNotes, setEditingNotes] = useState(false)
-
   const loadData = () => {
     setLoading(true)
     Promise.all([
@@ -84,11 +80,15 @@ export default function LeaveRequests() {
     if (!createForm.employee_id || !createForm.leave_type_id || !createForm.start_date || !createForm.end_date) return
     setCreating(true)
     try {
+      const start = new Date(createForm.start_date)
+      const end = new Date(createForm.end_date)
+      const days = Math.max(1, Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1)
       await createLeaveRequest({
         employee_id: createForm.employee_id,
         leave_type_id: createForm.leave_type_id,
         start_date: createForm.start_date,
         end_date: createForm.end_date,
+        days,
         notes: createForm.notes || null,
       })
       toast.success('Leave request created')
@@ -219,35 +219,7 @@ export default function LeaveRequests() {
             </div>
             <div>
               <p className="text-xs text-gray-500 mb-1">Notes</p>
-              {editingNotes ? (
-                <div className="space-y-2">
-                  <Textarea
-                    value={editNotes}
-                    onChange={e => setEditNotes(e.target.value)}
-                    placeholder="Add notes..."
-                    rows={3}
-                  />
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={() => {
-                      // Notes are display-only since API doesn't support note update on status endpoint
-                      // But we show them for context
-                      setEditingNotes(false)
-                      if (selectedRequest) {
-                        setSelectedRequest({ ...selectedRequest, notes: editNotes || null })
-                      }
-                      toast.success('Notes updated locally')
-                    }}>Save</Button>
-                    <Button variant="secondary" size="sm" onClick={() => setEditingNotes(false)}>Cancel</Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-start gap-2">
-                  <p className="text-sm text-gray-300 flex-1">{selectedRequest.notes || '\u2014'}</p>
-                  <Button variant="ghost" size="sm" onClick={() => { setEditNotes(selectedRequest.notes || ''); setEditingNotes(true) }}>
-                    Edit
-                  </Button>
-                </div>
-              )}
+              <p className="text-sm text-gray-300">{selectedRequest.notes || '\u2014'}</p>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
