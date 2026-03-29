@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 
 interface ModalProps {
   open: boolean
@@ -18,19 +18,48 @@ const sizes = {
 
 export default function Modal({ open, onClose, title, children, size = 'md', footer }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
+
+  // Focus trap
+  const handleTab = useCallback((e: KeyboardEvent) => {
+    if (e.key !== 'Tab' || !dialogRef.current) return
+    const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    )
+    if (focusable.length === 0) return
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    if (e.shiftKey) {
+      if (document.activeElement === first) { e.preventDefault(); last.focus() }
+    } else {
+      if (document.activeElement === last) { e.preventDefault(); first.focus() }
+    }
+  }, [])
 
   useEffect(() => {
     if (!open) return
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
+      handleTab(e)
     }
     document.addEventListener('keydown', handleKey)
     document.body.style.overflow = 'hidden'
+
+    // Auto-focus first focusable element
+    requestAnimationFrame(() => {
+      if (dialogRef.current) {
+        const first = dialogRef.current.querySelector<HTMLElement>(
+          'input, select, textarea, button:not([aria-label="Close"])'
+        )
+        if (first) first.focus()
+      }
+    })
+
     return () => {
       document.removeEventListener('keydown', handleKey)
       document.body.style.overflow = ''
     }
-  }, [open, onClose])
+  }, [open, onClose, handleTab])
 
   if (!open) return null
 
@@ -40,7 +69,7 @@ export default function Modal({ open, onClose, title, children, size = 'md', foo
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in"
       onClick={e => { if (e.target === overlayRef.current) onClose() }}
     >
-      <div role="dialog" aria-modal="true" className={`w-full ${sizes[size]} bg-gray-900 border border-gray-800 rounded-xl shadow-2xl max-h-[90vh] flex flex-col`}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" className={`w-full ${sizes[size]} bg-gray-900 border border-gray-800 rounded-xl shadow-2xl max-h-[90vh] flex flex-col`}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
           <h2 className="text-lg font-semibold text-white">{title}</h2>

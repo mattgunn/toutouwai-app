@@ -58,7 +58,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
 
   useEffect(() => {
     requestAnimationFrame(() => setVisible(true))
-    const timer = setTimeout(() => setVisible(false), 3600)
+    const timer = setTimeout(() => setVisible(false), 3500)
     return () => clearTimeout(timer)
   }, [])
 

@@ -1,5 +1,6 @@
 """Dev mode: seed database with realistic dummy data for all modules."""
 import random
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends
 from ..db import new_id, now_iso
 from ..deps import get_db, get_current_user
@@ -181,12 +182,15 @@ def seed_database(conn=Depends(get_db), user=Depends(get_current_user)):
     statuses_lr = ["pending"] * 3 + ["approved"] * 5 + ["rejected"]
     for _ in range(40):
         eid = random.choice(emp_ids)
-        start = _date(2025, (1, 12))
         days = random.randint(1, 10)
+        start_dt = datetime(2025, random.randint(1, 12), random.randint(1, 25))
+        end_dt = start_dt + timedelta(days=days - 1)
+        start = start_dt.strftime("%Y-%m-%d")
+        end = end_dt.strftime("%Y-%m-%d")
         conn.execute(
             """INSERT INTO leave_requests (id, employee_id, leave_type_id, start_date, end_date, days, notes, status, created_at, updated_at)
             VALUES (?,?,?,?,?,?,?,?,?,?)""",
-            (new_id(), eid, random.choice(leave_type_ids), start, start, days,
+            (new_id(), eid, random.choice(leave_type_ids), start, end, days,
              random.choice(["Family vacation", "Medical appointment", "Personal day", "Wedding", "Moving house", "Conference"]),
              random.choice(statuses_lr), ts, ts)
         )
