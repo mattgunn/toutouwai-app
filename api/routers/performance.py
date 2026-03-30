@@ -186,3 +186,101 @@ def delete_goal(goal_id: str, conn=Depends(get_db), _user=Depends(get_current_us
     conn.execute("DELETE FROM goals WHERE id = ?", (goal_id,))
     conn.commit()
     return {"ok": True}
+
+
+# ── 360 Feedback Requests ───────────────────────────────────────────
+
+@router.get("/performance/feedback")
+def list_feedback_requests(
+    employee_id: str = "",
+    reviewer_id: str = "",
+    review_id: str = "",
+    status: str = "",
+    conn=Depends(get_db),
+    _user=Depends(get_current_user),
+):
+    conditions, params = [], []
+    if employee_id:
+        conditions.append("fr.employee_id = ?")
+        params.append(employee_id)
+    if reviewer_id:
+        conditions.append("fr.reviewer_id = ?")
+        params.append(reviewer_id)
+    if review_id:
+        conditions.append("fr.review_id = ?")
+        params.append(review_id)
+    if status:
+        conditions.append("fr.status = ?")
+        params.append(status)
+    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+    rows = conn.execute(f"""
+        SELECT fr.*,
+               e.first_name || ' ' || e.last_name as employee_name,
+               rv.first_name || ' ' || rv.last_name as reviewer_name
+        FROM feedback_requests fr
+        JOIN employees e ON fr.employee_id = e.id
+        JOIN employees rv ON fr.reviewer_id = rv.id
+        {where}
+        ORDER BY fr.created_at DESC
+    """, params).fetchall()
+    return [dict(r) for r in rows]
+
+
+@router.post("/performance/feedback")
+def create_feedback_request(body: dict, conn=Depends(get_db), _user=Depends(get_current_user)):
+    if not conn.execute("SELECT id FROM employees WHERE id = ?", (body["employee_id"],)).fetchone():
+        raise HTTPException(status_code=400, detail="employee_id does not exist")
+    if not conn.execute("SELECT id FROM employees WHERE id = ?", (body["reviewer_id"],)).fetchone():
+        raise HTTPException(status_code=400, detail="reviewer_id does not exist")
+    if body.get("review_id"):
+        if not conn.execute("SELECT id FROM reviews WHERE id = ?", (body["review_id"],)).fetchone():
+            raise HTTPException(status_code=400, detail="review_id does not exist")
+    ts = now_iso()
+    fid = new_id()
+    conn.execute("""
+        INSERT INTO feedback_requests (id, review_id, employee_id, reviewer_id, relationship, status, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        fid, body.get("review_id"), body["employee_id"], body["reviewer_id"],
+        body.get("relationship", "peer"), body.get("status", "pending"), ts, ts,
+    ))
+    conn.commit()
+    row = conn.execute("""
+        SELECT fr.*,
+               e.first_name || ' ' || e.last_name as employee_name,
+               rv.first_name || ' ' || rv.last_name as reviewer_name
+        FROM feedback_requests fr
+        JOIN employees e ON fr.employee_id = e.id
+        JOIN employees rv ON fr.reviewer_id = rv.id
+        WHERE fr.id = ?
+    """, (fid,)).fetchone()
+    return dict(row)
+
+
+@router.put("/performance/feedback/{feedback_id}")
+def update_feedback_request(feedback_id: str, body: dict, conn=Depends(get_db), _user=Depends(get_current_user)):
+    fields = ["status", "rating", "feedback", "submitted_at", "relationship"]
+    updates, values = [], []
+    for f in fields:
+        if f in body:
+            updates.append(f"{f} = ?")
+            values.append(body[f])
+    if not updates:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    updates.append("updated_at = ?")
+    values.extend([now_iso(), feedback_id])
+    conn.execute(f"UPDATE feedback_requests SET {', '.join(updates)} WHERE id = ?", values)
+    conn.commit()
+    row = conn.execute("""
+        SELECT fr.*,
+               e.first_name || ' ' || e.last_name as employee_name,
+               rv.first_name || ' ' || rv.last_name as reviewer_name
+        FROM feedback_requests fr
+        JOIN employees e ON fr.employee_id = e.id
+        JOIN employees rv ON fr.reviewer_id = rv.id
+        WHERE fr.id = ?
+    """, (feedback_id,)).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Feedback request not found")
+    return dict(row)

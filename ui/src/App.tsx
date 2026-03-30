@@ -29,6 +29,8 @@ import MyProfile from './pages/MyProfile'
 import AuditLog from './pages/AuditLog'
 import Workflows from './pages/Workflows'
 import Surveys from './pages/Surveys'
+import Learning from './pages/Learning'
+import AbsenceCalendar from './pages/AbsenceCalendar'
 import Help from './pages/Help'
 
 export default function App() {
@@ -56,6 +58,7 @@ export default function App() {
               <Route path="/timesheets" element={<ModuleGuard module="timesheets"><Timesheets /></ModuleGuard>} />
               <Route path="/leave-requests" element={<ModuleGuard module="leave"><LeaveRequests /></ModuleGuard>} />
               <Route path="/leave-balances" element={<ModuleGuard module="leave"><LeaveBalances /></ModuleGuard>} />
+              <Route path="/absence-calendar" element={<ModuleGuard module="leave"><AbsenceCalendar /></ModuleGuard>} />
               <Route path="/compensation" element={<ModuleGuard module="compensation"><Compensation /></ModuleGuard>} />
               <Route path="/benefits" element={<ModuleGuard module="benefits"><Benefits /></ModuleGuard>} />
               <Route path="/succession" element={<ModuleGuard module="succession"><Succession /></ModuleGuard>} />
@@ -65,6 +68,7 @@ export default function App() {
               <Route path="/reviews" element={<ModuleGuard module="performance"><Reviews /></ModuleGuard>} />
               <Route path="/goals" element={<ModuleGuard module="performance"><Goals /></ModuleGuard>} />
               <Route path="/surveys" element={<ModuleGuard module="performance"><Surveys /></ModuleGuard>} />
+              <Route path="/learning" element={<ModuleGuard module="performance"><Learning /></ModuleGuard>} />
               <Route path="/reports" element={<ModuleGuard module="reports"><Reports /></ModuleGuard>} />
               <Route path="/audit" element={<ModuleGuard module="settings"><AuditLog /></ModuleGuard>} />
               <Route path="/workflows" element={<ModuleGuard module="settings"><Workflows /></ModuleGuard>} />

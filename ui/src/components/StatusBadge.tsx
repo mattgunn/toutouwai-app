@@ -37,6 +37,15 @@ const statusColors: Record<string, string> = {
   medium: 'bg-amber-600/20 text-amber-400',
   high: 'bg-red-600/20 text-red-400',
   critical: 'bg-red-600/20 text-red-400',
+  // Employment types
+  full_time: 'bg-blue-600/20 text-blue-400',
+  part_time: 'bg-cyan-600/20 text-cyan-400',
+  contractor: 'bg-orange-600/20 text-orange-400',
+  casual: 'bg-teal-600/20 text-teal-400',
+  intern: 'bg-violet-600/20 text-violet-400',
+  // Learning
+  assigned: 'bg-blue-600/20 text-blue-400',
+  overdue: 'bg-red-600/20 text-red-400',
 }
 
 export default function StatusBadge({ status }: { status: string }) {

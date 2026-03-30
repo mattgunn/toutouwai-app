@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react'
 import { formatDate } from '../utils/format'
-import { fetchCurrentCompensation, fetchCompensation, createCompensation, updateCompensation } from '../modules/compensation/api'
-import { fetchEmployees } from '../api'
-import type { CurrentCompensation, CompensationRecord } from '../modules/compensation/types'
-import type { Employee } from '../types'
+import { fetchCurrentCompensation, fetchCompensation, createCompensation, updateCompensation, fetchSalaryBands, createSalaryBand, updateSalaryBand, deleteSalaryBand } from '../modules/compensation/api'
+import { fetchEmployees, fetchPositions } from '../api'
+import type { CurrentCompensation, CompensationRecord, SalaryBand } from '../modules/compensation/types'
+import type { Employee, Position } from '../types'
 import StatCard from '../components/StatCard'
 import EmptyState from '../components/EmptyState'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
 import PageHeader from '../components/PageHeader'
 import DataTable from '../components/DataTable'
+import Tabs from '../components/Tabs'
 import { FormField, Input, Select, Textarea } from '../components/FormField'
 import { PageSkeleton } from '../components/Skeleton'
 import { useToast } from '../components/Toast'
@@ -33,9 +34,14 @@ function formatCurrency(amount: number, currency: string) {
   return new Intl.NumberFormat('en-NZ', { style: 'currency', currency }).format(amount)
 }
 
+type CompTab = 'employees' | 'bands'
+
 export default function Compensation() {
+  const [tab, setTab] = useState<CompTab>('employees')
   const [current, setCurrent] = useState<CurrentCompensation[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
+  const [positions, setPositions] = useState<Position[]>([])
+  const [bands, setBands] = useState<SalaryBand[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [search, setSearch] = useState('')
@@ -46,12 +52,21 @@ export default function Compensation() {
   const [editingRecord, setEditingRecord] = useState<CompensationRecord | null>(null)
   const [editForm, setEditForm] = useState({ effective_date: '', salary: '', currency: 'NZD', pay_frequency: 'annual', reason: '', notes: '' })
   const [editSubmitting, setEditSubmitting] = useState(false)
+
+  // Band form state
+  const [showBandForm, setShowBandForm] = useState(false)
+  const [bandSubmitting, setBandSubmitting] = useState(false)
+  const [bandForm, setBandForm] = useState({ name: '', grade: '', position_id: '', min_salary: '', mid_salary: '', max_salary: '', currency: 'NZD' })
+  const [editingBand, setEditingBand] = useState<SalaryBand | null>(null)
+
   const toast = useToast()
 
   useEffect(() => {
     Promise.all([
       fetchCurrentCompensation().then(setCurrent).catch(() => toast.error('Failed to load compensation data')),
       fetchEmployees().then(r => setEmployees(r.employees)).catch(() => toast.error('Failed to load employees')),
+      fetchSalaryBands().then(setBands).catch(() => toast.error('Failed to load salary bands')),
+      fetchPositions().then(setPositions).catch(() => toast.error('Failed to load positions')),
     ])
       .finally(() => setLoading(false))
   }, [])
@@ -60,7 +75,7 @@ export default function Compensation() {
     if (selectedEmployee) {
       fetchCompensation({ employee_id: selectedEmployee.employee_id })
         .then(setHistory)
-        .catch(() => {})
+        .catch(() => toast.error('Failed to load compensation history'))
     }
   }, [selectedEmployee])
 
@@ -92,7 +107,7 @@ export default function Compensation() {
       toast.success('Compensation record added')
       fetchCurrentCompensation().then(setCurrent).catch(() => toast.error('Failed to refresh data'))
       if (selectedEmployee) {
-        fetchCompensation({ employee_id: selectedEmployee.employee_id }).then(setHistory).catch(() => {})
+        fetchCompensation({ employee_id: selectedEmployee.employee_id }).then(setHistory).catch(() => toast.error('Failed to refresh history'))
       }
     } catch {
       toast.error('Failed to add compensation record')
@@ -127,15 +142,79 @@ export default function Compensation() {
       await updateCompensation(editingRecord.id, { ...editForm, salary: parseFloat(editForm.salary) })
       toast.success('Compensation record updated')
       setEditingRecord(null)
-      fetchCurrentCompensation().then(setCurrent).catch(() => {})
+      fetchCurrentCompensation().then(setCurrent).catch(() => toast.error('Failed to refresh data'))
       if (selectedEmployee) {
-        fetchCompensation({ employee_id: selectedEmployee.employee_id }).then(setHistory).catch(() => {})
+        fetchCompensation({ employee_id: selectedEmployee.employee_id }).then(setHistory).catch(() => toast.error('Failed to refresh history'))
       }
     } catch {
       toast.error('Failed to update compensation record')
     } finally {
       setEditSubmitting(false)
     }
+  }
+
+  // Band handlers
+  const openAddBand = () => {
+    setEditingBand(null)
+    setBandForm({ name: '', grade: '', position_id: '', min_salary: '', mid_salary: '', max_salary: '', currency: 'NZD' })
+    setShowBandForm(true)
+  }
+
+  const openEditBand = (band: SalaryBand) => {
+    setEditingBand(band)
+    setBandForm({
+      name: band.name,
+      grade: band.grade,
+      position_id: band.position_id || '',
+      min_salary: String(band.min_salary),
+      mid_salary: String(band.mid_salary),
+      max_salary: String(band.max_salary),
+      currency: band.currency,
+    })
+    setShowBandForm(true)
+  }
+
+  const handleSaveBand = async () => {
+    if (!bandForm.name || !bandForm.grade || !bandForm.min_salary || !bandForm.mid_salary || !bandForm.max_salary) return
+    setBandSubmitting(true)
+    try {
+      const payload = {
+        ...bandForm,
+        position_id: bandForm.position_id || null,
+        min_salary: parseFloat(bandForm.min_salary),
+        mid_salary: parseFloat(bandForm.mid_salary),
+        max_salary: parseFloat(bandForm.max_salary),
+      }
+      if (editingBand) {
+        await updateSalaryBand(editingBand.id, payload)
+        toast.success('Salary band updated')
+      } else {
+        await createSalaryBand(payload)
+        toast.success('Salary band created')
+      }
+      setShowBandForm(false)
+      fetchSalaryBands().then(setBands).catch(() => toast.error('Failed to refresh bands'))
+    } catch {
+      toast.error('Failed to save salary band')
+    } finally {
+      setBandSubmitting(false)
+    }
+  }
+
+  const handleDeleteBand = async (band: SalaryBand) => {
+    try {
+      await deleteSalaryBand(band.id)
+      toast.success('Salary band deleted')
+      setBands(prev => prev.filter(b => b.id !== band.id))
+    } catch {
+      toast.error('Failed to delete salary band')
+    }
+  }
+
+  // Find matching band for employee's position
+  const findBandForPosition = (positionTitle: string | null) => {
+    if (!positionTitle) return null
+    return bands.find(b => b.position_title === positionTitle)
   }
 
   const compColumns = [
@@ -237,11 +316,70 @@ export default function Compensation() {
           </FormField>
         </div>
       </Modal>
+
+      {/* Band form modal */}
+      <Modal
+        open={showBandForm}
+        onClose={() => setShowBandForm(false)}
+        title={editingBand ? 'Edit Salary Band' : 'Add Salary Band'}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowBandForm(false)} disabled={bandSubmitting}>Cancel</Button>
+            <Button onClick={handleSaveBand} loading={bandSubmitting}>{editingBand ? 'Save Changes' : 'Create'}</Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Band Name" required>
+              <Input value={bandForm.name} onChange={e => setBandForm({ ...bandForm, name: e.target.value })} placeholder="e.g. Senior Engineer" />
+            </FormField>
+            <FormField label="Grade" required>
+              <Input value={bandForm.grade} onChange={e => setBandForm({ ...bandForm, grade: e.target.value })} placeholder="e.g. L5" />
+            </FormField>
+          </div>
+          <FormField label="Position">
+            <Select
+              value={bandForm.position_id}
+              onChange={e => setBandForm({ ...bandForm, position_id: e.target.value })}
+              placeholder="Link to position (optional)"
+              options={positions.map(p => ({ value: p.id, label: p.title }))}
+            />
+          </FormField>
+          <div className="grid grid-cols-3 gap-3">
+            <FormField label="Min Salary" required>
+              <Input type="number" value={bandForm.min_salary} onChange={e => setBandForm({ ...bandForm, min_salary: e.target.value })} placeholder="Min" />
+            </FormField>
+            <FormField label="Mid Salary" required>
+              <Input type="number" value={bandForm.mid_salary} onChange={e => setBandForm({ ...bandForm, mid_salary: e.target.value })} placeholder="Mid" />
+            </FormField>
+            <FormField label="Max Salary" required>
+              <Input type="number" value={bandForm.max_salary} onChange={e => setBandForm({ ...bandForm, max_salary: e.target.value })} placeholder="Max" />
+            </FormField>
+          </div>
+          <FormField label="Currency">
+            <Select value={bandForm.currency} onChange={e => setBandForm({ ...bandForm, currency: e.target.value })} options={[{ value: 'NZD', label: 'NZD' }, { value: 'AUD', label: 'AUD' }, { value: 'USD', label: 'USD' }, { value: 'GBP', label: 'GBP' }, { value: 'EUR', label: 'EUR' }]} />
+          </FormField>
+        </div>
+      </Modal>
     </>
   )
 
   // Detail view
   if (selectedEmployee) {
+    const matchingBand = findBandForPosition(selectedEmployee.position_title)
+    let bandStatus: 'below' | 'within' | 'above' | null = null
+    if (matchingBand) {
+      const annualSalary = selectedEmployee.pay_frequency === 'monthly'
+        ? selectedEmployee.salary * 12
+        : selectedEmployee.pay_frequency === 'hourly'
+          ? selectedEmployee.salary * 2080
+          : selectedEmployee.salary
+      if (annualSalary < matchingBand.min_salary) bandStatus = 'below'
+      else if (annualSalary > matchingBand.max_salary) bandStatus = 'above'
+      else bandStatus = 'within'
+    }
+
     return (
       <div>
         {modals}
@@ -260,10 +398,67 @@ export default function Compensation() {
             </div>
             <div className="text-right">
               <p className="text-2xl font-bold text-emerald-400">{formatCurrency(selectedEmployee.salary, selectedEmployee.currency)}</p>
-              <p className="text-xs text-gray-500">{frequencyLabel[selectedEmployee.pay_frequency] || selectedEmployee.pay_frequency} \u00B7 Effective {formatDate(selectedEmployee.effective_date)}</p>
+              <p className="text-xs text-gray-500">{frequencyLabel[selectedEmployee.pay_frequency] || selectedEmployee.pay_frequency} &middot; Effective {formatDate(selectedEmployee.effective_date)}</p>
               <Button size="sm" className="mt-2" onClick={openAddForEmployee}>Add Record</Button>
             </div>
           </div>
+
+          {/* Salary band indicator */}
+          {matchingBand && (
+            <div className="mt-4 pt-4 border-t border-gray-800">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-gray-400">
+                  Salary Band: {matchingBand.name} (Grade {matchingBand.grade})
+                </span>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded ${
+                  bandStatus === 'below' ? 'bg-red-600/20 text-red-400' :
+                  bandStatus === 'above' ? 'bg-amber-600/20 text-amber-400' :
+                  'bg-emerald-600/20 text-emerald-400'
+                }`}>
+                  {bandStatus === 'below' ? 'Below Range' : bandStatus === 'above' ? 'Above Range' : 'Within Range'}
+                </span>
+              </div>
+              <div className="relative h-3 bg-gray-700 rounded-full overflow-hidden">
+                <div
+                  className="absolute h-full bg-gray-600 rounded-full"
+                  style={{
+                    left: '0%',
+                    width: '100%',
+                  }}
+                />
+                <div
+                  className="absolute h-full bg-blue-500/30 rounded-full"
+                  style={{
+                    left: `${Math.max(0, ((matchingBand.mid_salary - matchingBand.min_salary) / (matchingBand.max_salary - matchingBand.min_salary)) * 100 - 2)}%`,
+                    width: '4%',
+                  }}
+                />
+                {(() => {
+                  const annualSalary = selectedEmployee.pay_frequency === 'monthly'
+                    ? selectedEmployee.salary * 12
+                    : selectedEmployee.pay_frequency === 'hourly'
+                      ? selectedEmployee.salary * 2080
+                      : selectedEmployee.salary
+                  const pct = Math.min(100, Math.max(0, ((annualSalary - matchingBand.min_salary) / (matchingBand.max_salary - matchingBand.min_salary)) * 100))
+                  return (
+                    <div
+                      className={`absolute top-0 w-2.5 h-full rounded-full ${
+                        bandStatus === 'below' ? 'bg-red-400' :
+                        bandStatus === 'above' ? 'bg-amber-400' :
+                        'bg-emerald-400'
+                      }`}
+                      style={{ left: `${pct}%`, transform: 'translateX(-50%)' }}
+                    />
+                  )
+                })()}
+              </div>
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>{formatCurrency(matchingBand.min_salary, matchingBand.currency)}</span>
+                <span>{formatCurrency(matchingBand.mid_salary, matchingBand.currency)}</span>
+                <span>{formatCurrency(matchingBand.max_salary, matchingBand.currency)}</span>
+              </div>
+            </div>
+          )}
         </div>
 
         <h3 className="text-sm font-semibold text-white mb-3">Compensation History</h3>
@@ -311,36 +506,113 @@ export default function Compensation() {
 
   return (
     <div>
-      <PageHeader title="Compensation" actions={<Button onClick={() => setShowAdd(true)}>Add Record</Button>} />
+      <PageHeader
+        title="Compensation"
+        actions={
+          tab === 'employees'
+            ? <Button onClick={() => setShowAdd(true)}>Add Record</Button>
+            : <Button onClick={openAddBand}>Add Band</Button>
+        }
+      />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <StatCard label="Employees" value={current.length} />
-        <StatCard label="Total Annual Payroll" value={formatCurrency(totalPayroll, 'NZD')} color="green" />
-        <StatCard label="Average Salary" value={formatCurrency(avgSalary, 'NZD')} color="blue" />
+      <div className="mb-4">
+        <Tabs
+          variant="pills"
+          tabs={[
+            { key: 'employees', label: 'Employees' },
+            { key: 'bands', label: 'Salary Bands' },
+          ]}
+          active={tab}
+          onChange={(k) => setTab(k as CompTab)}
+        />
       </div>
 
       {modals}
 
-      <div className="mb-4">
-        <Input
-          type="text"
-          placeholder="Search by name, department, or position..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="max-w-sm"
-        />
-      </div>
+      {tab === 'employees' && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <StatCard label="Employees" value={current.length} />
+            <StatCard label="Total Annual Payroll" value={formatCurrency(totalPayroll, 'NZD')} color="green" />
+            <StatCard label="Average Salary" value={formatCurrency(avgSalary, 'NZD')} color="blue" />
+          </div>
 
-      <DataTable
-        columns={compColumns}
-        data={filtered}
-        keyField="id"
-        emptyMessage="No compensation records yet"
-        emptyIcon="💰"
-        emptyAction="Add Record"
-        onEmptyAction={() => setShowAdd(true)}
-        onRowClick={(comp) => setSelectedEmployee(comp)}
-      />
+          <div className="mb-4">
+            <Input
+              type="text"
+              placeholder="Search by name, department, or position..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="max-w-sm"
+            />
+          </div>
+
+          <DataTable
+            columns={compColumns}
+            data={filtered}
+            keyField="id"
+            emptyMessage="No compensation records yet"
+            emptyIcon="💰"
+            emptyAction="Add Record"
+            onEmptyAction={() => setShowAdd(true)}
+            onRowClick={(comp) => setSelectedEmployee(comp)}
+          />
+        </>
+      )}
+
+      {tab === 'bands' && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <StatCard label="Salary Bands" value={bands.length} />
+            <StatCard label="Grades" value={new Set(bands.map(b => b.grade)).size} color="blue" />
+            <StatCard label="Linked Positions" value={bands.filter(b => b.position_id).length} color="green" />
+          </div>
+
+          {bands.length === 0 ? (
+            <EmptyState message="No salary bands defined" icon="📊" action="Add Band" onAction={openAddBand} />
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {bands.map(band => (
+                <div key={band.id} className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <h3 className="text-white font-medium">{band.name}</h3>
+                      <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-purple-600/20 text-purple-400">
+                        Grade {band.grade}
+                      </span>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => openEditBand(band)}>Edit</Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDeleteBand(band)}>Delete</Button>
+                    </div>
+                  </div>
+                  {band.position_title && (
+                    <p className="text-xs text-gray-400 mb-2">Position: {band.position_title}</p>
+                  )}
+                  {/* Range bar */}
+                  <div className="mt-3">
+                    <div className="relative h-3 bg-gray-700 rounded-full overflow-hidden">
+                      <div className="absolute h-full bg-gradient-to-r from-blue-600/40 via-blue-500/60 to-blue-600/40 rounded-full w-full" />
+                      <div
+                        className="absolute h-full bg-blue-400 rounded-full w-1"
+                        style={{
+                          left: `${((band.mid_salary - band.min_salary) / (band.max_salary - band.min_salary)) * 100}%`,
+                          transform: 'translateX(-50%)',
+                        }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-xs text-gray-500 mt-1">
+                      <span>{formatCurrency(band.min_salary, band.currency)}</span>
+                      <span className="text-blue-400">{formatCurrency(band.mid_salary, band.currency)}</span>
+                      <span>{formatCurrency(band.max_salary, band.currency)}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
     </div>
   )
 }

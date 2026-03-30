@@ -17,3 +17,17 @@ export interface CurrentCompensation extends CompensationRecord {
   department_name: string | null
   position_title: string | null
 }
+
+export interface SalaryBand {
+  id: string
+  name: string
+  grade: string
+  position_id: string | null
+  min_salary: number
+  mid_salary: number
+  max_salary: number
+  currency: string
+  position_title: string | null
+  created_at: string
+  updated_at: string
+}

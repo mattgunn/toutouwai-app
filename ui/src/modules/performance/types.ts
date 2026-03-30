@@ -37,3 +37,19 @@ export interface Goal {
   created_at: string
   updated_at: string
 }
+
+export interface FeedbackRequest {
+  id: string
+  review_id: string | null
+  employee_id: string
+  reviewer_id: string
+  relationship: string
+  status: string
+  rating: number | null
+  feedback: string | null
+  submitted_at: string | null
+  employee_name: string | null
+  reviewer_name: string | null
+  created_at: string
+  updated_at: string
+}

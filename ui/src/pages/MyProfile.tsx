@@ -3,6 +3,7 @@ import { formatDate } from '../utils/format'
 import {
   fetchMyProfile, updateMyProfile, fetchMyLeave, submitMyLeave,
   fetchMyLeaveBalances, fetchMyTime, fetchMyDocuments, fetchMyOnboarding,
+  fetchMyCompensation, fetchMyGoals, createMyGoal, updateMyGoal, fetchMyBenefits,
 } from '../modules/self_service/api'
 import { fetchLeaveTypes } from '../modules/leave/api'
 import type { Employee } from '../types'
@@ -10,6 +11,9 @@ import type { LeaveType, LeaveRequest, LeaveBalance } from '../modules/leave/typ
 import type { TimeEntry } from '../modules/time/types'
 import type { Document } from '../modules/documents/types'
 import type { OnboardingChecklist } from '../modules/onboarding/types'
+import type { CompensationRecord } from '../modules/compensation/types'
+import type { Goal } from '../modules/performance/types'
+import type { BenefitEnrollment } from '../modules/benefits/types'
 import StatusBadge from '../components/StatusBadge'
 import EmptyState from '../components/EmptyState'
 import DataTable from '../components/DataTable'
@@ -22,7 +26,7 @@ import { useToast } from '../components/Toast'
 import PageHeader from '../components/PageHeader'
 import Avatar from '../components/Avatar'
 
-type Section = 'profile' | 'leave' | 'time' | 'documents' | 'onboarding'
+type Section = 'profile' | 'leave' | 'time' | 'documents' | 'onboarding' | 'compensation' | 'goals' | 'benefits'
 
 export default function MyProfile() {
   const [section, setSection] = useState<Section>('profile')
@@ -32,6 +36,9 @@ export default function MyProfile() {
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([])
   const [documents, setDocuments] = useState<Document[]>([])
   const [onboarding, setOnboarding] = useState<OnboardingChecklist[]>([])
+  const [compensation, setCompensation] = useState<CompensationRecord[]>([])
+  const [goals, setGoals] = useState<Goal[]>([])
+  const [benefits, setBenefits] = useState<BenefitEnrollment[]>([])
   const [editing, setEditing] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
@@ -42,6 +49,10 @@ export default function MyProfile() {
   const [leaveModalOpen, setLeaveModalOpen] = useState(false)
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([])
   const [leaveSubmitting, setLeaveSubmitting] = useState(false)
+
+  // Goal modal state
+  const [goalModalOpen, setGoalModalOpen] = useState(false)
+  const [goalSubmitting, setGoalSubmitting] = useState(false)
 
   useEffect(() => {
     setLoading(true)
@@ -62,6 +73,12 @@ export default function MyProfile() {
       fetchMyDocuments().then(setDocuments).catch(() => toast.error('Failed to load documents'))
     } else if (section === 'onboarding') {
       fetchMyOnboarding().then(setOnboarding).catch(() => toast.error('Failed to load onboarding data'))
+    } else if (section === 'compensation') {
+      fetchMyCompensation().then(setCompensation).catch(() => toast.error('Failed to load compensation'))
+    } else if (section === 'goals') {
+      fetchMyGoals().then(setGoals).catch(() => toast.error('Failed to load goals'))
+    } else if (section === 'benefits') {
+      fetchMyBenefits().then(setBenefits).catch(() => toast.error('Failed to load benefits'))
     }
   }, [section])
 
@@ -112,6 +129,37 @@ export default function MyProfile() {
     }
   }
 
+  const handleSubmitGoal = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setGoalSubmitting(true)
+    try {
+      const fd = new FormData(e.currentTarget)
+      await createMyGoal({
+        title: fd.get('title'),
+        description: fd.get('description') || null,
+        due_date: fd.get('due_date') || null,
+      })
+      toast.success('Goal created')
+      setGoalModalOpen(false)
+      fetchMyGoals().then(setGoals).catch(() => {})
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to create goal')
+    } finally {
+      setGoalSubmitting(false)
+    }
+  }
+
+  const handleUpdateGoalProgress = async (goal: Goal, progress: number) => {
+    try {
+      const status = progress >= 100 ? 'completed' : progress > 0 ? 'in_progress' : 'not_started'
+      await updateMyGoal(goal.id, { progress, status })
+      toast.success('Goal updated')
+      fetchMyGoals().then(setGoals).catch(() => {})
+    } catch {
+      toast.error('Failed to update goal')
+    }
+  }
+
   if (loading) {
     return (
       <div>
@@ -146,6 +194,9 @@ export default function MyProfile() {
             { key: 'time', label: 'Time' },
             { key: 'documents', label: 'Documents' },
             { key: 'onboarding', label: 'Onboarding' },
+            { key: 'compensation', label: 'Compensation' },
+            { key: 'goals', label: 'Goals' },
+            { key: 'benefits', label: 'Benefits' },
           ]}
           active={section}
           onChange={(k) => setSection(k as Section)}
@@ -396,6 +447,161 @@ export default function MyProfile() {
                         {task.due_date && <span className="text-xs text-gray-500">Due {formatDate(task.due_date)}</span>}
                       </div>
                     ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* -- Compensation ---------------------------------------------- */}
+      {section === 'compensation' && (
+        <div className="space-y-4">
+          {/* Current salary card */}
+          {compensation.length > 0 && (
+            <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
+              <h3 className="text-sm font-semibold text-white mb-2">Current Salary</h3>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold text-emerald-400">
+                  {new Intl.NumberFormat('en-NZ', { style: 'currency', currency: compensation[0].currency }).format(compensation[0].salary)}
+                </span>
+                <span className="text-sm text-gray-500 capitalize">{compensation[0].pay_frequency}</span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Effective {formatDate(compensation[0].effective_date)}</p>
+            </div>
+          )}
+
+          {/* History list */}
+          <h3 className="text-sm font-semibold text-white">Compensation History</h3>
+          <DataTable
+            columns={[
+              { key: 'effective_date', header: 'Effective Date', render: (r: CompensationRecord) => <span className="text-gray-400">{formatDate(r.effective_date)}</span> },
+              { key: 'salary', header: 'Salary', render: (r: CompensationRecord) => <span className="text-emerald-400 font-medium">{new Intl.NumberFormat('en-NZ', { style: 'currency', currency: r.currency }).format(r.salary)}</span> },
+              { key: 'pay_frequency', header: 'Frequency', render: (r: CompensationRecord) => <span className="text-gray-400 capitalize">{r.pay_frequency}</span> },
+              { key: 'reason', header: 'Reason', render: (r: CompensationRecord) => <span className="text-gray-400">{r.reason || '\u2014'}</span> },
+            ]}
+            data={compensation}
+            keyField="id"
+            emptyIcon="💰"
+            emptyMessage="No compensation records"
+          />
+        </div>
+      )}
+
+      {/* -- Goals ----------------------------------------------------- */}
+      {section === 'goals' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div />
+            <Button onClick={() => setGoalModalOpen(true)}>Add Goal</Button>
+          </div>
+
+          {goals.length === 0 ? (
+            <EmptyState icon="🎯" message="No goals yet" />
+          ) : (
+            <div className="space-y-3">
+              {goals.map(goal => (
+                <div key={goal.id} className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-semibold text-white">{goal.title}</h4>
+                    <StatusBadge status={goal.status} />
+                  </div>
+                  {goal.description && <p className="text-xs text-gray-400 mb-3">{goal.description}</p>}
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="flex-1 bg-gray-800 rounded-full h-2">
+                      <div
+                        className={`h-full rounded-full transition-all ${goal.progress >= 100 ? 'bg-emerald-500' : 'bg-blue-500'}`}
+                        style={{ width: `${Math.min(goal.progress, 100)}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-gray-400 w-10 text-right">{goal.progress}%</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    {goal.due_date && <span className="text-xs text-gray-500">Due {formatDate(goal.due_date)}</span>}
+                    {goal.status !== 'completed' && (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min={0}
+                          max={100}
+                          defaultValue={goal.progress}
+                          className="w-20 text-xs"
+                          onBlur={(e) => {
+                            const val = Number(e.target.value)
+                            if (val !== goal.progress) handleUpdateGoalProgress(goal, val)
+                          }}
+                        />
+                        <span className="text-xs text-gray-500">%</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Goal Modal */}
+          <Modal
+            open={goalModalOpen}
+            onClose={() => setGoalModalOpen(false)}
+            title="Create Goal"
+            size="lg"
+            footer={
+              <>
+                <Button variant="secondary" onClick={() => setGoalModalOpen(false)}>Cancel</Button>
+                <Button type="submit" form="my-goal-form" loading={goalSubmitting}>Create Goal</Button>
+              </>
+            }
+          >
+            <form id="my-goal-form" onSubmit={handleSubmitGoal} className="space-y-4">
+              <FormField label="Title" required>
+                <Input name="title" required placeholder="Goal title" />
+              </FormField>
+              <FormField label="Description">
+                <Textarea name="description" placeholder="Describe your goal..." />
+              </FormField>
+              <FormField label="Due Date">
+                <Input name="due_date" type="date" />
+              </FormField>
+            </form>
+          </Modal>
+        </div>
+      )}
+
+      {/* -- Benefits -------------------------------------------------- */}
+      {section === 'benefits' && (
+        <div className="space-y-4">
+          {benefits.length === 0 ? (
+            <EmptyState icon="🏥" message="No benefit enrollments" />
+          ) : (
+            <div className="space-y-3">
+              {benefits.map(b => (
+                <div key={b.id} className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <h4 className="text-sm font-semibold text-white">{b.plan_name}</h4>
+                      <p className="text-xs text-gray-500 capitalize">{b.plan_type}</p>
+                    </div>
+                    <StatusBadge status={b.status} />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+                    <div>
+                      <p className="text-xs text-gray-500">Coverage</p>
+                      <p className="text-sm text-white capitalize">{b.coverage_level.replace(/_/g, ' ')}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Your Contribution</p>
+                      <p className="text-sm text-white">${b.employee_contribution.toFixed(2)}/mo</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Employer Contribution</p>
+                      <p className="text-sm text-white">${b.employer_contribution.toFixed(2)}/mo</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
+                    <span>Start: {formatDate(b.start_date)}</span>
+                    {b.end_date && <span>End: {formatDate(b.end_date)}</span>}
                   </div>
                 </div>
               ))}

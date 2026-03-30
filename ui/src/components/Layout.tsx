@@ -16,6 +16,7 @@ import {
   StarIcon, FlagIcon, PencilSquareIcon,
   ShieldCheckIcon, ArrowPathRoundedSquareIcon,
   UserCircleIcon, ChartPieIcon, Cog6ToothIcon, QuestionMarkCircleIcon,
+  AcademicCapIcon, CalendarIcon,
 } from './NavIcons'
 
 type NavItem = { to: string; label: string; icon: ReactNode; module: string }
@@ -39,6 +40,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/timesheets',     label: 'Timesheets',     icon: <ClockIcon className="w-4 h-4" />, module: 'timesheets' },
       { to: '/leave-requests', label: 'Leave Requests', icon: <CalendarDaysIcon className="w-4 h-4" />, module: 'leave' },
       { to: '/leave-balances', label: 'Leave Balances', icon: <ChartBarSquareIcon className="w-4 h-4" />, module: 'leave' },
+      { to: '/absence-calendar', label: 'Absence Calendar', icon: <CalendarIcon className="w-4 h-4" />, module: 'leave' },
     ],
   },
   {
@@ -63,6 +65,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/reviews', label: 'Reviews', icon: <StarIcon className="w-4 h-4" />, module: 'performance' },
       { to: '/goals',   label: 'Goals',   icon: <FlagIcon className="w-4 h-4" />, module: 'performance' },
       { to: '/surveys', label: 'Surveys', icon: <PencilSquareIcon className="w-4 h-4" />, module: 'performance' },
+      { to: '/learning', label: 'Learning', icon: <AcademicCapIcon className="w-4 h-4" />, module: 'performance' },
     ],
   },
   {

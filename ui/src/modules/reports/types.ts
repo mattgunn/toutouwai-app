@@ -51,4 +51,9 @@ export interface RecruitmentReport {
 export interface DiversityReport {
   by_department: { department: string | null; count: number }[]
   by_tenure: { tenure_group: string; count: number }[]
+  by_gender: { gender: string; count: number }[]
+  by_employment_type: { employment_type: string; count: number }[]
+  by_age: { age_group: string; count: number }[]
+  by_location: { location: string; count: number }[]
+  by_ethnicity: { ethnicity: string; count: number }[]
 }

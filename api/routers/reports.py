@@ -246,9 +246,9 @@ def diversity_report(conn=Depends(get_db), _user=Depends(get_current_user)):
     by_tenure = conn.execute("""
         SELECT
             CASE
-                WHEN julianday('now') - julianday(start_date) < 365 THEN 'Under 1 year'
-                WHEN julianday('now') - julianday(start_date) < 730 THEN '1-2 years'
-                WHEN julianday('now') - julianday(start_date) < 1825 THEN '2-5 years'
+                WHEN julianday('now') - julianday(start_date) < 365 THEN '0-1 years'
+                WHEN julianday('now') - julianday(start_date) < 1095 THEN '1-3 years'
+                WHEN julianday('now') - julianday(start_date) < 1825 THEN '3-5 years'
                 ELSE '5+ years'
             END as tenure_group,
             COUNT(*) as count
@@ -258,7 +258,61 @@ def diversity_report(conn=Depends(get_db), _user=Depends(get_current_user)):
         ORDER BY tenure_group
     """).fetchall()
 
+    by_gender = conn.execute("""
+        SELECT COALESCE(gender, 'Not specified') as gender, COUNT(*) as count
+        FROM employees
+        WHERE status = 'active'
+        GROUP BY gender
+        ORDER BY count DESC
+    """).fetchall()
+
+    by_employment_type = conn.execute("""
+        SELECT COALESCE(employment_type, 'Not specified') as employment_type, COUNT(*) as count
+        FROM employees
+        WHERE status = 'active'
+        GROUP BY employment_type
+        ORDER BY count DESC
+    """).fetchall()
+
+    by_age = conn.execute("""
+        SELECT
+            CASE
+                WHEN date_of_birth IS NULL THEN 'Unknown'
+                WHEN (julianday('now') - julianday(date_of_birth)) / 365.25 < 25 THEN 'Under 25'
+                WHEN (julianday('now') - julianday(date_of_birth)) / 365.25 < 35 THEN '25-34'
+                WHEN (julianday('now') - julianday(date_of_birth)) / 365.25 < 45 THEN '35-44'
+                WHEN (julianday('now') - julianday(date_of_birth)) / 365.25 < 55 THEN '45-54'
+                ELSE '55+'
+            END as age_group,
+            COUNT(*) as count
+        FROM employees
+        WHERE status = 'active'
+        GROUP BY age_group
+        ORDER BY age_group
+    """).fetchall()
+
+    by_location = conn.execute("""
+        SELECT COALESCE(location, 'Not specified') as location, COUNT(*) as count
+        FROM employees
+        WHERE status = 'active'
+        GROUP BY location
+        ORDER BY count DESC
+    """).fetchall()
+
+    by_ethnicity = conn.execute("""
+        SELECT COALESCE(ethnicity, 'Not specified') as ethnicity, COUNT(*) as count
+        FROM employees
+        WHERE status = 'active'
+        GROUP BY ethnicity
+        ORDER BY count DESC
+    """).fetchall()
+
     return {
         "by_department": [dict(r) for r in by_dept],
         "by_tenure": [dict(r) for r in by_tenure],
+        "by_gender": [dict(r) for r in by_gender],
+        "by_employment_type": [dict(r) for r in by_employment_type],
+        "by_age": [dict(r) for r in by_age],
+        "by_location": [dict(r) for r in by_location],
+        "by_ethnicity": [dict(r) for r in by_ethnicity],
     }

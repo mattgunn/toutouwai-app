@@ -87,14 +87,17 @@ def create_employee(body: dict, conn=Depends(get_db), _user=Depends(get_current_
     conn.execute("""
         INSERT INTO employees (id, first_name, last_name, email, phone, department_id, position_id,
             manager_id, start_date, status, avatar_url, address, date_of_birth, emergency_contact, notes,
+            employment_type, location,
             created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         eid, body["first_name"], body["last_name"], body["email"],
         body.get("phone"), body.get("department_id"), body.get("position_id"),
         body.get("manager_id"), body.get("start_date"), body.get("status", "active"),
         body.get("avatar_url"), body.get("address"), body.get("date_of_birth"),
-        body.get("emergency_contact"), body.get("notes"), ts, ts,
+        body.get("emergency_contact"), body.get("notes"),
+        body.get("employment_type", "full_time"), body.get("location"),
+        ts, ts,
     ))
     log_audit(conn, "employee", eid, "create", _user)
     conn.commit()
@@ -109,7 +112,7 @@ def update_employee(employee_id: str, body: dict, conn=Depends(get_db), _user=De
 
     fields = ["first_name", "last_name", "email", "phone", "department_id", "position_id",
               "manager_id", "start_date", "end_date", "status", "avatar_url", "address",
-              "date_of_birth", "emergency_contact", "notes"]
+              "date_of_birth", "emergency_contact", "notes", "employment_type", "location"]
     updates = []
     values = []
     for f in fields:

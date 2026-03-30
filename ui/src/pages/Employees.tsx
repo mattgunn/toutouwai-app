@@ -25,6 +25,14 @@ const STATUS_OPTIONS = [
   { value: 'on_leave', label: 'On Leave' },
 ]
 
+const EMPLOYMENT_TYPE_OPTIONS = [
+  { value: 'full_time', label: 'Full Time' },
+  { value: 'part_time', label: 'Part Time' },
+  { value: 'contractor', label: 'Contractor' },
+  { value: 'casual', label: 'Casual' },
+  { value: 'intern', label: 'Intern' },
+]
+
 const EMPTY_FORM = {
   first_name: '',
   last_name: '',
@@ -34,6 +42,8 @@ const EMPTY_FORM = {
   position_id: '',
   start_date: '',
   status: 'active',
+  employment_type: 'full_time',
+  location: '',
 }
 
 function formatCurrency(amount: number, currency: string) {
@@ -195,6 +205,7 @@ function EmployeeDetail({
               </div>
               <div className="flex items-center gap-3">
                 <StatusBadge status={employee.status} />
+                {employee.employment_type && <StatusBadge status={employee.employment_type} />}
                 <Button size="sm" variant="secondary" onClick={() => navigate('/onboarding')}>Start Onboarding</Button>
                 <Button size="sm" onClick={() => onEdit(employee)}>Edit</Button>
               </div>
@@ -223,6 +234,10 @@ function EmployeeDetail({
               <div>
                 <p className="text-xs text-gray-500 mb-1">Emergency Contact</p>
                 <p className="text-sm text-gray-300">{employee.emergency_contact || '\u2014'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Location</p>
+                <p className="text-sm text-gray-300">{employee.location || '\u2014'}</p>
               </div>
             </div>
           </div>
@@ -602,6 +617,8 @@ export default function Employees() {
       position_id: emp.position_id || '',
       start_date: emp.start_date || '',
       status: emp.status,
+      employment_type: emp.employment_type || 'full_time',
+      location: emp.location || '',
     })
     setShowModal(true)
   }
@@ -621,6 +638,8 @@ export default function Employees() {
         position_id: form.position_id || null,
         phone: form.phone || null,
         start_date: form.start_date || null,
+        employment_type: form.employment_type || 'full_time',
+        location: form.location || null,
       }
       if (editing) {
         await updateEmployee(editing.id, body)
@@ -714,6 +733,12 @@ export default function Employees() {
         </FormField>
         <FormField label="Status">
           <Select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} options={STATUS_OPTIONS} />
+        </FormField>
+        <FormField label="Employment Type">
+          <Select value={form.employment_type} onChange={e => setForm(f => ({ ...f, employment_type: e.target.value }))} options={EMPLOYMENT_TYPE_OPTIONS} />
+        </FormField>
+        <FormField label="Location">
+          <Input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="e.g. Auckland, Remote" />
         </FormField>
       </form>
     </Modal>

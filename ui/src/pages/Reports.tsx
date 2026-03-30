@@ -6,6 +6,7 @@ import {
   fetchTimeSummaryReport,
   fetchCompensationReport,
   fetchRecruitmentReport,
+  fetchDiversityReport,
 } from '../modules/reports/api'
 import type {
   HeadcountReport,
@@ -14,6 +15,7 @@ import type {
   TimeSummaryReport,
   CompensationReport,
   RecruitmentReport,
+  DiversityReport,
 } from '../modules/reports/types'
 import StatCard from '../components/StatCard'
 import PageHeader from '../components/PageHeader'
@@ -23,7 +25,7 @@ import Button from '../components/Button'
 import { Input } from '../components/FormField'
 import { useToast } from '../components/Toast'
 
-type Tab = 'headcount' | 'turnover' | 'leave' | 'time' | 'compensation' | 'recruitment'
+type Tab = 'headcount' | 'turnover' | 'leave' | 'time' | 'compensation' | 'recruitment' | 'diversity'
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'headcount', label: 'Headcount' },
@@ -32,6 +34,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'time', label: 'Time' },
   { key: 'compensation', label: 'Compensation' },
   { key: 'recruitment', label: 'Recruitment' },
+  { key: 'diversity', label: 'Diversity' },
 ]
 
 function exportTableCSV(filename: string, headers: string[], rows: (string | number | null | undefined)[][]) {
@@ -89,6 +92,7 @@ export default function Reports() {
       {tab === 'time' && <TimeTab fromDate={fromDate} toDate={toDate} />}
       {tab === 'compensation' && <CompensationTab />}
       {tab === 'recruitment' && <RecruitmentTab />}
+      {tab === 'diversity' && <DiversityTab />}
     </div>
   )
 }
@@ -407,6 +411,119 @@ function RecruitmentTab() {
         <div>
           <h2 className="text-sm font-semibold text-white mb-3">Applicants by Stage</h2>
           <DataTable columns={stageColumns} data={data.applicants_by_stage} keyField="stage" emptyMessage="No applicants" />
+        </div>
+      </div>
+    </>
+  )
+}
+
+const employmentTypeLabels: Record<string, string> = {
+  full_time: 'Full Time',
+  part_time: 'Part Time',
+  contract: 'Contract',
+  casual: 'Casual',
+  intern: 'Intern',
+}
+
+function DiversityTab() {
+  const toast = useToast()
+  const [data, setData] = useState<DiversityReport | null>(null)
+  useEffect(() => { fetchDiversityReport().then(setData).catch(() => toast.error('Failed to load diversity report')) }, [])
+  if (!data) return <div className="text-gray-500 text-sm">Loading...</div>
+
+  const totalActive = data.by_department.reduce((s, r) => s + r.count, 0)
+  const genderSpecified = data.by_gender.filter(r => r.gender !== 'Not specified')
+
+  const handleExport = () => {
+    const headers = ['Category', 'Group', 'Count']
+    const rows: (string | number)[][] = [
+      ...data.by_gender.map(r => ['Gender' as string, r.gender, r.count]),
+      ...data.by_employment_type.map(r => ['Employment Type' as string, r.employment_type, r.count]),
+      ...data.by_tenure.map(r => ['Tenure' as string, r.tenure_group, r.count]),
+      ...data.by_age.map(r => ['Age' as string, r.age_group, r.count]),
+      ...data.by_department.map(r => ['Department' as string, r.department || 'Unassigned', r.count]),
+      ...data.by_location.map(r => ['Location' as string, r.location, r.count]),
+      ...data.by_ethnicity.map(r => ['Ethnicity' as string, r.ethnicity, r.count]),
+    ]
+    exportTableCSV(`diversity-${new Date().toISOString().slice(0, 10)}.csv`, headers, rows)
+  }
+
+  const genderColumns = [
+    { key: 'gender', header: 'Gender', render: (row: typeof data.by_gender[number]) => <span className="text-white">{row.gender}</span> },
+    { key: 'count', header: 'Count', render: (row: typeof data.by_gender[number]) => <span className="text-gray-400">{row.count}</span> },
+    { key: 'pct', header: '%', render: (row: typeof data.by_gender[number]) => <span className="text-blue-400">{totalActive > 0 ? Math.round(row.count / totalActive * 100) : 0}%</span> },
+  ]
+
+  const employmentColumns = [
+    { key: 'employment_type', header: 'Type', render: (row: typeof data.by_employment_type[number]) => <span className="text-white">{employmentTypeLabels[row.employment_type] || row.employment_type}</span> },
+    { key: 'count', header: 'Count', render: (row: typeof data.by_employment_type[number]) => <span className="text-gray-400">{row.count}</span> },
+    { key: 'pct', header: '%', render: (row: typeof data.by_employment_type[number]) => <span className="text-blue-400">{totalActive > 0 ? Math.round(row.count / totalActive * 100) : 0}%</span> },
+  ]
+
+  const tenureColumns = [
+    { key: 'tenure_group', header: 'Tenure', render: (row: typeof data.by_tenure[number]) => <span className="text-white">{row.tenure_group}</span> },
+    { key: 'count', header: 'Count', render: (row: typeof data.by_tenure[number]) => <span className="text-gray-400">{row.count}</span> },
+    { key: 'pct', header: '%', render: (row: typeof data.by_tenure[number]) => <span className="text-blue-400">{totalActive > 0 ? Math.round(row.count / totalActive * 100) : 0}%</span> },
+  ]
+
+  const ageColumns = [
+    { key: 'age_group', header: 'Age Group', render: (row: typeof data.by_age[number]) => <span className="text-white">{row.age_group}</span> },
+    { key: 'count', header: 'Count', render: (row: typeof data.by_age[number]) => <span className="text-gray-400">{row.count}</span> },
+    { key: 'pct', header: '%', render: (row: typeof data.by_age[number]) => <span className="text-blue-400">{totalActive > 0 ? Math.round(row.count / totalActive * 100) : 0}%</span> },
+  ]
+
+  const deptColumns = [
+    { key: 'department', header: 'Department', render: (row: typeof data.by_department[number]) => <span className="text-white">{row.department || 'Unassigned'}</span> },
+    { key: 'count', header: 'Count', render: (row: typeof data.by_department[number]) => <span className="text-gray-400">{row.count}</span> },
+  ]
+
+  const locationColumns = [
+    { key: 'location', header: 'Location', render: (row: typeof data.by_location[number]) => <span className="text-white">{row.location}</span> },
+    { key: 'count', header: 'Count', render: (row: typeof data.by_location[number]) => <span className="text-gray-400">{row.count}</span> },
+  ]
+
+  return (
+    <>
+      <div className="flex justify-end mb-4">
+        <Button variant="secondary" size="sm" onClick={handleExport}>Export CSV</Button>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <StatCard label="Active Employees" value={totalActive} color="green" />
+        <StatCard label="Gender Groups" value={genderSpecified.length} color="blue" />
+        <StatCard label="Locations" value={data.by_location.filter(r => r.location !== 'Not specified').length} />
+        <StatCard label="Departments" value={data.by_department.length} />
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-6 mb-6">
+        <div>
+          <h2 className="text-sm font-semibold text-white mb-3">Gender Distribution</h2>
+          <DataTable columns={genderColumns} data={data.by_gender} keyField="gender" emptyMessage="No data" />
+        </div>
+        <div>
+          <h2 className="text-sm font-semibold text-white mb-3">Employment Type</h2>
+          <DataTable columns={employmentColumns} data={data.by_employment_type} keyField="employment_type" emptyMessage="No data" />
+        </div>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-6 mb-6">
+        <div>
+          <h2 className="text-sm font-semibold text-white mb-3">Tenure Distribution</h2>
+          <DataTable columns={tenureColumns} data={data.by_tenure} keyField="tenure_group" emptyMessage="No data" />
+        </div>
+        <div>
+          <h2 className="text-sm font-semibold text-white mb-3">Age Distribution</h2>
+          <DataTable columns={ageColumns} data={data.by_age} keyField="age_group" emptyMessage="No data" />
+        </div>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <div>
+          <h2 className="text-sm font-semibold text-white mb-3">Department Sizes</h2>
+          <DataTable columns={deptColumns} data={data.by_department} keyField="department" emptyMessage="No data" />
+        </div>
+        <div>
+          <h2 className="text-sm font-semibold text-white mb-3">Location Distribution</h2>
+          <DataTable columns={locationColumns} data={data.by_location} keyField="location" emptyMessage="No data" />
         </div>
       </div>
     </>

@@ -1,5 +1,5 @@
 import { BASE, authFetch, jsonPost, jsonPut, jsonDelete } from '../shared/api'
-import type { ReviewCycle, Review, Goal } from './types'
+import type { ReviewCycle, Review, Goal, FeedbackRequest } from './types'
 
 export async function fetchReviewCycles(): Promise<ReviewCycle[]> {
   const res = await authFetch(`${BASE}/performance/cycles`)
@@ -54,4 +54,23 @@ export async function updateGoal(id: string, body: unknown): Promise<Goal> {
 export async function deleteGoal(id: string): Promise<void> {
   const res = await jsonDelete(`${BASE}/performance/goals/${id}`)
   if (!res.ok) throw new Error('Failed to delete goal')
+}
+
+export async function fetchFeedbackRequests(params?: Record<string, string>): Promise<FeedbackRequest[]> {
+  const qs = params ? '?' + new URLSearchParams(params).toString() : ''
+  const res = await authFetch(`${BASE}/performance/feedback${qs}`)
+  if (!res.ok) throw new Error('Failed to fetch feedback requests')
+  return res.json()
+}
+
+export async function createFeedbackRequest(body: unknown): Promise<FeedbackRequest> {
+  const res = await jsonPost(`${BASE}/performance/feedback`, body)
+  if (!res.ok) throw new Error((await res.json()).detail || 'Failed to create feedback request')
+  return res.json()
+}
+
+export async function updateFeedbackRequest(id: string, body: unknown): Promise<FeedbackRequest> {
+  const res = await jsonPut(`${BASE}/performance/feedback/${id}`, body)
+  if (!res.ok) throw new Error('Failed to update feedback request')
+  return res.json()
 }

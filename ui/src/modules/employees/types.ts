@@ -12,6 +12,8 @@ export interface Employee {
   status: string
   avatar_url: string | null
   address: string | null
+  employment_type: string | null
+  location: string | null
   emergency_contact: string | null
   department_name: string | null
   position_title: string | null

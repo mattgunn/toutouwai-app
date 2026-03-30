@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { fetchReviewCycles, createReviewCycle, fetchReviews, createReview, updateReview, fetchEmployees } from '../api'
+import { fetchFeedbackRequests, createFeedbackRequest, updateFeedbackRequest } from '../modules/performance/api'
 import type { ReviewCycle, Review, Employee } from '../types'
+import type { FeedbackRequest } from '../modules/performance/types'
 import StatusBadge from '../components/StatusBadge'
 import PageHeader from '../components/PageHeader'
 import DataTable from '../components/DataTable'
@@ -13,6 +15,20 @@ import { formatDate } from '../utils/format'
 import EmployeeLink from '../components/EmployeeLink'
 import { useToast } from '../components/Toast'
 
+const relationshipLabels: Record<string, string> = {
+  manager: 'Manager',
+  peer: 'Peer',
+  direct_report: 'Direct Report',
+  self: 'Self',
+}
+
+const relationshipColors: Record<string, string> = {
+  manager: 'bg-purple-600/20 text-purple-400',
+  peer: 'bg-blue-600/20 text-blue-400',
+  direct_report: 'bg-amber-600/20 text-amber-400',
+  self: 'bg-gray-600/20 text-gray-400',
+}
+
 export default function Reviews() {
   const [cycles, setCycles] = useState<ReviewCycle[]>([])
   const [selectedCycle, setSelectedCycle] = useState<string | null>(null)
@@ -23,6 +39,18 @@ export default function Reviews() {
 
   // Detail view state
   const [selectedReview, setSelectedReview] = useState<Review | null>(null)
+
+  // 360 Feedback state
+  const [feedbackRequests, setFeedbackRequests] = useState<FeedbackRequest[]>([])
+  const [showFeedbackForm, setShowFeedbackForm] = useState(false)
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false)
+  const [feedbackFormData, setFeedbackFormData] = useState({ reviewer_id: '', relationship: 'peer' })
+
+  // Submit feedback modal
+  const [submitFeedbackItem, setSubmitFeedbackItem] = useState<FeedbackRequest | null>(null)
+  const [submitFeedbackRating, setSubmitFeedbackRating] = useState('')
+  const [submitFeedbackText, setSubmitFeedbackText] = useState('')
+  const [submitFeedbackSubmitting, setSubmitFeedbackSubmitting] = useState(false)
 
   // New cycle modal
   const [showCycleForm, setShowCycleForm] = useState(false)
@@ -62,13 +90,24 @@ export default function Reviews() {
   const loadReviews = () => {
     if (selectedCycle) {
       setLoadingReviews(true)
-      fetchReviews({ cycle_id: selectedCycle }).then(setReviews).catch(() => {}).finally(() => setLoadingReviews(false))
+      fetchReviews({ cycle_id: selectedCycle }).then(setReviews).catch(() => toast.error('Failed to load reviews')).finally(() => setLoadingReviews(false))
     }
   }
 
   useEffect(() => {
     loadReviews()
   }, [selectedCycle])
+
+  // Load feedback when a review is selected
+  useEffect(() => {
+    if (selectedReview) {
+      fetchFeedbackRequests({ review_id: selectedReview.id })
+        .then(setFeedbackRequests)
+        .catch(() => toast.error('Failed to load feedback requests'))
+    } else {
+      setFeedbackRequests([])
+    }
+  }, [selectedReview])
 
   const handleCreateCycle = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -137,6 +176,54 @@ export default function Reviews() {
       toast.error('Failed to update review')
     } finally {
       setEditSubmitting(false)
+    }
+  }
+
+  // 360 Feedback handlers
+  const handleRequestFeedback = async () => {
+    if (!selectedReview || !feedbackFormData.reviewer_id) return
+    setFeedbackSubmitting(true)
+    try {
+      const fb = await createFeedbackRequest({
+        review_id: selectedReview.id,
+        employee_id: selectedReview.employee_id,
+        reviewer_id: feedbackFormData.reviewer_id,
+        relationship: feedbackFormData.relationship,
+      })
+      setFeedbackRequests(prev => [fb, ...prev])
+      setShowFeedbackForm(false)
+      setFeedbackFormData({ reviewer_id: '', relationship: 'peer' })
+      toast.success('Feedback requested')
+    } catch {
+      toast.error('Failed to request feedback')
+    } finally {
+      setFeedbackSubmitting(false)
+    }
+  }
+
+  const openSubmitFeedback = (fb: FeedbackRequest) => {
+    setSubmitFeedbackItem(fb)
+    setSubmitFeedbackRating(fb.rating != null ? String(fb.rating) : '')
+    setSubmitFeedbackText(fb.feedback || '')
+  }
+
+  const handleSubmitFeedback = async () => {
+    if (!submitFeedbackItem) return
+    setSubmitFeedbackSubmitting(true)
+    try {
+      const updated = await updateFeedbackRequest(submitFeedbackItem.id, {
+        rating: submitFeedbackRating ? parseInt(submitFeedbackRating) : null,
+        feedback: submitFeedbackText || null,
+        status: 'submitted',
+        submitted_at: new Date().toISOString(),
+      })
+      setFeedbackRequests(prev => prev.map(fb => fb.id === updated.id ? updated : fb))
+      setSubmitFeedbackItem(null)
+      toast.success('Feedback submitted')
+    } catch {
+      toast.error('Failed to submit feedback')
+    } finally {
+      setSubmitFeedbackSubmitting(false)
     }
   }
 
@@ -289,7 +376,7 @@ export default function Reviews() {
         </form>
       </Modal>
 
-      {/* Review detail modal */}
+      {/* Review detail modal with 360 Feedback */}
       <Modal
         open={!!selectedReview && !editingReview}
         onClose={() => setSelectedReview(null)}
@@ -348,6 +435,131 @@ export default function Reviews() {
                 </div>
               </div>
             )}
+
+            {/* 360 Feedback Section */}
+            <div className="border-t border-gray-700 pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-white">360 Feedback</h3>
+                <Button size="sm" variant="secondary" onClick={() => setShowFeedbackForm(true)}>
+                  Request Feedback
+                </Button>
+              </div>
+
+              {feedbackRequests.length === 0 ? (
+                <p className="text-sm text-gray-500">No feedback requests yet</p>
+              ) : (
+                <div className="space-y-3">
+                  {feedbackRequests.map(fb => (
+                    <div key={fb.id} className="bg-gray-800/50 border border-gray-700 rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-white text-sm font-medium">{fb.reviewer_name || 'Unknown'}</span>
+                          <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${relationshipColors[fb.relationship] || 'bg-gray-600/20 text-gray-400'}`}>
+                            {relationshipLabels[fb.relationship] || fb.relationship}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <StatusBadge status={fb.status} />
+                          {fb.status === 'pending' && (
+                            <Button variant="ghost" size="sm" onClick={() => openSubmitFeedback(fb)}>Submit</Button>
+                          )}
+                        </div>
+                      </div>
+                      {fb.status === 'submitted' && (
+                        <div className="mt-2">
+                          {fb.rating != null && (
+                            <span className="text-amber-400 text-sm mr-2">Rating: {fb.rating}/5</span>
+                          )}
+                          {fb.feedback && (
+                            <p className="text-gray-400 text-sm mt-1">{fb.feedback}</p>
+                          )}
+                          {fb.submitted_at && (
+                            <p className="text-gray-600 text-xs mt-1">Submitted {formatDate(fb.submitted_at)}</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Request Feedback modal */}
+      <Modal
+        open={showFeedbackForm}
+        onClose={() => setShowFeedbackForm(false)}
+        title="Request 360 Feedback"
+        size="md"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowFeedbackForm(false)} disabled={feedbackSubmitting}>Cancel</Button>
+            <Button onClick={handleRequestFeedback} loading={feedbackSubmitting}>Request</Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <FormField label="Reviewer" required>
+            <Select
+              value={feedbackFormData.reviewer_id}
+              onChange={e => setFeedbackFormData(prev => ({ ...prev, reviewer_id: e.target.value }))}
+              placeholder="Select reviewer..."
+              options={employees.map(emp => ({ value: emp.id, label: `${emp.first_name} ${emp.last_name}` }))}
+            />
+          </FormField>
+          <FormField label="Relationship" required>
+            <Select
+              value={feedbackFormData.relationship}
+              onChange={e => setFeedbackFormData(prev => ({ ...prev, relationship: e.target.value }))}
+              options={[
+                { value: 'manager', label: 'Manager' },
+                { value: 'peer', label: 'Peer' },
+                { value: 'direct_report', label: 'Direct Report' },
+                { value: 'self', label: 'Self' },
+              ]}
+            />
+          </FormField>
+        </div>
+      </Modal>
+
+      {/* Submit Feedback modal */}
+      <Modal
+        open={!!submitFeedbackItem}
+        onClose={() => setSubmitFeedbackItem(null)}
+        title="Submit Feedback"
+        size="md"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setSubmitFeedbackItem(null)} disabled={submitFeedbackSubmitting}>Cancel</Button>
+            <Button onClick={handleSubmitFeedback} loading={submitFeedbackSubmitting}>Submit</Button>
+          </>
+        }
+      >
+        {submitFeedbackItem && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-400">
+              Feedback for {submitFeedbackItem.employee_name || 'Unknown'} as {relationshipLabels[submitFeedbackItem.relationship] || submitFeedbackItem.relationship}
+            </p>
+            <FormField label="Rating (1-5)">
+              <Input
+                type="number"
+                min="1"
+                max="5"
+                value={submitFeedbackRating}
+                onChange={e => setSubmitFeedbackRating(e.target.value)}
+                placeholder="e.g. 4"
+              />
+            </FormField>
+            <FormField label="Feedback">
+              <Textarea
+                value={submitFeedbackText}
+                onChange={e => setSubmitFeedbackText(e.target.value)}
+                placeholder="Enter your feedback..."
+                rows={4}
+              />
+            </FormField>
           </div>
         )}
       </Modal>

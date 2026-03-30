@@ -88,3 +88,74 @@ def update_compensation(comp_id: str, body: dict, conn=Depends(get_db), _user=De
     if not row:
         raise HTTPException(status_code=404, detail="Compensation record not found")
     return dict(row)
+
+
+# ── Salary Bands ────────────────────────────────────────────────────
+
+@router.get("/compensation/bands")
+def list_salary_bands(conn=Depends(get_db), _user=Depends(get_current_user)):
+    rows = conn.execute("""
+        SELECT sb.*, p.title as position_title
+        FROM salary_bands sb
+        LEFT JOIN positions p ON sb.position_id = p.id
+        ORDER BY sb.grade, sb.name
+    """).fetchall()
+    return [dict(r) for r in rows]
+
+
+@router.post("/compensation/bands")
+def create_salary_band(body: dict, conn=Depends(get_db), _user=Depends(get_current_user)):
+    if body.get("position_id"):
+        if not conn.execute("SELECT id FROM positions WHERE id = ?", (body["position_id"],)).fetchone():
+            raise HTTPException(status_code=400, detail="position_id does not exist")
+    ts = now_iso()
+    bid = new_id()
+    conn.execute("""
+        INSERT INTO salary_bands (id, name, grade, position_id, min_salary, mid_salary, max_salary, currency, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        bid, body["name"], body["grade"], body.get("position_id"),
+        body["min_salary"], body["mid_salary"], body["max_salary"],
+        body.get("currency", "NZD"), ts, ts,
+    ))
+    conn.commit()
+    row = conn.execute("""
+        SELECT sb.*, p.title as position_title
+        FROM salary_bands sb LEFT JOIN positions p ON sb.position_id = p.id
+        WHERE sb.id = ?
+    """, (bid,)).fetchone()
+    return dict(row)
+
+
+@router.put("/compensation/bands/{band_id}")
+def update_salary_band(band_id: str, body: dict, conn=Depends(get_db), _user=Depends(get_current_user)):
+    if "position_id" in body and body["position_id"]:
+        if not conn.execute("SELECT id FROM positions WHERE id = ?", (body["position_id"],)).fetchone():
+            raise HTTPException(status_code=400, detail="position_id does not exist")
+    fields = ["name", "grade", "position_id", "min_salary", "mid_salary", "max_salary", "currency"]
+    updates, values = [], []
+    for f in fields:
+        if f in body:
+            updates.append(f"{f} = ?")
+            values.append(body[f])
+    if not updates:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    updates.append("updated_at = ?")
+    values.extend([now_iso(), band_id])
+    conn.execute(f"UPDATE salary_bands SET {', '.join(updates)} WHERE id = ?", values)
+    conn.commit()
+    row = conn.execute("""
+        SELECT sb.*, p.title as position_title
+        FROM salary_bands sb LEFT JOIN positions p ON sb.position_id = p.id
+        WHERE sb.id = ?
+    """, (band_id,)).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Salary band not found")
+    return dict(row)
+
+
+@router.delete("/compensation/bands/{band_id}")
+def delete_salary_band(band_id: str, conn=Depends(get_db), _user=Depends(get_current_user)):
+    conn.execute("DELETE FROM salary_bands WHERE id = ?", (band_id,))
+    conn.commit()
+    return {"ok": True}

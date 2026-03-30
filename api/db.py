@@ -55,8 +55,12 @@ CREATE TABLE IF NOT EXISTS employees (
     avatar_url    TEXT,
     address       TEXT,
     date_of_birth TEXT,
+    gender        TEXT,
+    ethnicity     TEXT,
     emergency_contact TEXT,
     notes         TEXT,
+    employment_type TEXT DEFAULT 'full_time',
+    location      TEXT,
     payhero_employee_key TEXT,
     azure_ad_id   TEXT,
     user_id       TEXT REFERENCES users(id) ON DELETE SET NULL,
@@ -435,6 +439,123 @@ CREATE TABLE IF NOT EXISTS survey_responses (
 );
 CREATE INDEX IF NOT EXISTS idx_responses_survey ON survey_responses(survey_id);
 CREATE INDEX IF NOT EXISTS idx_responses_question ON survey_responses(question_id);
+
+-- Learning Management
+CREATE TABLE IF NOT EXISTS courses (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT,
+    category TEXT DEFAULT 'general',
+    format TEXT DEFAULT 'online',
+    duration_hours REAL DEFAULT 1,
+    provider TEXT,
+    is_mandatory INTEGER DEFAULT 0,
+    is_active INTEGER DEFAULT 1,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS course_enrollments (
+    id TEXT PRIMARY KEY,
+    course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    employee_id TEXT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    status TEXT NOT NULL DEFAULT 'assigned',
+    assigned_by TEXT REFERENCES users(id),
+    assigned_at TEXT NOT NULL,
+    started_at TEXT,
+    completed_at TEXT,
+    score REAL,
+    certificate_url TEXT,
+    due_date TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_course_enrollments_course ON course_enrollments(course_id);
+CREATE INDEX IF NOT EXISTS idx_course_enrollments_employee ON course_enrollments(employee_id);
+
+CREATE TABLE IF NOT EXISTS certifications (
+    id TEXT PRIMARY KEY,
+    employee_id TEXT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    issuer TEXT,
+    issue_date TEXT,
+    expiry_date TEXT,
+    credential_id TEXT,
+    credential_url TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_certifications_employee ON certifications(employee_id);
+
+-- Salary Bands / Grades
+CREATE TABLE IF NOT EXISTS salary_bands (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    grade TEXT NOT NULL,
+    position_id TEXT REFERENCES positions(id),
+    min_salary REAL NOT NULL,
+    mid_salary REAL NOT NULL,
+    max_salary REAL NOT NULL,
+    currency TEXT DEFAULT 'NZD',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_salary_bands_position ON salary_bands(position_id);
+
+-- 360-Degree Feedback
+CREATE TABLE IF NOT EXISTS feedback_requests (
+    id TEXT PRIMARY KEY,
+    review_id TEXT REFERENCES reviews(id) ON DELETE CASCADE,
+    employee_id TEXT NOT NULL REFERENCES employees(id),
+    reviewer_id TEXT NOT NULL REFERENCES employees(id),
+    relationship TEXT NOT NULL DEFAULT 'peer',
+    status TEXT NOT NULL DEFAULT 'pending',
+    rating INTEGER,
+    feedback TEXT,
+    submitted_at TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_feedback_employee ON feedback_requests(employee_id);
+CREATE INDEX IF NOT EXISTS idx_feedback_reviewer ON feedback_requests(reviewer_id);
+
+-- Interviews
+CREATE TABLE IF NOT EXISTS interviews (
+    id TEXT PRIMARY KEY,
+    applicant_id TEXT NOT NULL REFERENCES applicants(id) ON DELETE CASCADE,
+    interviewer_id TEXT REFERENCES employees(id),
+    interview_type TEXT DEFAULT 'phone',
+    scheduled_at TEXT NOT NULL,
+    duration_minutes INTEGER DEFAULT 60,
+    location TEXT,
+    notes TEXT,
+    status TEXT NOT NULL DEFAULT 'scheduled',
+    feedback TEXT,
+    rating INTEGER,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_interviews_applicant ON interviews(applicant_id);
+CREATE INDEX IF NOT EXISTS idx_interviews_interviewer ON interviews(interviewer_id);
+
+-- Offers
+CREATE TABLE IF NOT EXISTS offers (
+    id TEXT PRIMARY KEY,
+    applicant_id TEXT NOT NULL REFERENCES applicants(id) ON DELETE CASCADE,
+    job_posting_id TEXT REFERENCES job_postings(id),
+    salary REAL,
+    currency TEXT DEFAULT 'NZD',
+    start_date TEXT,
+    position_id TEXT REFERENCES positions(id),
+    department_id TEXT REFERENCES departments(id),
+    status TEXT NOT NULL DEFAULT 'draft',
+    notes TEXT,
+    sent_at TEXT,
+    responded_at TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_offers_applicant ON offers(applicant_id);
 """
 
 

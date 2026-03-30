@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from ..db import new_id, now_iso
 from ..deps import get_db, get_current_user
 
@@ -179,3 +179,86 @@ def get_own_onboarding(conn=Depends(get_db), user=Depends(get_current_user)):
         d["completed_tasks"] = sum(1 for t in tasks if t["status"] in ("completed", "skipped"))
         result.append(d)
     return result
+
+
+# ── Compensation ──────────────────────────────────────────────────
+
+@router.get("/self-service/compensation")
+def get_own_compensation(conn=Depends(get_db), user=Depends(get_current_user)):
+    emp = _get_employee_for_user(conn, user)
+    rows = conn.execute("""
+        SELECT * FROM compensation
+        WHERE employee_id = ?
+        ORDER BY effective_date DESC
+    """, (emp["id"],)).fetchall()
+    return [dict(r) for r in rows]
+
+
+# ── Goals ─────────────────────────────────────────────────────────
+
+@router.get("/self-service/goals")
+def get_own_goals(conn=Depends(get_db), user=Depends(get_current_user)):
+    emp = _get_employee_for_user(conn, user)
+    rows = conn.execute("""
+        SELECT * FROM goals
+        WHERE employee_id = ?
+        ORDER BY created_at DESC
+    """, (emp["id"],)).fetchall()
+    return [dict(r) for r in rows]
+
+
+@router.post("/self-service/goals")
+def create_own_goal(body: dict, conn=Depends(get_db), user=Depends(get_current_user)):
+    emp = _get_employee_for_user(conn, user)
+    if not body.get("title"):
+        raise HTTPException(status_code=400, detail="title is required")
+    ts = now_iso()
+    gid = new_id()
+    conn.execute("""
+        INSERT INTO goals (id, employee_id, title, description, due_date, status, progress, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (gid, emp["id"], body["title"], body.get("description"),
+          body.get("due_date"), body.get("status", "not_started"),
+          body.get("progress", 0), ts, ts))
+    conn.commit()
+    row = conn.execute("SELECT * FROM goals WHERE id = ?", (gid,)).fetchone()
+    return dict(row)
+
+
+@router.put("/self-service/goals/{goal_id}")
+def update_own_goal(goal_id: str, body: dict, conn=Depends(get_db), user=Depends(get_current_user)):
+    emp = _get_employee_for_user(conn, user)
+    row = conn.execute("SELECT * FROM goals WHERE id = ? AND employee_id = ?", (goal_id, emp["id"])).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Goal not found")
+    fields = ["title", "description", "due_date", "status", "progress"]
+    updates = []
+    values = []
+    for f in fields:
+        if f in body:
+            updates.append(f"{f} = ?")
+            values.append(body[f])
+    if not updates:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    updates.append("updated_at = ?")
+    values.append(now_iso())
+    values.append(goal_id)
+    conn.execute(f"UPDATE goals SET {', '.join(updates)} WHERE id = ?", values)
+    conn.commit()
+    row = conn.execute("SELECT * FROM goals WHERE id = ?", (goal_id,)).fetchone()
+    return dict(row)
+
+
+# ── Benefits ──────────────────────────────────────────────────────
+
+@router.get("/self-service/benefits")
+def get_own_benefits(conn=Depends(get_db), user=Depends(get_current_user)):
+    emp = _get_employee_for_user(conn, user)
+    rows = conn.execute("""
+        SELECT be.*, bp.name as plan_name, bp.type as plan_type, bp.provider as plan_provider
+        FROM benefit_enrollments be
+        JOIN benefit_plans bp ON be.plan_id = bp.id
+        WHERE be.employee_id = ?
+        ORDER BY be.start_date DESC
+    """, (emp["id"],)).fetchall()
+    return [dict(r) for r in rows]

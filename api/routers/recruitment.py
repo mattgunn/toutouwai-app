@@ -161,3 +161,181 @@ def delete_applicant(applicant_id: str, conn=Depends(get_db), _user=Depends(get_
     conn.execute("DELETE FROM applicants WHERE id = ?", (applicant_id,))
     conn.commit()
     return {"ok": True}
+
+
+# ── Interviews ──────────────────────────────────────────────────────
+
+@router.get("/recruitment/interviews")
+def list_interviews(applicant_id: str = "", conn=Depends(get_db), _user=Depends(get_current_user)):
+    conditions, params = [], []
+    if applicant_id:
+        conditions.append("i.applicant_id = ?")
+        params.append(applicant_id)
+    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+    rows = conn.execute(f"""
+        SELECT i.*,
+               a.first_name || ' ' || a.last_name as applicant_name,
+               e.first_name || ' ' || e.last_name as interviewer_name
+        FROM interviews i
+        LEFT JOIN applicants a ON i.applicant_id = a.id
+        LEFT JOIN employees e ON i.interviewer_id = e.id
+        {where}
+        ORDER BY i.scheduled_at DESC
+    """, params).fetchall()
+    return [dict(r) for r in rows]
+
+
+@router.post("/recruitment/interviews")
+def create_interview(body: dict, conn=Depends(get_db), _user=Depends(get_current_user)):
+    if not conn.execute("SELECT id FROM applicants WHERE id = ?", (body["applicant_id"],)).fetchone():
+        raise HTTPException(status_code=400, detail="applicant_id does not exist")
+    if body.get("interviewer_id"):
+        if not conn.execute("SELECT id FROM employees WHERE id = ?", (body["interviewer_id"],)).fetchone():
+            raise HTTPException(status_code=400, detail="interviewer_id does not exist")
+    ts = now_iso()
+    iid = new_id()
+    conn.execute("""
+        INSERT INTO interviews (id, applicant_id, interviewer_id, interview_type, scheduled_at,
+            duration_minutes, location, notes, status, feedback, rating, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (iid, body["applicant_id"], body.get("interviewer_id"), body.get("interview_type", "phone"),
+          body["scheduled_at"], body.get("duration_minutes", 60), body.get("location"),
+          body.get("notes"), body.get("status", "scheduled"), body.get("feedback"),
+          body.get("rating"), ts, ts))
+    conn.commit()
+    row = conn.execute("""
+        SELECT i.*, a.first_name || ' ' || a.last_name as applicant_name,
+               e.first_name || ' ' || e.last_name as interviewer_name
+        FROM interviews i LEFT JOIN applicants a ON i.applicant_id = a.id
+        LEFT JOIN employees e ON i.interviewer_id = e.id
+        WHERE i.id = ?
+    """, (iid,)).fetchone()
+    return dict(row)
+
+
+@router.put("/recruitment/interviews/{interview_id}")
+def update_interview(interview_id: str, body: dict, conn=Depends(get_db), _user=Depends(get_current_user)):
+    fields = ["interviewer_id", "interview_type", "scheduled_at", "duration_minutes",
+              "location", "notes", "status", "feedback", "rating"]
+    updates, values = [], []
+    for f in fields:
+        if f in body:
+            updates.append(f"{f} = ?")
+            values.append(body[f])
+    if updates:
+        updates.append("updated_at = ?")
+        values.extend([now_iso(), interview_id])
+        conn.execute(f"UPDATE interviews SET {', '.join(updates)} WHERE id = ?", values)
+        conn.commit()
+    row = conn.execute("""
+        SELECT i.*, a.first_name || ' ' || a.last_name as applicant_name,
+               e.first_name || ' ' || e.last_name as interviewer_name
+        FROM interviews i LEFT JOIN applicants a ON i.applicant_id = a.id
+        LEFT JOIN employees e ON i.interviewer_id = e.id
+        WHERE i.id = ?
+    """, (interview_id,)).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Interview not found")
+    return dict(row)
+
+
+@router.delete("/recruitment/interviews/{interview_id}")
+def delete_interview(interview_id: str, conn=Depends(get_db), _user=Depends(get_current_user)):
+    conn.execute("DELETE FROM interviews WHERE id = ?", (interview_id,))
+    conn.commit()
+    return {"ok": True}
+
+
+# ── Offers ──────────────────────────────────────────────────────────
+
+@router.get("/recruitment/offers")
+def list_offers(applicant_id: str = "", status: str = "", conn=Depends(get_db), _user=Depends(get_current_user)):
+    conditions, params = [], []
+    if applicant_id:
+        conditions.append("o.applicant_id = ?")
+        params.append(applicant_id)
+    if status:
+        conditions.append("o.status = ?")
+        params.append(status)
+    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+    rows = conn.execute(f"""
+        SELECT o.*,
+               a.first_name || ' ' || a.last_name as applicant_name,
+               jp.title as job_title,
+               p.title as position_title,
+               d.name as department_name
+        FROM offers o
+        LEFT JOIN applicants a ON o.applicant_id = a.id
+        LEFT JOIN job_postings jp ON o.job_posting_id = jp.id
+        LEFT JOIN positions p ON o.position_id = p.id
+        LEFT JOIN departments d ON o.department_id = d.id
+        {where}
+        ORDER BY o.created_at DESC
+    """, params).fetchall()
+    return [dict(r) for r in rows]
+
+
+@router.post("/recruitment/offers")
+def create_offer(body: dict, conn=Depends(get_db), _user=Depends(get_current_user)):
+    if not conn.execute("SELECT id FROM applicants WHERE id = ?", (body["applicant_id"],)).fetchone():
+        raise HTTPException(status_code=400, detail="applicant_id does not exist")
+    if body.get("job_posting_id"):
+        if not conn.execute("SELECT id FROM job_postings WHERE id = ?", (body["job_posting_id"],)).fetchone():
+            raise HTTPException(status_code=400, detail="job_posting_id does not exist")
+    if body.get("position_id"):
+        if not conn.execute("SELECT id FROM positions WHERE id = ?", (body["position_id"],)).fetchone():
+            raise HTTPException(status_code=400, detail="position_id does not exist")
+    if body.get("department_id"):
+        if not conn.execute("SELECT id FROM departments WHERE id = ?", (body["department_id"],)).fetchone():
+            raise HTTPException(status_code=400, detail="department_id does not exist")
+    ts = now_iso()
+    oid = new_id()
+    conn.execute("""
+        INSERT INTO offers (id, applicant_id, job_posting_id, salary, currency, start_date,
+            position_id, department_id, status, notes, sent_at, responded_at, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (oid, body["applicant_id"], body.get("job_posting_id"), body.get("salary"),
+          body.get("currency", "NZD"), body.get("start_date"), body.get("position_id"),
+          body.get("department_id"), body.get("status", "draft"), body.get("notes"),
+          body.get("sent_at"), body.get("responded_at"), ts, ts))
+    conn.commit()
+    row = conn.execute("""
+        SELECT o.*, a.first_name || ' ' || a.last_name as applicant_name,
+               jp.title as job_title, p.title as position_title, d.name as department_name
+        FROM offers o LEFT JOIN applicants a ON o.applicant_id = a.id
+        LEFT JOIN job_postings jp ON o.job_posting_id = jp.id
+        LEFT JOIN positions p ON o.position_id = p.id
+        LEFT JOIN departments d ON o.department_id = d.id
+        WHERE o.id = ?
+    """, (oid,)).fetchone()
+    return dict(row)
+
+
+@router.put("/recruitment/offers/{offer_id}")
+def update_offer(offer_id: str, body: dict, conn=Depends(get_db), _user=Depends(get_current_user)):
+    fields = ["salary", "currency", "start_date", "position_id", "department_id",
+              "status", "notes", "sent_at", "responded_at"]
+    updates, values = [], []
+    for f in fields:
+        if f in body:
+            updates.append(f"{f} = ?")
+            values.append(body[f])
+    if updates:
+        updates.append("updated_at = ?")
+        values.extend([now_iso(), offer_id])
+        conn.execute(f"UPDATE offers SET {', '.join(updates)} WHERE id = ?", values)
+        conn.commit()
+    row = conn.execute("""
+        SELECT o.*, a.first_name || ' ' || a.last_name as applicant_name,
+               jp.title as job_title, p.title as position_title, d.name as department_name
+        FROM offers o LEFT JOIN applicants a ON o.applicant_id = a.id
+        LEFT JOIN job_postings jp ON o.job_posting_id = jp.id
+        LEFT JOIN positions p ON o.position_id = p.id
+        LEFT JOIN departments d ON o.department_id = d.id
+        WHERE o.id = ?
+    """, (offer_id,)).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Offer not found")
+    return dict(row)

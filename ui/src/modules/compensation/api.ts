@@ -1,5 +1,5 @@
-import { BASE, authFetch, jsonPost, jsonPut } from '../shared/api'
-import type { CompensationRecord, CurrentCompensation } from './types'
+import { BASE, authFetch, jsonPost, jsonPut, jsonDelete } from '../shared/api'
+import type { CompensationRecord, CurrentCompensation, SalaryBand } from './types'
 
 export async function fetchCompensation(params?: Record<string, string>): Promise<CompensationRecord[]> {
   const qs = params ? '?' + new URLSearchParams(params).toString() : ''
@@ -24,4 +24,27 @@ export async function updateCompensation(id: string, body: unknown): Promise<Com
   const res = await jsonPut(`${BASE}/compensation/${id}`, body)
   if (!res.ok) throw new Error('Failed to update compensation record')
   return res.json()
+}
+
+export async function fetchSalaryBands(): Promise<SalaryBand[]> {
+  const res = await authFetch(`${BASE}/compensation/bands`)
+  if (!res.ok) throw new Error('Failed to fetch salary bands')
+  return res.json()
+}
+
+export async function createSalaryBand(body: unknown): Promise<SalaryBand> {
+  const res = await jsonPost(`${BASE}/compensation/bands`, body)
+  if (!res.ok) throw new Error((await res.json()).detail || 'Failed to create salary band')
+  return res.json()
+}
+
+export async function updateSalaryBand(id: string, body: unknown): Promise<SalaryBand> {
+  const res = await jsonPut(`${BASE}/compensation/bands/${id}`, body)
+  if (!res.ok) throw new Error('Failed to update salary band')
+  return res.json()
+}
+
+export async function deleteSalaryBand(id: string): Promise<void> {
+  const res = await jsonDelete(`${BASE}/compensation/bands/${id}`)
+  if (!res.ok) throw new Error('Failed to delete salary band')
 }
