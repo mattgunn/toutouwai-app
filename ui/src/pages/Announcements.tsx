@@ -86,9 +86,8 @@ export default function Announcements() {
           { key: 'title', header: 'Title', render: (row) => <span className="text-white font-medium">{String(row.title)}</span> },
           { key: 'category', header: 'Category', render: (row) => <span className="text-gray-400 capitalize">{String(row.category || '-')}</span>, className: 'hidden md:table-cell' },
           { key: 'priority', header: 'Priority', render: (row) => <StatusBadge status={String(row.priority)} /> },
-          { key: 'publish_date', header: 'Published', render: (row) => <span className="text-gray-400">{row.publish_date ? formatDate(String(row.publish_date)) : '-'}</span>, className: 'hidden md:table-cell' },
-          { key: 'expiry_date', header: 'Expires', render: (row) => <span className="text-gray-400">{row.expiry_date ? formatDate(String(row.expiry_date)) : '-'}</span>, className: 'hidden lg:table-cell' },
-          { key: 'is_active', header: 'Status', render: (row) => row.is_active ? <StatusBadge status="active" /> : <StatusBadge status="inactive" /> },
+          { key: 'expires_at', header: 'Expires', render: (row) => <span className="text-gray-400">{row.expires_at ? formatDate(String(row.expires_at)) : '-'}</span>, className: 'hidden lg:table-cell' },
+          { key: 'status', header: 'Status', render: (row) => <StatusBadge status={String(row.status || 'draft')} /> },
         ]}
         data={announcements as unknown as Record<string, unknown>[]}
         keyField="id"
