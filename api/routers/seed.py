@@ -892,6 +892,15 @@ def seed_database(conn=Depends(get_db), user=Depends(get_current_user)):
     conn.commit()
 
     # Count what was created
+    # Link admin user to first employee for self-service to work
+    admin_user = conn.execute("SELECT id, email FROM users WHERE role = 'admin' LIMIT 1").fetchone()
+    if admin_user:
+        first_emp = conn.execute("SELECT id FROM employees LIMIT 1").fetchone()
+        if first_emp:
+            conn.execute("UPDATE employees SET user_id = ?, email = ? WHERE id = ?",
+                         (admin_user["id"], admin_user["email"], first_emp["id"]))
+            conn.commit()
+
     counts = {}
     for table in ["departments", "positions", "employees", "leave_requests",
                    "time_entries", "job_postings", "applicants", "review_cycles", "reviews", "goals",
