@@ -260,7 +260,7 @@ function RequisitionModal({
           <Button variant="danger" onClick={() => onDelete(requisition)} className="mr-auto">Delete</Button>
         )}
         <Button variant="secondary" onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSubmit} disabled={!title} loading={submitting}>
+        <Button onClick={handleSubmit} disabled={!title || !departmentId || !justification} loading={submitting}>
           {requisition ? 'Save' : 'Create'}
         </Button>
       </>
