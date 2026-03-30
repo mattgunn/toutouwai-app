@@ -556,6 +556,356 @@ CREATE TABLE IF NOT EXISTS offers (
     updated_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_offers_applicant ON offers(applicant_id);
+
+-- Locations
+CREATE TABLE IF NOT EXISTS locations (
+    id          TEXT PRIMARY KEY,
+    name        TEXT NOT NULL,
+    address     TEXT,
+    city        TEXT,
+    state       TEXT,
+    country     TEXT,
+    postal_code TEXT,
+    timezone    TEXT,
+    is_active   INTEGER DEFAULT 1,
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL
+);
+
+-- Emergency Contacts
+CREATE TABLE IF NOT EXISTS emergency_contacts (
+    id            TEXT PRIMARY KEY,
+    employee_id   TEXT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    contact_name  TEXT NOT NULL,
+    relationship  TEXT,
+    phone         TEXT,
+    email         TEXT,
+    is_primary    INTEGER DEFAULT 1,
+    created_at    TEXT NOT NULL,
+    updated_at    TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_emergency_contacts_employee ON emergency_contacts(employee_id);
+
+-- Dependents
+CREATE TABLE IF NOT EXISTS dependents (
+    id            TEXT PRIMARY KEY,
+    employee_id   TEXT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    first_name    TEXT NOT NULL,
+    last_name     TEXT NOT NULL,
+    relationship  TEXT NOT NULL CHECK (relationship IN ('spouse', 'child', 'domestic_partner', 'other')),
+    date_of_birth TEXT,
+    gender        TEXT,
+    is_active     INTEGER DEFAULT 1,
+    created_at    TEXT NOT NULL,
+    updated_at    TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_dependents_employee ON dependents(employee_id);
+
+-- Job History
+CREATE TABLE IF NOT EXISTS job_history (
+    id              TEXT PRIMARY KEY,
+    employee_id     TEXT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    effective_date  TEXT NOT NULL,
+    position_id     TEXT REFERENCES positions(id) ON DELETE SET NULL,
+    department_id   TEXT REFERENCES departments(id) ON DELETE SET NULL,
+    manager_id      TEXT REFERENCES employees(id) ON DELETE SET NULL,
+    location        TEXT,
+    employment_type TEXT,
+    reason          TEXT,
+    notes           TEXT,
+    created_at      TEXT NOT NULL,
+    updated_at      TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_job_history_employee ON job_history(employee_id);
+
+-- Skills Catalog
+CREATE TABLE IF NOT EXISTS skills (
+    id          TEXT PRIMARY KEY,
+    name        TEXT NOT NULL,
+    category    TEXT,
+    description TEXT,
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL
+);
+
+-- Employee Skills
+CREATE TABLE IF NOT EXISTS employee_skills (
+    id                TEXT PRIMARY KEY,
+    employee_id       TEXT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    skill_id          TEXT NOT NULL REFERENCES skills(id) ON DELETE CASCADE,
+    proficiency_level TEXT CHECK (proficiency_level IN ('beginner', 'intermediate', 'advanced', 'expert')),
+    years_experience  REAL,
+    notes             TEXT,
+    verified_by       TEXT,
+    verified_at       TEXT,
+    created_at        TEXT NOT NULL,
+    updated_at        TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_employee_skills_employee ON employee_skills(employee_id);
+CREATE INDEX IF NOT EXISTS idx_employee_skills_skill ON employee_skills(skill_id);
+
+-- Compensation Components
+CREATE TABLE IF NOT EXISTS compensation_components (
+    id              TEXT PRIMARY KEY,
+    employee_id     TEXT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    component_type  TEXT NOT NULL CHECK (component_type IN ('bonus', 'stock', 'allowance', 'commission', 'overtime', 'other')),
+    amount          REAL NOT NULL,
+    currency        TEXT DEFAULT 'NZD',
+    frequency       TEXT CHECK (frequency IN ('one_time', 'monthly', 'quarterly', 'annual')),
+    effective_date  TEXT,
+    end_date        TEXT,
+    description     TEXT,
+    status          TEXT DEFAULT 'active',
+    created_at      TEXT NOT NULL,
+    updated_at      TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_comp_components_employee ON compensation_components(employee_id);
+
+-- Leave Accrual Policies
+CREATE TABLE IF NOT EXISTS leave_accrual_policies (
+    id                  TEXT PRIMARY KEY,
+    leave_type_id       TEXT NOT NULL REFERENCES leave_types(id),
+    name                TEXT NOT NULL,
+    accrual_rate        REAL NOT NULL,
+    accrual_frequency   TEXT CHECK (accrual_frequency IN ('monthly', 'quarterly', 'annual')),
+    max_balance         REAL,
+    carry_over_limit    REAL,
+    waiting_period_days INTEGER DEFAULT 0,
+    is_active           INTEGER DEFAULT 1,
+    created_at          TEXT NOT NULL,
+    updated_at          TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_leave_accrual_leave_type ON leave_accrual_policies(leave_type_id);
+
+-- Assets
+CREATE TABLE IF NOT EXISTS assets (
+    id            TEXT PRIMARY KEY,
+    name          TEXT NOT NULL,
+    asset_tag     TEXT,
+    category      TEXT CHECK (category IN ('laptop', 'phone', 'monitor', 'keyboard', 'chair', 'vehicle', 'other')),
+    serial_number TEXT,
+    purchase_date TEXT,
+    purchase_cost REAL,
+    status        TEXT NOT NULL DEFAULT 'available' CHECK (status IN ('available', 'assigned', 'maintenance', 'retired')),
+    assigned_to   TEXT REFERENCES employees(id) ON DELETE SET NULL,
+    assigned_date TEXT,
+    notes         TEXT,
+    created_at    TEXT NOT NULL,
+    updated_at    TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_assets_assigned_to ON assets(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_assets_status ON assets(status);
+
+-- Disciplinary Actions
+CREATE TABLE IF NOT EXISTS disciplinary_actions (
+    id            TEXT PRIMARY KEY,
+    employee_id   TEXT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    action_type   TEXT NOT NULL CHECK (action_type IN ('verbal_warning', 'written_warning', 'final_warning', 'suspension', 'termination', 'other')),
+    description   TEXT,
+    incident_date TEXT,
+    action_date   TEXT,
+    issued_by     TEXT REFERENCES users(id) ON DELETE SET NULL,
+    status        TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'acknowledged', 'resolved', 'appealed')),
+    resolution    TEXT,
+    resolved_at   TEXT,
+    created_at    TEXT NOT NULL,
+    updated_at    TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_disciplinary_employee ON disciplinary_actions(employee_id);
+
+-- Grievances
+CREATE TABLE IF NOT EXISTS grievances (
+    id          TEXT PRIMARY KEY,
+    employee_id TEXT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    subject     TEXT NOT NULL,
+    description TEXT,
+    category    TEXT CHECK (category IN ('workplace', 'harassment', 'discrimination', 'safety', 'pay', 'policy', 'other')),
+    priority    TEXT DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high', 'critical')),
+    status      TEXT NOT NULL DEFAULT 'submitted' CHECK (status IN ('submitted', 'investigating', 'resolved', 'dismissed', 'escalated')),
+    assigned_to TEXT REFERENCES users(id) ON DELETE SET NULL,
+    resolution  TEXT,
+    filed_date  TEXT,
+    resolved_at TEXT,
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_grievances_employee ON grievances(employee_id);
+CREATE INDEX IF NOT EXISTS idx_grievances_status ON grievances(status);
+
+-- Announcements
+CREATE TABLE IF NOT EXISTS announcements (
+    id           TEXT PRIMARY KEY,
+    title        TEXT NOT NULL,
+    content      TEXT,
+    category     TEXT CHECK (category IN ('general', 'policy', 'event', 'hr', 'it', 'safety')),
+    priority     TEXT DEFAULT 'normal' CHECK (priority IN ('normal', 'important', 'urgent')),
+    status       TEXT NOT NULL DEFAULT 'draft',
+    author_id    TEXT REFERENCES users(id) ON DELETE SET NULL,
+    expires_at   TEXT,
+    is_active    INTEGER DEFAULT 1,
+    created_at   TEXT NOT NULL,
+    updated_at   TEXT NOT NULL
+);
+
+-- Notifications
+CREATE TABLE IF NOT EXISTS notifications (
+    id          TEXT PRIMARY KEY,
+    user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title       TEXT NOT NULL,
+    message     TEXT,
+    type        TEXT CHECK (type IN ('info', 'warning', 'action', 'reminder')),
+    entity_type TEXT,
+    entity_id   TEXT,
+    is_read     INTEGER DEFAULT 0,
+    read_at     TEXT,
+    created_at  TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);
+
+-- Probation Periods
+CREATE TABLE IF NOT EXISTS probation_periods (
+    id          TEXT PRIMARY KEY,
+    employee_id TEXT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    start_date  TEXT NOT NULL,
+    end_date    TEXT NOT NULL,
+    status      TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'passed', 'extended', 'failed')),
+    review_date TEXT,
+    reviewer_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+    notes       TEXT,
+    outcome     TEXT,
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_probation_employee ON probation_periods(employee_id);
+
+-- Notice Periods
+CREATE TABLE IF NOT EXISTS notice_periods (
+    id                TEXT PRIMARY KEY,
+    employee_id       TEXT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    notice_type       TEXT NOT NULL CHECK (notice_type IN ('resignation', 'termination', 'redundancy', 'end_of_contract')),
+    notice_date       TEXT,
+    effective_date    TEXT,
+    last_working_day  TEXT,
+    notice_length_days INTEGER,
+    status            TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'serving', 'completed', 'waived')),
+    reason            TEXT,
+    notes             TEXT,
+    created_at        TEXT NOT NULL,
+    updated_at        TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_notice_periods_employee ON notice_periods(employee_id);
+
+-- Delegations
+CREATE TABLE IF NOT EXISTS delegations (
+    id           TEXT PRIMARY KEY,
+    delegator_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    delegate_id  TEXT NOT NULL REFERENCES users(id),
+    entity_type  TEXT,
+    entity_id    TEXT,
+    start_date   TEXT,
+    end_date     TEXT,
+    reason       TEXT,
+    notes        TEXT,
+    is_active    INTEGER DEFAULT 1,
+    created_at   TEXT NOT NULL,
+    updated_at   TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_delegations_delegator ON delegations(delegator_id);
+CREATE INDEX IF NOT EXISTS idx_delegations_delegate ON delegations(delegate_id);
+
+-- Benefit Life Events
+CREATE TABLE IF NOT EXISTS benefit_life_events (
+    id           TEXT PRIMARY KEY,
+    employee_id  TEXT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    event_type   TEXT NOT NULL CHECK (event_type IN ('marriage', 'divorce', 'birth', 'adoption', 'death', 'job_change', 'open_enrollment', 'loss_of_coverage', 'other')),
+    event_date   TEXT,
+    description  TEXT,
+    status       TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'denied', 'processed')),
+    supporting_document_url TEXT,
+    notes        TEXT,
+    processed_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+    processed_at TEXT,
+    created_at   TEXT NOT NULL,
+    updated_at   TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_life_events_employee ON benefit_life_events(employee_id);
+
+-- Training Prerequisites
+CREATE TABLE IF NOT EXISTS training_prerequisites (
+    id                    TEXT PRIMARY KEY,
+    course_id             TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    prerequisite_course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    is_mandatory          INTEGER DEFAULT 1,
+    created_at            TEXT NOT NULL,
+    updated_at            TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_training_prereqs_course ON training_prerequisites(course_id);
+
+-- Job Requisitions
+CREATE TABLE IF NOT EXISTS job_requisitions (
+    id                 TEXT PRIMARY KEY,
+    title              TEXT NOT NULL,
+    department_id      TEXT REFERENCES departments(id) ON DELETE SET NULL,
+    position_id        TEXT REFERENCES positions(id) ON DELETE SET NULL,
+    requested_by       TEXT REFERENCES users(id) ON DELETE SET NULL,
+    number_of_openings INTEGER DEFAULT 1,
+    justification      TEXT,
+    priority           TEXT DEFAULT 'normal' CHECK (priority IN ('low', 'normal', 'high', 'urgent')),
+    status             TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'pending_approval', 'approved', 'rejected', 'filled', 'cancelled')),
+    budget_min         REAL,
+    budget_max         REAL,
+    currency           TEXT DEFAULT 'NZD',
+    target_start_date  TEXT,
+    approved_by        TEXT REFERENCES users(id) ON DELETE SET NULL,
+    approved_at        TEXT,
+    created_at         TEXT NOT NULL,
+    updated_at         TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_job_requisitions_status ON job_requisitions(status);
+CREATE INDEX IF NOT EXISTS idx_job_requisitions_dept ON job_requisitions(department_id);
+
+-- Cost Centers
+CREATE TABLE IF NOT EXISTS cost_centers (
+    id            TEXT PRIMARY KEY,
+    code          TEXT NOT NULL,
+    name          TEXT NOT NULL,
+    description   TEXT,
+    department_id TEXT REFERENCES departments(id) ON DELETE SET NULL,
+    manager_id    TEXT REFERENCES employees(id) ON DELETE SET NULL,
+    budget        REAL,
+    currency      TEXT DEFAULT 'NZD',
+    is_active     INTEGER DEFAULT 1,
+    created_at    TEXT NOT NULL,
+    updated_at    TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_cost_centers_dept ON cost_centers(department_id);
+
+-- Custom Field Definitions
+CREATE TABLE IF NOT EXISTS custom_field_definitions (
+    id            TEXT PRIMARY KEY,
+    entity_type   TEXT NOT NULL,
+    field_name    TEXT NOT NULL,
+    field_type    TEXT NOT NULL DEFAULT 'text',
+    field_options TEXT,
+    is_required   INTEGER DEFAULT 0,
+    sort_order    INTEGER DEFAULT 0,
+    is_active     INTEGER DEFAULT 1,
+    created_at    TEXT NOT NULL,
+    updated_at    TEXT NOT NULL
+);
+
+-- Custom Field Values
+CREATE TABLE IF NOT EXISTS custom_field_values (
+    id            TEXT PRIMARY KEY,
+    definition_id TEXT NOT NULL REFERENCES custom_field_definitions(id) ON DELETE CASCADE,
+    entity_id     TEXT NOT NULL,
+    value         TEXT,
+    created_at    TEXT NOT NULL,
+    updated_at    TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_cfv_definition ON custom_field_values(definition_id);
+CREATE INDEX IF NOT EXISTS idx_cfv_entity ON custom_field_values(entity_id);
 """
 
 
@@ -601,6 +951,8 @@ def init_db():
             "dashboard", "employees", "departments", "positions",
             "leave", "timesheets", "recruitment", "performance",
             "reports", "settings", "compensation", "benefits", "succession",
+            "locations", "assets", "grievances", "announcements", "skills",
+            "disciplinary",
         ]
         name = default_admin.split("@")[0].replace(".", " ").title()
         conn.execute(

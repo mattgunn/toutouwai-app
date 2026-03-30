@@ -17,6 +17,10 @@ import {
   ShieldCheckIcon, ArrowPathRoundedSquareIcon,
   UserCircleIcon, ChartPieIcon, Cog6ToothIcon, QuestionMarkCircleIcon,
   AcademicCapIcon, CalendarIcon,
+  MapPinIcon, WrenchScrewdriverIcon, ExclamationTriangleIcon,
+  ChatBubbleIcon, SpeakerWaveIcon, LightBulbIcon,
+  CurrencyDollarIcon, ClipboardDocumentListIcon, UserGroupIcon, SquaresIcon,
+  BellIcon,
 } from './NavIcons'
 
 type NavItem = { to: string; label: string; icon: ReactNode; module: string }
@@ -30,58 +34,83 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/org-chart',   label: 'Org Chart',   icon: <BuildingOfficeIcon className="w-4 h-4" />, module: 'employees' },
       { to: '/departments', label: 'Departments', icon: <BuildingOffice2Icon className="w-4 h-4" />, module: 'departments' },
       { to: '/positions',   label: 'Positions',   icon: <BriefcaseIcon className="w-4 h-4" />, module: 'positions' },
+      { to: '/locations',   label: 'Locations',   icon: <MapPinIcon className="w-4 h-4" />, module: 'locations' },
       { to: '/onboarding',  label: 'Onboarding',  icon: <HandRaisedIcon className="w-4 h-4" />, module: 'employees' },
+      { to: '/probation',   label: 'Probation',   icon: <ClipboardDocumentListIcon className="w-4 h-4" />, module: 'employees' },
+      { to: '/notice-periods', label: 'Notice Periods', icon: <DocumentTextIcon className="w-4 h-4" />, module: 'employees' },
       { to: '/documents',   label: 'Documents',   icon: <FolderOpenIcon className="w-4 h-4" />, module: 'employees' },
+      { to: '/skills',              label: 'Skills',              icon: <LightBulbIcon className="w-4 h-4" />, module: 'skills' },
+      { to: '/emergency-contacts',  label: 'Emergency Contacts', icon: <ExclamationTriangleIcon className="w-4 h-4" />, module: 'employees' },
+      { to: '/dependents',          label: 'Dependents',         icon: <UserGroupIcon className="w-4 h-4" />, module: 'employees' },
+      { to: '/job-history',         label: 'Job History',        icon: <ClipboardDocumentListIcon className="w-4 h-4" />, module: 'employees' },
     ],
   },
   {
     heading: 'Time & Leave',
     items: [
-      { to: '/timesheets',     label: 'Timesheets',     icon: <ClockIcon className="w-4 h-4" />, module: 'timesheets' },
-      { to: '/leave-requests', label: 'Leave Requests', icon: <CalendarDaysIcon className="w-4 h-4" />, module: 'leave' },
-      { to: '/leave-balances', label: 'Leave Balances', icon: <ChartBarSquareIcon className="w-4 h-4" />, module: 'leave' },
+      { to: '/timesheets',       label: 'Timesheets',       icon: <ClockIcon className="w-4 h-4" />, module: 'timesheets' },
+      { to: '/leave-requests',   label: 'Leave Requests',   icon: <CalendarDaysIcon className="w-4 h-4" />, module: 'leave' },
+      { to: '/leave-balances',   label: 'Leave Balances',   icon: <ChartBarSquareIcon className="w-4 h-4" />, module: 'leave' },
       { to: '/absence-calendar', label: 'Absence Calendar', icon: <CalendarIcon className="w-4 h-4" />, module: 'leave' },
+      { to: '/leave-accrual',    label: 'Accrual Policies', icon: <ArrowPathRoundedSquareIcon className="w-4 h-4" />, module: 'leave' },
     ],
   },
   {
     heading: 'Compensation',
     items: [
-      { to: '/compensation', label: 'Compensation', icon: <BanknotesIcon className="w-4 h-4" />, module: 'compensation' },
-      { to: '/benefits',     label: 'Benefits',     icon: <HeartIcon className="w-4 h-4" />, module: 'benefits' },
-      { to: '/succession',   label: 'Succession',   icon: <ArrowTrendingUpIcon className="w-4 h-4" />, module: 'succession' },
+      { to: '/compensation',     label: 'Compensation',     icon: <BanknotesIcon className="w-4 h-4" />, module: 'compensation' },
+      { to: '/comp-components',  label: 'Components',       icon: <CurrencyDollarIcon className="w-4 h-4" />, module: 'compensation' },
+      { to: '/benefits',         label: 'Benefits',         icon: <HeartIcon className="w-4 h-4" />, module: 'benefits' },
+      { to: '/life-events',      label: 'Life Events',      icon: <CalendarDaysIcon className="w-4 h-4" />, module: 'benefits' },
+      { to: '/succession',       label: 'Succession',       icon: <ArrowTrendingUpIcon className="w-4 h-4" />, module: 'succession' },
     ],
   },
   {
     heading: 'Recruitment',
     items: [
-      { to: '/job-postings', label: 'Job Postings', icon: <MegaphoneIcon className="w-4 h-4" />, module: 'recruitment' },
-      { to: '/applicants',   label: 'Applicants',   icon: <DocumentTextIcon className="w-4 h-4" />, module: 'recruitment' },
-      { to: '/pipeline',     label: 'Pipeline',     icon: <FunnelIcon className="w-4 h-4" />, module: 'recruitment' },
+      { to: '/requisitions',  label: 'Requisitions',  icon: <ClipboardDocumentListIcon className="w-4 h-4" />, module: 'recruitment' },
+      { to: '/job-postings',  label: 'Job Postings',  icon: <MegaphoneIcon className="w-4 h-4" />, module: 'recruitment' },
+      { to: '/applicants',    label: 'Applicants',    icon: <DocumentTextIcon className="w-4 h-4" />, module: 'recruitment' },
+      { to: '/pipeline',      label: 'Pipeline',      icon: <FunnelIcon className="w-4 h-4" />, module: 'recruitment' },
     ],
   },
   {
     heading: 'Performance',
     items: [
-      { to: '/reviews', label: 'Reviews', icon: <StarIcon className="w-4 h-4" />, module: 'performance' },
-      { to: '/goals',   label: 'Goals',   icon: <FlagIcon className="w-4 h-4" />, module: 'performance' },
-      { to: '/surveys', label: 'Surveys', icon: <PencilSquareIcon className="w-4 h-4" />, module: 'performance' },
-      { to: '/learning', label: 'Learning', icon: <AcademicCapIcon className="w-4 h-4" />, module: 'performance' },
+      { to: '/reviews',  label: 'Reviews',  icon: <StarIcon className="w-4 h-4" />, module: 'performance' },
+      { to: '/goals',    label: 'Goals',    icon: <FlagIcon className="w-4 h-4" />, module: 'performance' },
+      { to: '/surveys',  label: 'Surveys',  icon: <PencilSquareIcon className="w-4 h-4" />, module: 'performance' },
+      { to: '/learning',                 label: 'Learning',       icon: <AcademicCapIcon className="w-4 h-4" />, module: 'performance' },
+      { to: '/training-prerequisites',  label: 'Prerequisites',  icon: <ClipboardDocumentListIcon className="w-4 h-4" />, module: 'performance' },
+    ],
+  },
+  {
+    heading: 'Workplace',
+    items: [
+      { to: '/assets',         label: 'Assets',         icon: <WrenchScrewdriverIcon className="w-4 h-4" />, module: 'assets' },
+      { to: '/announcements',  label: 'Announcements',  icon: <SpeakerWaveIcon className="w-4 h-4" />, module: 'announcements' },
+      { to: '/grievances',     label: 'Grievances',     icon: <ChatBubbleIcon className="w-4 h-4" />, module: 'grievances' },
+      { to: '/disciplinary',   label: 'Disciplinary',   icon: <ExclamationTriangleIcon className="w-4 h-4" />, module: 'disciplinary' },
     ],
   },
   {
     heading: 'Admin',
     items: [
-      { to: '/audit',     label: 'Audit Log',  icon: <ShieldCheckIcon className="w-4 h-4" />, module: 'settings' },
-      { to: '/workflows', label: 'Workflows',  icon: <ArrowPathRoundedSquareIcon className="w-4 h-4" />, module: 'settings' },
+      { to: '/audit',          label: 'Audit Log',      icon: <ShieldCheckIcon className="w-4 h-4" />, module: 'settings' },
+      { to: '/workflows',      label: 'Workflows',      icon: <ArrowPathRoundedSquareIcon className="w-4 h-4" />, module: 'settings' },
+      { to: '/delegations',    label: 'Delegations',    icon: <UserGroupIcon className="w-4 h-4" />, module: 'settings' },
+      { to: '/cost-centers',   label: 'Cost Centers',   icon: <CurrencyDollarIcon className="w-4 h-4" />, module: 'settings' },
+      { to: '/custom-fields',  label: 'Custom Fields',  icon: <SquaresIcon className="w-4 h-4" />, module: 'settings' },
     ],
   },
 ]
 
 const GLOBAL_ITEMS: NavItem[] = [
-  { to: '/my-profile', label: 'My Profile', icon: <UserCircleIcon className="w-4 h-4" />, module: '' },
-  { to: '/reports',  label: 'Reports',  icon: <ChartPieIcon className="w-4 h-4" />, module: 'reports' },
-  { to: '/help',     label: 'Help',     icon: <QuestionMarkCircleIcon className="w-4 h-4" />, module: '' },
-  { to: '/settings', label: 'Settings', icon: <Cog6ToothIcon className="w-4 h-4" />, module: 'settings' },
+  { to: '/my-profile',     label: 'My Profile',     icon: <UserCircleIcon className="w-4 h-4" />, module: '' },
+  { to: '/notifications',  label: 'Notifications',  icon: <BellIcon className="w-4 h-4" />, module: '' },
+  { to: '/reports',        label: 'Reports',         icon: <ChartPieIcon className="w-4 h-4" />, module: 'reports' },
+  { to: '/help',           label: 'Help',            icon: <QuestionMarkCircleIcon className="w-4 h-4" />, module: '' },
+  { to: '/settings',       label: 'Settings',        icon: <Cog6ToothIcon className="w-4 h-4" />, module: 'settings' },
 ]
 
 const ALL_NAV_ITEMS = NAV_GROUPS.flatMap(g => g.items)

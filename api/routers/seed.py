@@ -38,6 +38,29 @@ def seed_database(conn=Depends(get_db), user=Depends(get_current_user)):
     count = conn.execute("SELECT COUNT(*) FROM employees").fetchone()[0]
     if count > 0:
         tables = [
+            "custom_field_values", "custom_field_definitions",
+            "cost_centers",
+            "job_requisitions",
+            "training_prerequisites", "course_enrollments", "certifications", "courses",
+            "benefit_life_events",
+            "delegations",
+            "notice_periods",
+            "probation_periods",
+            "notifications",
+            "announcements",
+            "grievances",
+            "disciplinary_actions",
+            "assets",
+            "leave_accrual_policies",
+            "compensation_components",
+            "employee_skills", "skills",
+            "job_history",
+            "dependents",
+            "emergency_contacts",
+            "locations",
+            "feedback_requests",
+            "offers", "interviews",
+            "salary_bands",
             "survey_responses", "survey_questions", "surveys",
             "workflow_approvals", "workflow_instances", "workflow_steps", "workflow_definitions",
             "audit_log", "documents",
@@ -45,7 +68,7 @@ def seed_database(conn=Depends(get_db), user=Depends(get_current_user)):
             "succession_candidates", "succession_plans",
             "benefit_enrollments", "benefit_plans", "compensation",
             "goals", "reviews", "review_cycles",
-            "time_entries", "leave_requests",
+            "time_entries", "leave_requests", "leave_balances",
             "applicants", "job_postings",
             "employees", "positions", "departments",
         ]
@@ -443,6 +466,429 @@ def seed_database(conn=Depends(get_db), user=Depends(get_current_user)):
              _date(2025, (1, 12)) + f"T{random.randint(8,17):02d}:{random.randint(0,59):02d}:00+00:00")
         )
 
+    # --- Locations ---
+    location_data = [
+        ("Auckland HQ", "100 Queen Street", "Auckland", "Auckland", "NZ", "1010", "Pacific/Auckland"),
+        ("Wellington Office", "50 Lambton Quay", "Wellington", "Wellington", "NZ", "6011", "Pacific/Auckland"),
+        ("Christchurch Office", "20 Cathedral Square", "Christchurch", "Canterbury", "NZ", "8011", "Pacific/Auckland"),
+        ("Hamilton Office", "10 Victoria Street", "Hamilton", "Waikato", "NZ", "3204", "Pacific/Auckland"),
+        ("Remote", None, None, None, "NZ", None, "Pacific/Auckland"),
+    ]
+    location_ids = []
+    for lname, addr, city, state, country, postal, tz in location_data:
+        lid = new_id()
+        location_ids.append(lid)
+        conn.execute(
+            "INSERT INTO locations (id, name, address, city, state, country, postal_code, timezone, is_active, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,1,?,?)",
+            (lid, lname, addr, city, state, country, postal, tz, ts, ts)
+        )
+
+    # --- Emergency Contacts ---
+    relationships_ec = ["spouse", "parent", "sibling", "partner", "friend"]
+    for eid in random.sample(emp_ids, min(15, len(emp_ids))):
+        conn.execute(
+            "INSERT INTO emergency_contacts (id, employee_id, contact_name, relationship, phone, email, is_primary, created_at, updated_at) VALUES (?,?,?,?,?,?,1,?,?)",
+            (new_id(), eid,
+             f"{random.choice(FIRST_NAMES)} {random.choice(LAST_NAMES)}",
+             random.choice(relationships_ec),
+             f"+64 21 {random.randint(100,999)} {random.randint(1000,9999)}",
+             f"{random.choice(FIRST_NAMES).lower()}.{random.choice(LAST_NAMES).lower()}@gmail.com",
+             ts, ts)
+        )
+
+    # --- Dependents ---
+    dep_relationships = ["spouse", "child", "child", "child", "domestic_partner"]
+    for eid in random.sample(emp_ids, min(10, len(emp_ids))):
+        fn = random.choice(FIRST_NAMES)
+        ln = random.choice(LAST_NAMES)
+        rel = random.choice(dep_relationships)
+        dob_year = random.randint(1980, 2020) if rel == "child" else random.randint(1970, 2000)
+        conn.execute(
+            "INSERT INTO dependents (id, employee_id, first_name, last_name, relationship, date_of_birth, gender, is_active, created_at, updated_at) VALUES (?,?,?,?,?,?,?,1,?,?)",
+            (new_id(), eid, fn, ln, rel,
+             f"{dob_year}-{random.randint(1,12):02d}-{random.randint(1,28):02d}",
+             random.choice(["male", "female"]),
+             ts, ts)
+        )
+
+    # --- Job History ---
+    history_reasons = ["Promotion", "Transfer", "Role change", "Reorganisation", "Lateral move"]
+    emp_types = ["full_time", "part_time", "contract"]
+    for _ in range(20):
+        eid = random.choice(emp_ids)
+        conn.execute(
+            "INSERT INTO job_history (id, employee_id, effective_date, position_id, department_id, manager_id, location, employment_type, reason, notes, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            (new_id(), eid, _past_date(),
+             random.choice(list(pos_ids.values())),
+             random.choice(list(dept_ids.values())),
+             random.choice(emp_ids),
+             random.choice(["Auckland", "Wellington", "Christchurch", "Remote"]),
+             random.choice(emp_types),
+             random.choice(history_reasons),
+             "Historical record",
+             ts, ts)
+        )
+
+    # --- Skills ---
+    skill_catalog = [
+        ("Python", "technical", "Python programming language"),
+        ("JavaScript", "technical", "JavaScript/TypeScript development"),
+        ("Leadership", "soft_skill", "Team leadership and management"),
+        ("Project Management", "management", "Planning and executing projects"),
+        ("Data Analysis", "technical", "Analysing datasets and deriving insights"),
+        ("Communication", "soft_skill", "Written and verbal communication"),
+        ("SQL", "technical", "Database querying and management"),
+        ("React", "technical", "React frontend framework"),
+        ("AWS", "technical", "Amazon Web Services cloud platform"),
+        ("Agile", "management", "Agile methodologies (Scrum, Kanban)"),
+        ("Machine Learning", "technical", "ML model development and deployment"),
+        ("Public Speaking", "soft_skill", "Presenting to audiences"),
+        ("Negotiation", "soft_skill", "Business negotiation skills"),
+        ("Financial Analysis", "management", "Financial modelling and analysis"),
+        ("Strategic Planning", "management", "Long-term strategy development"),
+    ]
+    skill_ids = []
+    for sname, scat, sdesc in skill_catalog:
+        sid = new_id()
+        skill_ids.append(sid)
+        conn.execute(
+            "INSERT INTO skills (id, name, category, description, created_at, updated_at) VALUES (?,?,?,?,?,?)",
+            (sid, sname, scat, sdesc, ts, ts)
+        )
+
+    # --- Employee Skills ---
+    proficiency_levels = ["beginner", "intermediate", "advanced", "expert"]
+    for _ in range(30):
+        conn.execute(
+            "INSERT INTO employee_skills (id, employee_id, skill_id, proficiency_level, years_experience, notes, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)",
+            (new_id(), random.choice(emp_ids), random.choice(skill_ids),
+             random.choice(proficiency_levels),
+             round(random.uniform(0.5, 15), 1),
+             random.choice(["Self-assessed", "Verified by manager", "Certified", None]),
+             ts, ts)
+        )
+
+    # --- Compensation Components ---
+    comp_types = ["bonus", "stock", "allowance", "commission"]
+    comp_freqs = ["one_time", "monthly", "quarterly", "annual"]
+    comp_descs = [
+        "Performance bonus", "Annual retention bonus", "RSU grant", "Home office allowance",
+        "Travel allowance", "Sales commission", "Signing bonus", "Quarterly incentive",
+        "Technology allowance", "Professional development fund",
+    ]
+    for _ in range(15):
+        conn.execute(
+            "INSERT INTO compensation_components (id, employee_id, component_type, amount, currency, frequency, effective_date, end_date, description, status, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            (new_id(), random.choice(emp_ids),
+             random.choice(comp_types),
+             round(random.uniform(500, 25000), 2),
+             "NZD",
+             random.choice(comp_freqs),
+             _past_date(),
+             _future_date() if random.random() > 0.5 else None,
+             random.choice(comp_descs),
+             random.choice(["active", "active", "active", "ended"]),
+             ts, ts)
+        )
+
+    # --- Leave Accrual Policies ---
+    leave_type_map = {lt["id"]: lt for lt in conn.execute("SELECT id, name FROM leave_types").fetchall()}
+    accrual_data = [
+        ("Annual Leave Monthly Accrual", "monthly", 1.67, 30, 10, 0),
+        ("Sick Leave Annual Accrual", "annual", 10, 20, 5, 0),
+        ("Personal Leave Annual Accrual", "annual", 5, 10, 2, 0),
+    ]
+    for i, (aname, freq, rate, max_bal, carry, wait) in enumerate(accrual_data):
+        lt_id = leave_type_ids[i] if i < len(leave_type_ids) else leave_type_ids[0]
+        conn.execute(
+            "INSERT INTO leave_accrual_policies (id, leave_type_id, name, accrual_rate, accrual_frequency, max_balance, carry_over_limit, waiting_period_days, is_active, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,1,?,?)",
+            (new_id(), lt_id, aname, rate, freq, max_bal, carry, wait, ts, ts)
+        )
+
+    # --- Assets ---
+    asset_categories = ["laptop", "phone", "monitor", "keyboard", "chair"]
+    asset_models = {
+        "laptop": ["MacBook Pro 14\"", "MacBook Pro 16\"", "Dell XPS 15", "ThinkPad X1 Carbon"],
+        "phone": ["iPhone 15 Pro", "iPhone 14", "Samsung Galaxy S24"],
+        "monitor": ["Dell U2723QE 27\"", "LG 27UK850-W", "Samsung S34J550WQN"],
+        "keyboard": ["Apple Magic Keyboard", "Logitech MX Keys"],
+        "chair": ["Herman Miller Aeron", "Steelcase Leap V2"],
+    }
+    for i in range(20):
+        cat = random.choice(asset_categories)
+        model = random.choice(asset_models[cat])
+        assigned_emp = random.choice(emp_ids) if random.random() > 0.3 else None
+        status = "assigned" if assigned_emp else random.choice(["available", "maintenance", "retired"])
+        conn.execute(
+            "INSERT INTO assets (id, name, asset_tag, category, serial_number, purchase_date, purchase_cost, status, assigned_to, assigned_date, notes, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (new_id(), model, f"AST-{1000 + i:04d}", cat,
+             f"SN-{random.randint(100000, 999999)}",
+             _past_date(),
+             round(random.uniform(200, 4500), 2),
+             status,
+             assigned_emp,
+             _past_date() if assigned_emp else None,
+             None,
+             ts, ts)
+        )
+
+    # --- Disciplinary Actions ---
+    disc_types = ["verbal_warning", "written_warning", "verbal_warning", "final_warning", "written_warning"]
+    disc_descs = [
+        "Repeated tardiness",
+        "Failure to follow safety procedures",
+        "Inappropriate workplace behaviour",
+        "Missed deadlines without communication",
+        "Policy violation - internet usage",
+    ]
+    for i in range(5):
+        conn.execute(
+            "INSERT INTO disciplinary_actions (id, employee_id, action_type, description, incident_date, action_date, issued_by, status, resolution, resolved_at, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            (new_id(), random.choice(emp_ids),
+             disc_types[i], disc_descs[i],
+             _past_date(), _past_date(),
+             user["id"],
+             random.choice(["open", "acknowledged", "resolved"]),
+             "Discussed with employee" if random.random() > 0.5 else None,
+             _past_date() if random.random() > 0.5 else None,
+             ts, ts)
+        )
+
+    # --- Grievances ---
+    griev_data = [
+        ("Unfair workload distribution", "workplace", "medium"),
+        ("Harassment complaint", "harassment", "critical"),
+        ("Pay discrepancy concern", "pay", "high"),
+        ("Unsafe office conditions", "safety", "high"),
+        ("Disagreement with policy change", "policy", "low"),
+    ]
+    for subject, category, priority in griev_data:
+        conn.execute(
+            "INSERT INTO grievances (id, employee_id, subject, description, category, priority, status, assigned_to, resolution, filed_date, resolved_at, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (new_id(), random.choice(emp_ids),
+             subject, f"Detailed description of: {subject}",
+             category, priority,
+             random.choice(["submitted", "investigating", "resolved"]),
+             user["id"],
+             "Resolved through mediation" if random.random() > 0.5 else None,
+             _past_date(),
+             _past_date() if random.random() > 0.5 else None,
+             ts, ts)
+        )
+
+    # --- Announcements ---
+    announce_data = [
+        ("Updated Remote Work Policy", "Please review the new remote work guidelines effective next month.", "policy", "important"),
+        ("Holiday Schedule 2025-2026", "Upcoming public holiday dates and office closure schedule.", "general", "normal"),
+        ("Annual Company Picnic", "Join us for the annual company picnic at Cornwall Park on 15 March.", "event", "normal"),
+        ("IT Maintenance Window", "Scheduled system maintenance this Saturday 10pm-2am. Services may be unavailable.", "it", "urgent"),
+    ]
+    for atitle, acontent, acat, apri in announce_data:
+        conn.execute(
+            "INSERT INTO announcements (id, title, content, category, priority, status, author_id, expires_at, is_active, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,1,?,?)",
+            (new_id(), atitle, acontent, acat, apri,
+             "published", user["id"], _future_date(),
+             ts, ts)
+        )
+
+    # --- Notifications ---
+    notif_data = [
+        ("Leave request approved", "Your leave request for 5 days has been approved.", "info", "leave_request"),
+        ("Performance review due", "Your mid-year review is due by end of month.", "reminder", "review"),
+        ("New announcement posted", "A new company announcement has been published.", "info", "announcement"),
+        ("Document expiring soon", "Your First Aid Certificate expires in 30 days.", "warning", "document"),
+        ("Goal deadline approaching", "Your Q1 OKR goal is due in 7 days.", "reminder", "goal"),
+        ("Training assigned", "You have been assigned a new mandatory training course.", "action", "course"),
+        ("Benefit enrollment open", "Open enrollment period starts next week.", "info", "benefit"),
+        ("Timesheet reminder", "Please submit your timesheet for this week.", "reminder", "time_entry"),
+        ("New team member", "A new team member has joined your department.", "info", "employee"),
+        ("Policy update", "The company travel policy has been updated.", "info", "announcement"),
+    ]
+    for ntitle, nmsg, ntype, nentity in notif_data:
+        conn.execute(
+            "INSERT INTO notifications (id, user_id, title, message, type, entity_type, entity_id, is_read, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
+            (new_id(), user["id"],
+             ntitle, nmsg, ntype, nentity, random.choice(emp_ids),
+             random.choice([0, 0, 0, 1]),
+             ts)
+        )
+
+    # --- Probation Periods ---
+    # Pick 8 employees for probation records
+    probation_emps = random.sample(emp_ids, min(8, len(emp_ids)))
+    for i, eid in enumerate(probation_emps):
+        start = _past_date()
+        start_dt = datetime.strptime(start, "%Y-%m-%d")
+        end_dt = start_dt + timedelta(days=90)
+        end = end_dt.strftime("%Y-%m-%d")
+        status = "passed" if i < 4 else random.choice(["active", "extended"])
+        conn.execute(
+            "INSERT INTO probation_periods (id, employee_id, start_date, end_date, status, review_date, reviewer_id, notes, outcome, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+            (new_id(), eid, start, end, status,
+             end,
+             user["id"],
+             random.choice(["Progressing well", "Meeting expectations", "Needs improvement", "Extended for further assessment"]),
+             "Confirmed" if status == "passed" else None,
+             ts, ts)
+        )
+
+    # --- Notice Periods ---
+    notice_types = ["resignation", "termination", "end_of_contract"]
+    for i in range(3):
+        eid = random.choice(emp_ids)
+        notice_dt = _past_date()
+        conn.execute(
+            "INSERT INTO notice_periods (id, employee_id, notice_type, notice_date, effective_date, last_working_day, notice_length_days, status, reason, notes, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            (new_id(), eid,
+             notice_types[i], notice_dt, notice_dt,
+             _future_date(), random.choice([30, 60, 90]),
+             random.choice(["pending", "serving", "completed"]),
+             random.choice(["Career change", "Relocation", "Contract end", "Performance"]),
+             None,
+             ts, ts)
+        )
+
+    # --- Delegations ---
+    delegation_data = [
+        ("leave_request", "Annual leave delegation"),
+        ("expense", "Expense approval delegation"),
+    ]
+    for etype, reason in delegation_data:
+        conn.execute(
+            "INSERT INTO delegations (id, delegator_id, delegate_id, entity_type, start_date, end_date, reason, is_active, created_at, updated_at) VALUES (?,?,?,?,?,?,?,1,?,?)",
+            (new_id(), user["id"], user["id"],
+             etype, _past_date(), _future_date(), reason,
+             ts, ts)
+        )
+
+    # --- Benefit Life Events ---
+    life_event_data = [
+        ("marriage", "approved"),
+        ("birth", "processed"),
+        ("open_enrollment", "pending"),
+        ("marriage", "approved"),
+        ("birth", "pending"),
+    ]
+    for etype, estatus in life_event_data:
+        conn.execute(
+            "INSERT INTO benefit_life_events (id, employee_id, event_type, event_date, description, status, processed_by, processed_at, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+            (new_id(), random.choice(emp_ids),
+             etype, _past_date(),
+             f"Life event: {etype}",
+             estatus,
+             user["id"] if estatus in ("approved", "processed") else None,
+             _past_date() if estatus in ("approved", "processed") else None,
+             ts, ts)
+        )
+
+    # --- Courses (for training prerequisites) ---
+    course_data = [
+        ("Health & Safety Fundamentals", "compliance", "online", 2, 1),
+        ("Introduction to Python", "technical", "online", 8, 0),
+        ("Advanced Python", "technical", "online", 16, 0),
+        ("Leadership 101", "leadership", "classroom", 4, 0),
+        ("Advanced Leadership", "leadership", "classroom", 8, 0),
+        ("Data Privacy & Security", "compliance", "online", 1, 1),
+    ]
+    course_ids = []
+    for ctitle, ccat, cfmt, cdur, cmand in course_data:
+        cid = new_id()
+        course_ids.append(cid)
+        conn.execute(
+            "INSERT INTO courses (id, title, description, category, format, duration_hours, provider, is_mandatory, is_active, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,1,?,?)",
+            (cid, ctitle, f"Course: {ctitle}", ccat, cfmt, cdur,
+             random.choice(["Internal", "LinkedIn Learning", "Coursera"]),
+             cmand, ts, ts)
+        )
+
+    # --- Training Prerequisites ---
+    # Advanced Python requires Intro to Python; Advanced Leadership requires Leadership 101; Data Privacy requires H&S
+    prereq_links = [(2, 1), (4, 3), (5, 0)]  # (course_index, prereq_index)
+    for cidx, pidx in prereq_links:
+        conn.execute(
+            "INSERT INTO training_prerequisites (id, course_id, prerequisite_course_id, is_mandatory, created_at, updated_at) VALUES (?,?,?,1,?,?)",
+            (new_id(), course_ids[cidx], course_ids[pidx], ts, ts)
+        )
+
+    # --- Job Requisitions ---
+    req_data = [
+        ("Senior Software Engineer", "Engineering", "Senior Software Engineer", "approved", "high"),
+        ("Marketing Coordinator", "Marketing", "Marketing Specialist", "pending_approval", "normal"),
+        ("Finance Analyst", "Finance", "Financial Analyst", "draft", "normal"),
+        ("DevOps Engineer", "Engineering", "Software Engineer", "filled", "urgent"),
+    ]
+    for rtitle, rdept, rpos, rstatus, rpri in req_data:
+        conn.execute(
+            "INSERT INTO job_requisitions (id, title, department_id, position_id, requested_by, number_of_openings, justification, priority, status, budget_min, budget_max, currency, target_start_date, approved_by, approved_at, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (new_id(), rtitle,
+             dept_ids.get(rdept, list(dept_ids.values())[0]),
+             pos_ids.get(rpos, list(pos_ids.values())[0]),
+             user["id"],
+             random.randint(1, 3),
+             f"Headcount request for {rtitle} role",
+             rpri, rstatus,
+             80000, 150000, "NZD",
+             _future_date(),
+             user["id"] if rstatus in ("approved", "filled") else None,
+             _past_date() if rstatus in ("approved", "filled") else None,
+             ts, ts)
+        )
+
+    # --- Cost Centers ---
+    cc_data = [
+        ("CC-ENG", "Engineering Cost Center", "Engineering"),
+        ("CC-PRD", "Product Cost Center", "Product"),
+        ("CC-HR", "Human Resources Cost Center", "Human Resources"),
+        ("CC-FIN", "Finance Cost Center", "Finance"),
+        ("CC-MKT", "Marketing Cost Center", "Marketing"),
+        ("CC-OPS", "Operations Cost Center", "Operations"),
+    ]
+    for ccode, cname, cdept in cc_data:
+        conn.execute(
+            "INSERT INTO cost_centers (id, code, name, description, department_id, manager_id, budget, currency, is_active, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,1,?,?)",
+            (new_id(), ccode, cname, f"Cost center for {cdept}",
+             dept_ids.get(cdept, list(dept_ids.values())[0]),
+             managers.get(cdept),
+             round(random.uniform(500000, 3000000), 2),
+             "NZD",
+             ts, ts)
+        )
+
+    # --- Custom Field Definitions ---
+    cf_shirt_id = new_id()
+    cf_preferred_id = new_id()
+    cf_parking_id = new_id()
+    conn.execute(
+        "INSERT INTO custom_field_definitions (id, entity_type, field_name, field_type, field_options, is_required, sort_order, is_active, created_at, updated_at) VALUES (?,?,?,?,?,0,1,1,?,?)",
+        (cf_shirt_id, "employee", "Shirt Size", "select", '["XS","S","M","L","XL","XXL"]', ts, ts)
+    )
+    conn.execute(
+        "INSERT INTO custom_field_definitions (id, entity_type, field_name, field_type, field_options, is_required, sort_order, is_active, created_at, updated_at) VALUES (?,?,?,?,?,0,2,1,?,?)",
+        (cf_preferred_id, "employee", "Preferred Name", "text", None, ts, ts)
+    )
+    conn.execute(
+        "INSERT INTO custom_field_definitions (id, entity_type, field_name, field_type, field_options, is_required, sort_order, is_active, created_at, updated_at) VALUES (?,?,?,?,?,0,3,1,?,?)",
+        (cf_parking_id, "employee", "Parking Spot", "text", None, ts, ts)
+    )
+
+    # --- Custom Field Values ---
+    shirt_sizes = ["XS", "S", "M", "M", "L", "L", "XL", "XXL"]
+    for eid in random.sample(emp_ids, min(10, len(emp_ids))):
+        conn.execute(
+            "INSERT INTO custom_field_values (id, definition_id, entity_id, value, created_at, updated_at) VALUES (?,?,?,?,?,?)",
+            (new_id(), cf_shirt_id, eid, random.choice(shirt_sizes), ts, ts)
+        )
+    for eid in random.sample(emp_ids, min(6, len(emp_ids))):
+        conn.execute(
+            "INSERT INTO custom_field_values (id, definition_id, entity_id, value, created_at, updated_at) VALUES (?,?,?,?,?,?)",
+            (new_id(), cf_preferred_id, eid, random.choice(FIRST_NAMES), ts, ts)
+        )
+    for eid in random.sample(emp_ids, min(5, len(emp_ids))):
+        conn.execute(
+            "INSERT INTO custom_field_values (id, definition_id, entity_id, value, created_at, updated_at) VALUES (?,?,?,?,?,?)",
+            (new_id(), cf_parking_id, eid, f"P{random.randint(1, 50)}", ts, ts)
+        )
+
     conn.commit()
 
     # Count what was created
@@ -450,7 +896,13 @@ def seed_database(conn=Depends(get_db), user=Depends(get_current_user)):
     for table in ["departments", "positions", "employees", "leave_requests",
                    "time_entries", "job_postings", "applicants", "review_cycles", "reviews", "goals",
                    "compensation", "benefit_plans", "benefit_enrollments", "succession_plans",
-                   "onboarding_templates", "documents", "surveys", "workflow_definitions", "audit_log"]:
+                   "onboarding_templates", "documents", "surveys", "workflow_definitions", "audit_log",
+                   "locations", "emergency_contacts", "dependents", "job_history",
+                   "skills", "employee_skills", "compensation_components",
+                   "leave_accrual_policies", "assets", "disciplinary_actions", "grievances",
+                   "announcements", "notifications", "probation_periods", "notice_periods",
+                   "delegations", "benefit_life_events", "courses", "training_prerequisites",
+                   "job_requisitions", "cost_centers", "custom_field_definitions", "custom_field_values"]:
         counts[table] = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
 
     return {"status": "ok", "message": "Database seeded with dummy data", "counts": counts}
@@ -460,6 +912,29 @@ def seed_database(conn=Depends(get_db), user=Depends(get_current_user)):
 def clear_seed_data(conn=Depends(get_db), _user=Depends(get_current_user)):
     """Clear all seeded data (keeps users and settings)."""
     tables = [
+        "custom_field_values", "custom_field_definitions",
+        "cost_centers",
+        "job_requisitions",
+        "training_prerequisites", "course_enrollments", "certifications", "courses",
+        "benefit_life_events",
+        "delegations",
+        "notice_periods",
+        "probation_periods",
+        "notifications",
+        "announcements",
+        "grievances",
+        "disciplinary_actions",
+        "assets",
+        "leave_accrual_policies",
+        "compensation_components",
+        "employee_skills", "skills",
+        "job_history",
+        "dependents",
+        "emergency_contacts",
+        "locations",
+        "feedback_requests",
+        "offers", "interviews",
+        "salary_bands",
         "survey_responses", "survey_questions", "surveys",
         "workflow_approvals", "workflow_instances", "workflow_steps", "workflow_definitions",
         "audit_log", "documents",

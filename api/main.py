@@ -10,6 +10,11 @@ from .routers import (
     recruitment, performance, settings, integrations,
     compensation, benefits, succession, onboarding, documents, self_service,
     reports, audit, workflows, surveys, learning, seed,
+    locations, emergency_contacts, dependents, job_history, skills,
+    compensation_components, leave_accrual, assets, disciplinary, grievances,
+    announcements, notifications, probation, notice_periods, delegations,
+    benefit_life_events, training_prerequisites, job_requisitions, cost_centers,
+    custom_fields,
 )
 
 app = FastAPI(title="HRIS API", version="0.1.0")
@@ -52,6 +57,26 @@ app.include_router(workflows.router, prefix="/api", tags=["workflows"])
 app.include_router(surveys.router, prefix="/api", tags=["surveys"])
 app.include_router(learning.router, prefix="/api", tags=["learning"])
 app.include_router(seed.router, prefix="/api", tags=["seed"])
+app.include_router(locations.router, prefix="/api", tags=["locations"])
+app.include_router(emergency_contacts.router, prefix="/api", tags=["emergency_contacts"])
+app.include_router(dependents.router, prefix="/api", tags=["dependents"])
+app.include_router(job_history.router, prefix="/api", tags=["job_history"])
+app.include_router(skills.router, prefix="/api", tags=["skills"])
+app.include_router(compensation_components.router, prefix="/api", tags=["compensation_components"])
+app.include_router(leave_accrual.router, prefix="/api", tags=["leave_accrual"])
+app.include_router(assets.router, prefix="/api", tags=["assets"])
+app.include_router(disciplinary.router, prefix="/api", tags=["disciplinary"])
+app.include_router(grievances.router, prefix="/api", tags=["grievances"])
+app.include_router(announcements.router, prefix="/api", tags=["announcements"])
+app.include_router(notifications.router, prefix="/api", tags=["notifications"])
+app.include_router(probation.router, prefix="/api", tags=["probation"])
+app.include_router(notice_periods.router, prefix="/api", tags=["notice_periods"])
+app.include_router(delegations.router, prefix="/api", tags=["delegations"])
+app.include_router(benefit_life_events.router, prefix="/api", tags=["benefit_life_events"])
+app.include_router(training_prerequisites.router, prefix="/api", tags=["training_prerequisites"])
+app.include_router(job_requisitions.router, prefix="/api", tags=["job_requisitions"])
+app.include_router(cost_centers.router, prefix="/api", tags=["cost_centers"])
+app.include_router(custom_fields.router, prefix="/api", tags=["custom_fields"])
 
 
 @app.get("/api/health")

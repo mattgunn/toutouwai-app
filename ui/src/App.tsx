@@ -31,6 +31,26 @@ import Workflows from './pages/Workflows'
 import Surveys from './pages/Surveys'
 import Learning from './pages/Learning'
 import AbsenceCalendar from './pages/AbsenceCalendar'
+import Locations from './pages/Locations'
+import Skills from './pages/Skills'
+import Assets from './pages/Assets'
+import DisciplinaryActions from './pages/DisciplinaryActions'
+import Grievances from './pages/Grievances'
+import Announcements from './pages/Announcements'
+import Probation from './pages/Probation'
+import NoticePeriods from './pages/NoticePeriods'
+import JobRequisitions from './pages/JobRequisitions'
+import CostCenters from './pages/CostCenters'
+import Delegations from './pages/Delegations'
+import BenefitLifeEvents from './pages/BenefitLifeEvents'
+import CustomFields from './pages/CustomFields'
+import CompensationComponents from './pages/CompensationComponents'
+import LeaveAccrualPolicies from './pages/LeaveAccrualPolicies'
+import Notifications from './pages/Notifications'
+import EmergencyContacts from './pages/EmergencyContacts'
+import Dependents from './pages/Dependents'
+import JobHistory from './pages/JobHistory'
+import TrainingPrerequisites from './pages/TrainingPrerequisites'
 import Help from './pages/Help'
 
 export default function App() {
@@ -73,6 +93,26 @@ export default function App() {
               <Route path="/audit" element={<ModuleGuard module="settings"><AuditLog /></ModuleGuard>} />
               <Route path="/workflows" element={<ModuleGuard module="settings"><Workflows /></ModuleGuard>} />
               <Route path="/settings" element={<ModuleGuard module="settings"><Settings /></ModuleGuard>} />
+              <Route path="/locations" element={<ModuleGuard module="locations"><Locations /></ModuleGuard>} />
+              <Route path="/skills" element={<ModuleGuard module="skills"><Skills /></ModuleGuard>} />
+              <Route path="/assets" element={<ModuleGuard module="assets"><Assets /></ModuleGuard>} />
+              <Route path="/disciplinary" element={<ModuleGuard module="disciplinary"><DisciplinaryActions /></ModuleGuard>} />
+              <Route path="/grievances" element={<ModuleGuard module="grievances"><Grievances /></ModuleGuard>} />
+              <Route path="/announcements" element={<ModuleGuard module="announcements"><Announcements /></ModuleGuard>} />
+              <Route path="/probation" element={<ModuleGuard module="employees"><Probation /></ModuleGuard>} />
+              <Route path="/notice-periods" element={<ModuleGuard module="employees"><NoticePeriods /></ModuleGuard>} />
+              <Route path="/requisitions" element={<ModuleGuard module="recruitment"><JobRequisitions /></ModuleGuard>} />
+              <Route path="/cost-centers" element={<ModuleGuard module="settings"><CostCenters /></ModuleGuard>} />
+              <Route path="/delegations" element={<ModuleGuard module="settings"><Delegations /></ModuleGuard>} />
+              <Route path="/life-events" element={<ModuleGuard module="benefits"><BenefitLifeEvents /></ModuleGuard>} />
+              <Route path="/custom-fields" element={<ModuleGuard module="settings"><CustomFields /></ModuleGuard>} />
+              <Route path="/comp-components" element={<ModuleGuard module="compensation"><CompensationComponents /></ModuleGuard>} />
+              <Route path="/leave-accrual" element={<ModuleGuard module="leave"><LeaveAccrualPolicies /></ModuleGuard>} />
+              <Route path="/notifications" element={<Notifications />} />
+              <Route path="/emergency-contacts" element={<ModuleGuard module="employees"><EmergencyContacts /></ModuleGuard>} />
+              <Route path="/dependents" element={<ModuleGuard module="employees"><Dependents /></ModuleGuard>} />
+              <Route path="/job-history" element={<ModuleGuard module="employees"><JobHistory /></ModuleGuard>} />
+              <Route path="/training-prerequisites" element={<ModuleGuard module="performance"><TrainingPrerequisites /></ModuleGuard>} />
               <Route path="/my-profile" element={<MyProfile />} />
               <Route path="/help" element={<Help />} />
             </Routes>
