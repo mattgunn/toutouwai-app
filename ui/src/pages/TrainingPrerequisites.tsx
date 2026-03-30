@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   fetchPrerequisites,
   createPrerequisite,
@@ -7,7 +7,6 @@ import {
 import { fetchCourses } from '../modules/learning/api'
 import type { TrainingPrerequisite } from '../modules/training-prerequisites/types'
 import type { Course } from '../modules/learning/types'
-import StatusBadge from '../components/StatusBadge'
 import Button from '../components/Button'
 import { FormField, Select } from '../components/FormField'
 import Modal from '../components/Modal'
@@ -89,16 +88,24 @@ export default function TrainingPrerequisites() {
         columns={[
           { key: 'course_title', header: 'Course', render: (row) => <span className="text-white font-medium">{String(row.course_title)}</span> },
           { key: 'prerequisite_title', header: 'Prerequisite Course', render: (row) => <span className="text-gray-400">{String(row.prerequisite_title)}</span> },
-          { key: 'is_mandatory', header: 'Mandatory', render: (row) => <StatusBadge status={Number(row.is_mandatory) ? 'yes' : 'no'} /> },
+          { key: 'is_mandatory', header: 'Mandatory', render: (row) => <span className={`text-xs font-medium ${Number(row.is_mandatory) ? 'text-amber-400' : 'text-gray-400'}`}>{Number(row.is_mandatory) ? 'Yes' : 'No'}</span> },
+          { key: 'actions', header: '', render: (row) => (
+            <Button
+              variant="danger"
+              onClick={(e) => {
+                (e as React.MouseEvent).stopPropagation()
+                const prereq = prerequisites.find(p => p.id === row.id)
+                if (prereq) {
+                  setDeleteConfirm({ id: prereq.id, name: `${prereq.course_title} requires ${prereq.prerequisite_title}` })
+                }
+              }}
+            >
+              Remove
+            </Button>
+          )},
         ]}
         data={prerequisites as unknown as Record<string, unknown>[]}
         keyField="id"
-        onRowClick={(row) => {
-          const prereq = prerequisites.find(p => p.id === row.id)
-          if (prereq) {
-            setDeleteConfirm({ id: prereq.id, name: `${prereq.course_title} requires ${prereq.prerequisite_title}` })
-          }
-        }}
         emptyMessage="No prerequisites found"
         emptyAction="Add Prerequisite"
         onEmptyAction={() => setShowModal(true)}

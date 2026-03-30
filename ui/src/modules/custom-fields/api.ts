@@ -50,3 +50,8 @@ export async function updateFieldValue(id: string, body: unknown): Promise<Custo
   if (!res.ok) throw new Error('Failed to update field value')
   return res.json()
 }
+
+export async function deleteFieldValue(id: string): Promise<void> {
+  const res = await jsonDelete(`${BASE}/custom-fields/values/${id}`)
+  if (!res.ok) throw new Error('Failed to delete field value')
+}

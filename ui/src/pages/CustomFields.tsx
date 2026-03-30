@@ -232,7 +232,7 @@ function DefinitionModal({
         field_type: fieldType,
         is_required: isRequired ? 1 : 0,
         is_active: isActive ? 1 : 0,
-        options: options || null,
+        field_options: options || null,
       }
       if (definition) {
         await updateFieldDefinition(definition.id, body)
@@ -282,7 +282,6 @@ function DefinitionModal({
             { value: 'date', label: 'Date' },
             { value: 'boolean', label: 'Boolean' },
             { value: 'select', label: 'Select (Dropdown)' },
-            { value: 'textarea', label: 'Textarea' },
           ]} />
         </FormField>
         {fieldType === 'select' && (

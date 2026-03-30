@@ -40,4 +40,4 @@ export { fetchLifeEvents, createLifeEvent, updateLifeEvent, deleteLifeEvent } fr
 export { fetchPrerequisites, createPrerequisite, deletePrerequisite } from './modules/training-prerequisites/api'
 export { fetchRequisitions, createRequisition, updateRequisition, deleteRequisition } from './modules/job-requisitions/api'
 export { fetchCostCenters, createCostCenter, updateCostCenter, deleteCostCenter } from './modules/cost-centers/api'
-export { fetchFieldDefinitions, createFieldDefinition, updateFieldDefinition, deleteFieldDefinition, fetchFieldValues, createFieldValue, updateFieldValue } from './modules/custom-fields/api'
+export { fetchFieldDefinitions, createFieldDefinition, updateFieldDefinition, deleteFieldDefinition, fetchFieldValues, createFieldValue, updateFieldValue, deleteFieldValue } from './modules/custom-fields/api'

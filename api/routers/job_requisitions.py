@@ -71,7 +71,7 @@ def create_requisition(body: dict, conn=Depends(get_db), user=Depends(get_curren
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (rid, body["title"], body["department_id"], body.get("position_id"),
           body.get("number_of_openings", 1), body["justification"],
-          body.get("status", "draft"), body.get("priority", "normal"),
+          body.get("status", "draft"), body.get("priority", "medium"),
           user["id"], body.get("budget_min"), body.get("budget_max"),
           body.get("currency", "NZD"), body.get("target_start_date"),
           ts, ts))
