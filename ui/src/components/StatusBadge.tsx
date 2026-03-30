@@ -46,6 +46,30 @@ const statusColors: Record<string, string> = {
   // Learning
   assigned: 'bg-blue-600/20 text-blue-400',
   overdue: 'bg-red-600/20 text-red-400',
+  // Announcements
+  published: 'bg-emerald-600/20 text-emerald-400',
+  // Grievances
+  submitted: 'bg-blue-600/20 text-blue-400',
+  investigating: 'bg-amber-600/20 text-amber-400',
+  dismissed: 'bg-gray-600/20 text-gray-400',
+  escalated: 'bg-red-600/20 text-red-400',
+  resolved: 'bg-emerald-600/20 text-emerald-400',
+  // Probation
+  passed: 'bg-emerald-600/20 text-emerald-400',
+  extended: 'bg-amber-600/20 text-amber-400',
+  failed: 'bg-red-600/20 text-red-400',
+  // Notice periods
+  serving: 'bg-blue-600/20 text-blue-400',
+  waived: 'bg-gray-600/20 text-gray-400',
+  // Assets
+  available: 'bg-emerald-600/20 text-emerald-400',
+  in_use: 'bg-blue-600/20 text-blue-400',
+  maintenance: 'bg-amber-600/20 text-amber-400',
+  disposed: 'bg-gray-600/20 text-gray-400',
+  // Disciplinary
+  appealed: 'bg-purple-600/20 text-purple-400',
+  // Benefit life events / general
+  processing: 'bg-amber-600/20 text-amber-400',
 }
 
 export default function StatusBadge({ status }: { status: string }) {
