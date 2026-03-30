@@ -116,7 +116,7 @@ export default function Assets() {
           { key: 'category', header: 'Category', render: (row) => <span className="text-gray-400 capitalize">{String(row.category || '-')}</span>, className: 'hidden md:table-cell' },
           { key: 'serial_number', header: 'Serial #', render: (row) => <span className="text-gray-400">{String(row.serial_number || '-')}</span>, className: 'hidden lg:table-cell' },
           { key: 'status', header: 'Status', render: (row) => <StatusBadge status={String(row.status)} /> },
-          { key: 'assigned_to_name', header: 'Assigned To', render: (row) => row.assigned_to_id ? <EmployeeLink employeeId={String(row.assigned_to_id)} name={String(row.assigned_to_name)} /> : <span className="text-gray-500">-</span> },
+          { key: 'assigned_to_name', header: 'Assigned To', render: (row) => row.assigned_to ? <EmployeeLink employeeId={String(row.assigned_to)} name={String(row.assigned_to_name)} /> : <span className="text-gray-500">-</span> },
         ]}
         data={filteredAssets as unknown as Record<string, unknown>[]}
         keyField="id"
@@ -205,7 +205,7 @@ function AssetModal({
         category,
         serial_number: serialNumber || null,
         status,
-        assigned_to_id: assignedToId || null,
+        assigned_to: assignedToId || null,
         purchase_date: purchaseDate || null,
         purchase_cost: purchaseCost ? parseFloat(purchaseCost) : null,
         notes: notes || null,

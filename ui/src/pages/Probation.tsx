@@ -227,7 +227,7 @@ function ProbationModal({
           <Button variant="danger" onClick={() => onDelete(probation)} className="mr-auto">Delete</Button>
         )}
         <Button variant="secondary" onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSubmit} disabled={!employeeId} loading={submitting}>
+        <Button onClick={handleSubmit} disabled={!employeeId || !startDate || !endDate} loading={submitting}>
           {probation ? 'Save' : 'Create'}
         </Button>
       </>

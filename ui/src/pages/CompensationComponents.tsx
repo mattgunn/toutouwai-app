@@ -101,7 +101,7 @@ export default function CompensationComponents() {
         columns={[
           { key: 'employee_name', header: 'Employee', render: (row) => <EmployeeLink employeeId={String(row.employee_id)} name={String(row.employee_name)} /> },
           { key: 'component_type', header: 'Type', render: (row) => <StatusBadge status={String(row.component_type)} /> },
-          { key: 'amount', header: 'Amount', render: (row) => <span className="text-white font-medium">{formatCurrency(Number(row.amount), String(row.currency || 'USD'))}</span> },
+          { key: 'amount', header: 'Amount', render: (row) => <span className="text-white font-medium">{formatCurrency(Number(row.amount), String(row.currency || 'NZD'))}</span> },
           { key: 'frequency', header: 'Frequency', render: (row) => <span className="text-gray-400 capitalize">{String(row.frequency).replace(/_/g, ' ')}</span>, className: 'hidden md:table-cell' },
           { key: 'effective_date', header: 'Effective', render: (row) => <span className="text-gray-400">{row.effective_date ? formatDate(String(row.effective_date)) : '-'}</span>, className: 'hidden md:table-cell' },
           { key: 'status', header: 'Status', render: (row) => <StatusBadge status={String(row.status)} /> },
@@ -163,7 +163,7 @@ function ComponentModal({
   const [employeeId, setEmployeeId] = useState('')
   const [componentType, setComponentType] = useState('bonus')
   const [amount, setAmount] = useState('')
-  const [currency, setCurrency] = useState('USD')
+  const [currency, setCurrency] = useState('NZD')
   const [frequency, setFrequency] = useState('one_time')
   const [effectiveDate, setEffectiveDate] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -176,7 +176,7 @@ function ComponentModal({
       setEmployeeId(component?.employee_id ?? '')
       setComponentType(component?.component_type ?? 'bonus')
       setAmount(component ? String(component.amount) : '')
-      setCurrency(component?.currency ?? 'USD')
+      setCurrency(component?.currency ?? 'NZD')
       setFrequency(component?.frequency ?? 'one_time')
       setEffectiveDate(component?.effective_date ?? '')
       setEndDate(component?.end_date ?? '')
@@ -254,13 +254,12 @@ function ComponentModal({
           </FormField>
           <FormField label="Currency">
             <Select value={currency} onChange={e => setCurrency(e.target.value)} options={[
-              { value: 'USD', label: 'USD' },
-              { value: 'EUR', label: 'EUR' },
-              { value: 'GBP', label: 'GBP' },
-              { value: 'CAD', label: 'CAD' },
+              { value: 'NZD', label: 'NZD' },
               { value: 'AUD', label: 'AUD' },
-              { value: 'JPY', label: 'JPY' },
-              { value: 'INR', label: 'INR' },
+              { value: 'USD', label: 'USD' },
+              { value: 'GBP', label: 'GBP' },
+              { value: 'EUR', label: 'EUR' },
+              { value: 'CAD', label: 'CAD' },
             ]} />
           </FormField>
         </div>

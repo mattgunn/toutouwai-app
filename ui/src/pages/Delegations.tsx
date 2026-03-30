@@ -10,7 +10,6 @@ import { fetchUsers } from '../modules/settings/api'
 import type { Delegation } from '../modules/delegations/types'
 import type { User } from '../modules/settings/types'
 import StatusBadge from '../components/StatusBadge'
-import EmployeeLink from '../components/EmployeeLink'
 import Button from '../components/Button'
 import { FormField, Input, Select, Textarea } from '../components/FormField'
 import Modal from '../components/Modal'
@@ -91,8 +90,8 @@ export default function Delegations() {
 
       <DataTable
         columns={[
-          { key: 'delegator_name', header: 'Delegator', render: (row) => <EmployeeLink employeeId={String(row.delegator_id)} name={String(row.delegator_name)} /> },
-          { key: 'delegate_name', header: 'Delegate', render: (row) => <EmployeeLink employeeId={String(row.delegate_id)} name={String(row.delegate_name)} /> },
+          { key: 'delegator_name', header: 'Delegator', render: (row) => <span className="text-white font-medium">{String(row.delegator_name || '-')}</span> },
+          { key: 'delegate_name', header: 'Delegate', render: (row) => <span className="text-white font-medium">{String(row.delegate_name || '-')}</span> },
           { key: 'entity_type', header: 'Entity Type', render: (row) => <span className="text-gray-400 capitalize">{String(row.entity_type).replace(/_/g, ' ')}</span> },
           { key: 'start_date', header: 'Start Date', render: (row) => <span className="text-gray-400">{row.start_date ? formatDate(String(row.start_date)) : '-'}</span>, className: 'hidden md:table-cell' },
           { key: 'end_date', header: 'End Date', render: (row) => <span className="text-gray-400">{row.end_date ? formatDate(String(row.end_date)) : '-'}</span>, className: 'hidden md:table-cell' },

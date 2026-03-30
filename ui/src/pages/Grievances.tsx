@@ -98,7 +98,7 @@ export default function Grievances() {
       <div className="flex gap-4 mb-4 flex-wrap">
         <div className="flex gap-2 flex-wrap">
           <span className="text-gray-500 text-xs self-center">Status:</span>
-          {['all', 'filed', 'under_review', 'investigation', 'resolved', 'closed'].map(s => (
+          {['all', 'submitted', 'investigating', 'resolved', 'dismissed', 'escalated'].map(s => (
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
@@ -196,7 +196,7 @@ function GrievanceModal({
   const [subject, setSubject] = useState('')
   const [category, setCategory] = useState('workplace')
   const [priority, setPriority] = useState('medium')
-  const [status, setStatus] = useState('filed')
+  const [status, setStatus] = useState('submitted')
   const [filedDate, setFiledDate] = useState('')
   const [description, setDescription] = useState('')
   const [resolution, setResolution] = useState('')
@@ -208,7 +208,7 @@ function GrievanceModal({
       setSubject(grievance?.subject ?? '')
       setCategory(grievance?.category ?? 'workplace')
       setPriority(grievance?.priority ?? 'medium')
-      setStatus(grievance?.status ?? 'filed')
+      setStatus(grievance?.status ?? 'submitted')
       setFiledDate(grievance?.filed_date ?? '')
       setDescription(grievance?.description ?? '')
       setResolution(grievance?.resolution ?? '')
@@ -250,7 +250,7 @@ function GrievanceModal({
           <Button variant="danger" onClick={() => onDelete(grievance)} className="mr-auto">Delete</Button>
         )}
         <Button variant="secondary" onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSubmit} disabled={!employeeId || !subject} loading={submitting}>
+        <Button onClick={handleSubmit} disabled={!employeeId || !subject || !description} loading={submitting}>
           {grievance ? 'Save' : 'File'}
         </Button>
       </>
@@ -295,11 +295,11 @@ function GrievanceModal({
         <div className="grid grid-cols-2 gap-3">
           <FormField label="Status">
             <Select value={status} onChange={e => setStatus(e.target.value)} options={[
-              { value: 'filed', label: 'Filed' },
-              { value: 'under_review', label: 'Under Review' },
-              { value: 'investigation', label: 'Investigation' },
+              { value: 'submitted', label: 'Submitted' },
+              { value: 'investigating', label: 'Investigating' },
               { value: 'resolved', label: 'Resolved' },
-              { value: 'closed', label: 'Closed' },
+              { value: 'dismissed', label: 'Dismissed' },
+              { value: 'escalated', label: 'Escalated' },
             ]} />
           </FormField>
           <FormField label="Filed Date">

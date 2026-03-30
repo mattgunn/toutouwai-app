@@ -144,8 +144,7 @@ function AnnouncementModal({
   const [content, setContent] = useState('')
   const [category, setCategory] = useState('general')
   const [priority, setPriority] = useState('normal')
-  const [publishDate, setPublishDate] = useState('')
-  const [expiryDate, setExpiryDate] = useState('')
+  const [expiresAt, setExpiresAt] = useState('')
   const [isActive, setIsActive] = useState(true)
   const [submitting, setSubmitting] = useState(false)
 
@@ -155,8 +154,7 @@ function AnnouncementModal({
       setContent(announcement?.content ?? '')
       setCategory(announcement?.category ?? 'general')
       setPriority(announcement?.priority ?? 'normal')
-      setPublishDate(announcement?.publish_date ?? '')
-      setExpiryDate(announcement?.expiry_date ?? '')
+      setExpiresAt(announcement?.expires_at ?? '')
       setIsActive(announcement ? !!announcement.is_active : true)
     }
   }, [open, announcement])
@@ -169,9 +167,9 @@ function AnnouncementModal({
         content: content || null,
         category,
         priority,
-        publish_date: publishDate || null,
-        expiry_date: expiryDate || null,
+        expires_at: expiresAt || null,
         is_active: isActive ? 1 : 0,
+        status: isActive ? 'published' : 'draft',
       }
       if (announcement) {
         await updateAnnouncement(announcement.id, body)
@@ -195,7 +193,7 @@ function AnnouncementModal({
           <Button variant="danger" onClick={() => onDelete(announcement)} className="mr-auto">Delete</Button>
         )}
         <Button variant="secondary" onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSubmit} disabled={!title} loading={submitting}>
+        <Button onClick={handleSubmit} disabled={!title || !content} loading={submitting}>
           {announcement ? 'Save' : 'Create'}
         </Button>
       </>
@@ -204,7 +202,7 @@ function AnnouncementModal({
         <FormField label="Title" required>
           <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Announcement title" />
         </FormField>
-        <FormField label="Content">
+        <FormField label="Content" required>
           <Textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Announcement content" rows={5} />
         </FormField>
         <div className="grid grid-cols-2 gap-3">
@@ -228,14 +226,9 @@ function AnnouncementModal({
             ]} />
           </FormField>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <FormField label="Publish Date">
-            <Input type="date" value={publishDate} onChange={e => setPublishDate(e.target.value)} />
-          </FormField>
-          <FormField label="Expiry Date">
-            <Input type="date" value={expiryDate} onChange={e => setExpiryDate(e.target.value)} />
-          </FormField>
-        </div>
+        <FormField label="Expiry Date">
+          <Input type="date" value={expiresAt} onChange={e => setExpiresAt(e.target.value)} />
+        </FormField>
         <div className="flex gap-6">
           <label className="flex items-center gap-2 text-sm text-gray-400">
             <input type="checkbox" checked={isActive} onChange={e => setIsActive(e.target.checked)} className="rounded" />

@@ -222,7 +222,7 @@ function DisciplinaryModal({
           <Button variant="danger" onClick={() => onDelete(action)} className="mr-auto">Delete</Button>
         )}
         <Button variant="secondary" onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSubmit} disabled={!employeeId} loading={submitting}>
+        <Button onClick={handleSubmit} disabled={!employeeId || !description} loading={submitting}>
           {action ? 'Save' : 'Create'}
         </Button>
       </>
