@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { formatDate } from '../utils/format'
 import {
   fetchLocations,
   createLocation,
@@ -8,10 +7,8 @@ import {
 } from '../modules/locations/api'
 import type { Location } from '../modules/locations/types'
 import StatusBadge from '../components/StatusBadge'
-import EmployeeLink from '../components/EmployeeLink'
 import Button from '../components/Button'
-import { FormField, Input, Select, Textarea } from '../components/FormField'
-import Tabs from '../components/Tabs'
+import { FormField, Input } from '../components/FormField'
 import Modal from '../components/Modal'
 import { SkeletonTable } from '../components/Skeleton'
 import ConfirmDialog from '../components/ConfirmDialog'

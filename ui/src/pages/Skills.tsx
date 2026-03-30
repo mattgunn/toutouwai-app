@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { formatDate } from '../utils/format'
 import {
   fetchSkills,
   createSkill,

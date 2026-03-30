@@ -11,7 +11,6 @@ import {
 } from '../modules/custom-fields/api'
 import type { CustomFieldDefinition, CustomFieldValue } from '../modules/custom-fields/types'
 import StatusBadge from '../components/StatusBadge'
-import EmployeeLink from '../components/EmployeeLink'
 import Button from '../components/Button'
 import { FormField, Input, Select, Textarea } from '../components/FormField'
 import Tabs from '../components/Tabs'
@@ -220,7 +219,7 @@ function DefinitionModal({
       setFieldType(definition?.field_type ?? 'text')
       setIsRequired(!!definition?.is_required)
       setIsActive(definition ? !!definition.is_active : true)
-      setOptions(definition?.options ?? '')
+      setOptions(definition?.field_options ?? '')
     }
   }, [open, definition])
 

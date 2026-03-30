@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { formatDate } from '../utils/format'
 import {
   fetchAssets,
   createAsset,
@@ -13,7 +12,6 @@ import StatusBadge from '../components/StatusBadge'
 import EmployeeLink from '../components/EmployeeLink'
 import Button from '../components/Button'
 import { FormField, Input, Select, Textarea } from '../components/FormField'
-import Tabs from '../components/Tabs'
 import Modal from '../components/Modal'
 import { SkeletonTable } from '../components/Skeleton'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -191,7 +189,7 @@ function AssetModal({
       setCategory(asset?.category ?? 'laptop')
       setSerialNumber(asset?.serial_number ?? '')
       setStatus(asset?.status ?? 'available')
-      setAssignedToId(asset?.assigned_to_id ?? '')
+      setAssignedToId(asset?.assigned_to ?? '')
       setPurchaseDate(asset?.purchase_date ?? '')
       setPurchaseCost(asset?.purchase_cost != null ? String(asset.purchase_cost) : '')
       setNotes(asset?.notes ?? '')
