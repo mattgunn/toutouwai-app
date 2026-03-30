@@ -17,7 +17,12 @@ from .routers import (
     custom_fields,
 )
 
+from .db import init_db
+
 app = FastAPI(title="HRIS API", version="0.1.0")
+
+# Ensure database tables exist on startup
+init_db()
 
 cors_origins = os.environ.get("CORS_ORIGINS", "").split(",") if os.environ.get("CORS_ORIGINS") else [
     "http://localhost:5183", "http://localhost:5173", "http://localhost:3000"
