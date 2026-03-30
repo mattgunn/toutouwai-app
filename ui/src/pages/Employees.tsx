@@ -3,10 +3,20 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import EmployeeLink from '../components/EmployeeLink'
 import { fetchEmployees, fetchDepartments, fetchPositions, createEmployee, updateEmployee, fetchDocuments, fetchLeaveRequests, fetchTimeEntries, createLeaveRequest, createTimeEntry, createDocument, createGoal, fetchLeaveTypes, fetchGoals } from '../api'
 import { fetchCompensation, createCompensation } from '../modules/compensation/api'
+import { fetchEmergencyContacts } from '../modules/emergency-contacts/api'
+import { fetchAssets } from '../modules/assets/api'
+import { fetchJobHistory } from '../modules/job-history/api'
+import { fetchEmployeeSkills } from '../modules/skills/api'
+import { fetchDisciplinaryActions } from '../modules/disciplinary/api'
 import type { Employee, Department, Position, LeaveRequest, LeaveType, TimeEntry } from '../types'
 import type { CompensationRecord } from '../modules/compensation/types'
 import type { Document } from '../modules/documents/types'
 import type { Goal } from '../types'
+import type { EmergencyContact } from '../modules/emergency-contacts/types'
+import type { Asset } from '../modules/assets/types'
+import type { JobHistoryEntry } from '../modules/job-history/types'
+import type { EmployeeSkill } from '../modules/skills/types'
+import type { DisciplinaryAction } from '../modules/disciplinary/types'
 import StatusBadge from '../components/StatusBadge'
 import Avatar from '../components/Avatar'
 import { Input, Select, Textarea, FormField } from '../components/FormField'
@@ -73,6 +83,11 @@ function EmployeeDetail({
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([])
   const [documents, setDocuments] = useState<Document[]>([])
   const [goals, setGoals] = useState<Goal[]>([])
+  const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContact[]>([])
+  const [assets, setAssets] = useState<Asset[]>([])
+  const [jobHistory, setJobHistory] = useState<JobHistoryEntry[]>([])
+  const [employeeSkills, setEmployeeSkills] = useState<EmployeeSkill[]>([])
+  const [disciplinaryActions, setDisciplinaryActions] = useState<DisciplinaryAction[]>([])
   const [tabLoading, setTabLoading] = useState(false)
 
   // Modal visibility
@@ -114,6 +129,18 @@ function EmployeeDetail({
       fetchDocuments({ employee_id: employee.id }).then(setDocuments).catch(() => {}).finally(() => setTabLoading(false))
     } else if (tab === 'goals') {
       fetchGoals().then(all => setGoals(all.filter(g => g.employee_id === employee.id))).catch(() => {}).finally(() => setTabLoading(false))
+    } else if (tab === 'emergency-contacts') {
+      fetchEmergencyContacts(employee.id).then(setEmergencyContacts).catch(() => {}).finally(() => setTabLoading(false))
+    } else if (tab === 'assets') {
+      fetchAssets({ assigned_to: employee.id }).then(setAssets).catch(() => {}).finally(() => setTabLoading(false))
+    } else if (tab === 'job-history') {
+      fetchJobHistory(employee.id).then(setJobHistory).catch(() => {}).finally(() => setTabLoading(false))
+    } else if (tab === 'skills') {
+      fetchEmployeeSkills({ employee_id: employee.id }).then(setEmployeeSkills).catch(() => {}).finally(() => setTabLoading(false))
+    } else if (tab === 'disciplinary') {
+      fetchDisciplinaryActions({ employee_id: employee.id }).then(setDisciplinaryActions).catch(() => {}).finally(() => setTabLoading(false))
+    } else {
+      setTabLoading(false)
     }
   }
 
@@ -253,6 +280,11 @@ function EmployeeDetail({
             { key: 'time', label: 'Time Entries' },
             { key: 'documents', label: 'Documents' },
             { key: 'goals', label: 'Goals' },
+            { key: 'job-history', label: 'Job History' },
+            { key: 'skills', label: 'Skills' },
+            { key: 'emergency-contacts', label: 'Emergency Contacts' },
+            { key: 'assets', label: 'Assets' },
+            { key: 'disciplinary', label: 'Disciplinary' },
           ]}
           active={activeTab}
           onChange={setActiveTab}
@@ -377,6 +409,115 @@ function EmployeeDetail({
                     { key: 'status', header: 'Status', render: (g: Goal) => <StatusBadge status={g.status} /> },
                   ]}
                   data={goals}
+                  keyField="id"
+                />
+              )}
+            </>
+          )}
+          {activeTab === 'job-history' && (
+            <>
+              <div className="mb-4">
+                <h3 className="text-sm font-medium text-gray-400">{jobHistory.length} records</h3>
+              </div>
+              {jobHistory.length === 0 ? (
+                <p className="text-gray-500 text-sm py-8 text-center">No job history</p>
+              ) : (
+                <DataTable
+                  columns={[
+                    { key: 'effective_date', header: 'Effective Date', render: (r: JobHistoryEntry) => <span className="text-gray-400">{formatDate(r.effective_date)}</span> },
+                    { key: 'position_title', header: 'Position', render: (r: JobHistoryEntry) => <span className="text-white">{r.position_title || '—'}</span> },
+                    { key: 'department_name', header: 'Department', render: (r: JobHistoryEntry) => <span className="text-gray-400">{r.department_name || '—'}</span> },
+                    { key: 'employment_type', header: 'Type', render: (r: JobHistoryEntry) => <span className="text-gray-400 capitalize">{r.employment_type || '—'}</span> },
+                    { key: 'reason', header: 'Reason', render: (r: JobHistoryEntry) => <span className="text-gray-400">{r.reason || '—'}</span> },
+                  ]}
+                  data={jobHistory}
+                  keyField="id"
+                />
+              )}
+            </>
+          )}
+          {activeTab === 'skills' && (
+            <>
+              <div className="mb-4">
+                <h3 className="text-sm font-medium text-gray-400">{employeeSkills.length} skills</h3>
+              </div>
+              {employeeSkills.length === 0 ? (
+                <p className="text-gray-500 text-sm py-8 text-center">No skills recorded</p>
+              ) : (
+                <DataTable
+                  columns={[
+                    { key: 'skill_name', header: 'Skill', render: (r: EmployeeSkill) => <span className="text-white font-medium">{r.skill_name}</span> },
+                    { key: 'proficiency_level', header: 'Proficiency', render: (r: EmployeeSkill) => <span className="text-gray-400 capitalize">{r.proficiency_level || '—'}</span> },
+                    { key: 'years_experience', header: 'Years', render: (r: EmployeeSkill) => <span className="text-gray-400">{r.years_experience != null ? `${r.years_experience} yr${r.years_experience !== 1 ? 's' : ''}` : '—'}</span> },
+                    { key: 'notes', header: 'Notes', render: (r: EmployeeSkill) => <span className="text-gray-400">{r.notes || '—'}</span> },
+                  ]}
+                  data={employeeSkills}
+                  keyField="id"
+                />
+              )}
+            </>
+          )}
+          {activeTab === 'emergency-contacts' && (
+            <>
+              <div className="mb-4">
+                <h3 className="text-sm font-medium text-gray-400">{emergencyContacts.length} contacts</h3>
+              </div>
+              {emergencyContacts.length === 0 ? (
+                <p className="text-gray-500 text-sm py-8 text-center">No emergency contacts</p>
+              ) : (
+                <DataTable
+                  columns={[
+                    { key: 'contact_name', header: 'Name', render: (r: EmergencyContact) => (
+                      <span className="text-white font-medium">{r.contact_name}{r.is_primary ? <span className="ml-2 text-xs text-amber-400">Primary</span> : null}</span>
+                    )},
+                    { key: 'relationship', header: 'Relationship', render: (r: EmergencyContact) => <span className="text-gray-400 capitalize">{r.relationship || '—'}</span> },
+                    { key: 'phone', header: 'Phone', render: (r: EmergencyContact) => <span className="text-gray-400">{r.phone || '—'}</span> },
+                    { key: 'email', header: 'Email', render: (r: EmergencyContact) => <span className="text-gray-400">{r.email || '—'}</span> },
+                  ]}
+                  data={emergencyContacts}
+                  keyField="id"
+                />
+              )}
+            </>
+          )}
+          {activeTab === 'assets' && (
+            <>
+              <div className="mb-4">
+                <h3 className="text-sm font-medium text-gray-400">{assets.length} assets</h3>
+              </div>
+              {assets.length === 0 ? (
+                <p className="text-gray-500 text-sm py-8 text-center">No assets assigned</p>
+              ) : (
+                <DataTable
+                  columns={[
+                    { key: 'name', header: 'Asset', render: (r: Asset) => <span className="text-white font-medium">{r.name}</span> },
+                    { key: 'category', header: 'Category', render: (r: Asset) => <span className="text-gray-400 capitalize">{r.category || '—'}</span> },
+                    { key: 'asset_tag', header: 'Tag', render: (r: Asset) => <span className="text-gray-400 font-mono text-xs">{r.asset_tag || '—'}</span> },
+                    { key: 'status', header: 'Status', render: (r: Asset) => <StatusBadge status={r.status} /> },
+                    { key: 'assigned_date', header: 'Assigned', render: (r: Asset) => <span className="text-gray-400">{r.assigned_date ? formatDate(r.assigned_date) : '—'}</span> },
+                  ]}
+                  data={assets}
+                  keyField="id"
+                />
+              )}
+            </>
+          )}
+          {activeTab === 'disciplinary' && (
+            <>
+              <div className="mb-4">
+                <h3 className="text-sm font-medium text-gray-400">{disciplinaryActions.length} records</h3>
+              </div>
+              {disciplinaryActions.length === 0 ? (
+                <p className="text-gray-500 text-sm py-8 text-center">No disciplinary records</p>
+              ) : (
+                <DataTable
+                  columns={[
+                    { key: 'action_date', header: 'Date', render: (r: DisciplinaryAction) => <span className="text-gray-400">{formatDate(r.action_date)}</span> },
+                    { key: 'action_type', header: 'Type', render: (r: DisciplinaryAction) => <span className="text-white capitalize">{r.action_type.replace(/_/g, ' ')}</span> },
+                    { key: 'description', header: 'Description', render: (r: DisciplinaryAction) => <span className="text-gray-400">{r.description || '—'}</span> },
+                    { key: 'status', header: 'Status', render: (r: DisciplinaryAction) => <StatusBadge status={r.status} /> },
+                  ]}
+                  data={disciplinaryActions}
                   keyField="id"
                 />
               )}
