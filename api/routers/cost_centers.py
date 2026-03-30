@@ -49,10 +49,11 @@ def create_cost_center(body: dict, conn=Depends(get_db), _user=Depends(get_curre
     cid = new_id()
     conn.execute("""
         INSERT INTO cost_centers (id, code, name, description, department_id, manager_id,
-            is_active, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            budget, currency, is_active, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (cid, body["code"], body["name"], body.get("description"),
           body.get("department_id"), body.get("manager_id"),
+          body.get("budget"), body.get("currency", "NZD"),
           body.get("is_active", 1), ts, ts))
     conn.commit()
     row = conn.execute(
@@ -63,7 +64,7 @@ def create_cost_center(body: dict, conn=Depends(get_db), _user=Depends(get_curre
 
 @router.put("/cost-centers/{cost_center_id}")
 def update_cost_center(cost_center_id: str, body: dict, conn=Depends(get_db), _user=Depends(get_current_user)):
-    fields = ["code", "name", "description", "department_id", "manager_id", "is_active"]
+    fields = ["code", "name", "description", "department_id", "manager_id", "budget", "currency", "is_active"]
     updates, values = [], []
     for f in fields:
         if f in body:

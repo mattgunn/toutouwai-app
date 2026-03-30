@@ -10,13 +10,18 @@ def list_notifications(
     user_id: str | None = None,
     is_read: int | None = None,
     conn=Depends(get_db),
-    _user=Depends(get_current_user),
+    user=Depends(get_current_user),
 ):
+    # Non-admins can only see their own notifications
+    if user.get("role") != "admin":
+        effective_user_id = user["id"]
+    else:
+        effective_user_id = user_id  # admins can filter by any user_id
     query = "SELECT * FROM notifications"
     conditions, params = [], []
-    if user_id:
+    if effective_user_id:
         conditions.append("user_id = ?")
-        params.append(user_id)
+        params.append(effective_user_id)
     if is_read is not None:
         conditions.append("is_read = ?")
         params.append(is_read)
@@ -74,7 +79,8 @@ def mark_as_read(notification_id: str, conn=Depends(get_db), _user=Depends(get_c
 
 @router.put("/notifications/read-all")
 def mark_all_as_read(body: dict, conn=Depends(get_db), user=Depends(get_current_user)):
-    uid = body.get("user_id", user["id"])
+    # Always use the authenticated user's own ID — ignore any user_id in body
+    uid = user["id"]
     ts = now_iso()
     conn.execute(
         "UPDATE notifications SET is_read = 1, read_at = ? WHERE user_id = ? AND is_read = 0",

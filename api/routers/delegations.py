@@ -88,11 +88,12 @@ def create_delegation(body: dict, conn=Depends(get_db), _user=Depends(get_curren
     did = new_id()
     conn.execute("""
         INSERT INTO delegations (id, delegator_id, delegate_id, entity_type,
-            is_active, start_date, end_date, reason, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            is_active, start_date, end_date, reason, notes, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (did, body["delegator_id"], body["delegate_id"], body["entity_type"],
           body.get("is_active", 1),
-          body.get("start_date"), body.get("end_date"), body.get("reason"), ts, ts))
+          body.get("start_date"), body.get("end_date"), body.get("reason"),
+          body.get("notes"), ts, ts))
     conn.commit()
     row = conn.execute("""
         SELECT d.*,
@@ -108,7 +109,7 @@ def create_delegation(body: dict, conn=Depends(get_db), _user=Depends(get_curren
 
 @router.put("/delegations/{delegation_id}")
 def update_delegation(delegation_id: str, body: dict, conn=Depends(get_db), _user=Depends(get_current_user)):
-    fields = ["entity_type", "is_active", "start_date", "end_date", "reason"]
+    fields = ["entity_type", "is_active", "start_date", "end_date", "reason", "notes"]
     updates, values = [], []
     for f in fields:
         if f in body:

@@ -42,7 +42,7 @@ def create_emergency_contact(body: dict, conn=Depends(get_db), _user=Depends(get
         INSERT INTO emergency_contacts (id, employee_id, contact_name, relationship, phone, email, is_primary, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (cid, body["employee_id"], body["contact_name"], body.get("relationship"),
-          body["phone"], body.get("email"), body.get("is_primary", 0), ts, ts))
+          body["phone"], body.get("email"), body.get("is_primary", 1), ts, ts))
     conn.commit()
     row = conn.execute("""
         SELECT ec.*,

@@ -60,11 +60,11 @@ def create_notice_period(body: dict, conn=Depends(get_db), _user=Depends(get_cur
     nid = new_id()
     conn.execute("""
         INSERT INTO notice_periods (id, employee_id, notice_type, notice_date, effective_date,
-            status, reason, notes, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            last_working_day, notice_length_days, status, reason, notes, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (nid, body["employee_id"], body["notice_type"], body["notice_date"],
-          body["effective_date"], body.get("status", "pending"),
-          body.get("reason"), body.get("notes"), ts, ts))
+          body["effective_date"], body.get("last_working_day"), body.get("notice_length_days"),
+          body.get("status", "pending"), body.get("reason"), body.get("notes"), ts, ts))
     conn.commit()
     row = conn.execute("""
         SELECT np.*, e.first_name || ' ' || e.last_name as employee_name
@@ -77,7 +77,7 @@ def create_notice_period(body: dict, conn=Depends(get_db), _user=Depends(get_cur
 
 @router.put("/notice-periods/{notice_id}")
 def update_notice_period(notice_id: str, body: dict, conn=Depends(get_db), _user=Depends(get_current_user)):
-    fields = ["notice_type", "notice_date", "effective_date", "status", "reason", "notes"]
+    fields = ["notice_type", "notice_date", "effective_date", "last_working_day", "notice_length_days", "status", "reason", "notes"]
     updates, values = [], []
     for f in fields:
         if f in body:

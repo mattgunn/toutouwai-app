@@ -9,7 +9,7 @@ export async function fetchNotifications(isRead?: string): Promise<Notification[
 }
 
 export async function fetchUnreadCount(): Promise<{ count: number }> {
-  const res = await authFetch(`${BASE}/notifications?is_read=0&count=true`)
+  const res = await authFetch(`${BASE}/notifications/unread-count`)
   if (!res.ok) throw new Error('Failed to fetch unread count')
   return res.json()
 }
@@ -21,13 +21,13 @@ export async function createNotification(body: unknown): Promise<Notification> {
 }
 
 export async function markAsRead(id: string): Promise<Notification> {
-  const res = await jsonPut(`${BASE}/notifications/${id}`, { is_read: 1 })
+  const res = await jsonPut(`${BASE}/notifications/${id}/read`, {})
   if (!res.ok) throw new Error('Failed to mark notification as read')
   return res.json()
 }
 
 export async function markAllAsRead(): Promise<void> {
-  const res = await jsonPut(`${BASE}/notifications/mark-all-read`, {})
+  const res = await jsonPut(`${BASE}/notifications/read-all`, {})
   if (!res.ok) throw new Error('Failed to mark all notifications as read')
 }
 

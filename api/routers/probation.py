@@ -57,10 +57,11 @@ def create_probation(body: dict, conn=Depends(get_db), _user=Depends(get_current
     ts = now_iso()
     pid = new_id()
     conn.execute("""
-        INSERT INTO probation_periods (id, employee_id, start_date, end_date, status, review_date, notes, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO probation_periods (id, employee_id, start_date, end_date, status, review_date, reviewer_id, notes, outcome, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (pid, body["employee_id"], body["start_date"], body["end_date"],
-          body.get("status", "active"), body.get("review_date"), body.get("notes"), ts, ts))
+          body.get("status", "active"), body.get("review_date"), body.get("reviewer_id"),
+          body.get("notes"), body.get("outcome"), ts, ts))
     conn.commit()
     row = conn.execute("""
         SELECT p.*, e.first_name || ' ' || e.last_name as employee_name
@@ -73,7 +74,7 @@ def create_probation(body: dict, conn=Depends(get_db), _user=Depends(get_current
 
 @router.put("/probation/{probation_id}")
 def update_probation(probation_id: str, body: dict, conn=Depends(get_db), _user=Depends(get_current_user)):
-    fields = ["start_date", "end_date", "status", "review_date", "notes"]
+    fields = ["start_date", "end_date", "status", "review_date", "reviewer_id", "notes", "outcome"]
     updates, values = [], []
     for f in fields:
         if f in body:
