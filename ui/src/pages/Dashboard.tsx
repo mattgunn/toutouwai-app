@@ -1,6 +1,7 @@
 import { useState, useEffect, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { fetchDashboard } from '../api'
+import { fetchDashboard, fetchAnnouncements } from '../api'
+import type { Announcement } from '../modules/announcements/types'
 import { formatDate } from '../utils/format'
 import type { DashboardData } from '../types'
 import { useAuth } from '../auth'
@@ -49,6 +50,7 @@ function getGreeting(): string {
 export default function Dashboard() {
   const { user } = useAuth()
   const [data, setData] = useState<DashboardData | null>(null)
+  const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [loading, setLoading] = useState(true)
   const toast = useToast()
 
@@ -57,6 +59,9 @@ export default function Dashboard() {
       .then(setData)
       .catch(() => toast.error('Failed to load dashboard'))
       .finally(() => setLoading(false))
+    fetchAnnouncements({ is_active: '1' })
+      .then(list => setAnnouncements(list.filter(a => a.status === 'published').slice(0, 5)))
+      .catch(() => { /* non-critical */ })
   }, [])
 
   const displayName = user?.name && user.name !== 'Admin'
@@ -243,11 +248,39 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── Announcements / Timely Info ── */}
+      {/* ── Announcements ── */}
+      {announcements.length > 0 && (
+        <div className="rounded-xl border border-gray-800 bg-gray-900 p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <MegaphoneIcon className="w-4 h-4 text-amber-400" />
+              <h2 className="text-sm font-semibold text-white">Announcements</h2>
+            </div>
+            <Link to="/announcements" className="text-xs text-blue-400 hover:underline">View all</Link>
+          </div>
+          <div className="space-y-3">
+            {announcements.map(ann => (
+              <div key={ann.id} className="flex items-start gap-3">
+                <span className={`mt-0.5 w-2 h-2 rounded-full shrink-0 ${
+                  ann.priority === 'urgent' ? 'bg-red-400' :
+                  ann.priority === 'high' ? 'bg-amber-400' :
+                  'bg-blue-400'
+                }`} />
+                <div className="min-w-0">
+                  <p className="text-sm text-white font-medium leading-tight">{ann.title}</p>
+                  {ann.content && <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{ann.content}</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Activity Feed ── */}
       <div className="rounded-xl border border-gray-800 bg-gray-900 p-5">
         <div className="flex items-center gap-2 mb-3">
           <span className="text-lg">📌</span>
-          <h2 className="text-sm font-semibold text-white">Announcements</h2>
+          <h2 className="text-sm font-semibold text-white">Activity</h2>
         </div>
         <div className="space-y-3">
           {(data.recent_hires ?? []).length > 0 && (

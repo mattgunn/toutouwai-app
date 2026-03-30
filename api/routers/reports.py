@@ -118,26 +118,28 @@ def time_summary_report(
         params.append(to_date)
     where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
 
-    emp_conditions = ["e.status = 'active'"]
-    emp_params = []
+    # Build JOIN condition for date filters so LEFT JOIN is preserved (employees with
+    # no entries in range still appear with 0 hours rather than being dropped)
+    join_conditions = ["te.employee_id = e.id"]
+    join_params = []
     if from_date:
-        emp_conditions.append("te.date >= ?")
-        emp_params.append(from_date)
+        join_conditions.append("te.date >= ?")
+        join_params.append(from_date)
     if to_date:
-        emp_conditions.append("te.date <= ?")
-        emp_params.append(to_date)
-    emp_where = f"WHERE {' AND '.join(emp_conditions)}"
+        join_conditions.append("te.date <= ?")
+        join_params.append(to_date)
+    join_on = " AND ".join(join_conditions)
 
     by_employee = conn.execute(f"""
         SELECT e.first_name || ' ' || e.last_name as employee_name,
                COALESCE(SUM(te.hours), 0) as total_hours,
                COUNT(te.id) as entry_count
         FROM employees e
-        LEFT JOIN time_entries te ON te.employee_id = e.id
-        {emp_where}
+        LEFT JOIN time_entries te ON {join_on}
+        WHERE e.status = 'active'
         GROUP BY e.id
         ORDER BY total_hours DESC
-    """, emp_params).fetchall()
+    """, join_params).fetchall()
 
     by_project = conn.execute(f"""
         SELECT COALESCE(te.project, 'Unassigned') as project,

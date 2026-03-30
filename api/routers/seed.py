@@ -68,7 +68,7 @@ def seed_database(conn=Depends(get_db), user=Depends(get_current_user)):
             "succession_candidates", "succession_plans",
             "benefit_enrollments", "benefit_plans", "compensation",
             "goals", "reviews", "review_cycles",
-            "time_entries", "leave_requests", "leave_balances",
+            "time_entries", "leave_requests",
             "applicants", "job_postings",
             "employees", "positions", "departments",
         ]
@@ -951,7 +951,7 @@ def clear_seed_data(conn=Depends(get_db), _user=Depends(get_current_user)):
         "succession_candidates", "succession_plans",
         "benefit_enrollments", "benefit_plans", "compensation",
         "goals", "reviews", "review_cycles",
-        "time_entries", "leave_requests", "leave_balances",
+        "time_entries", "leave_requests",
         "applicants", "job_postings",
         "employees", "positions", "departments",
     ]

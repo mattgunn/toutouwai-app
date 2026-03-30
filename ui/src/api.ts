@@ -32,7 +32,7 @@ export { fetchAssets, createAsset, updateAsset, deleteAsset } from './modules/as
 export { fetchDisciplinaryActions, createDisciplinaryAction, updateDisciplinaryAction, deleteDisciplinaryAction } from './modules/disciplinary/api'
 export { fetchGrievances, createGrievance, updateGrievance, deleteGrievance } from './modules/grievances/api'
 export { fetchAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement } from './modules/announcements/api'
-export { fetchNotifications, createNotification, markAsRead, markAllAsRead, deleteNotification } from './modules/notifications/api'
+export { fetchNotifications, fetchUnreadCount, createNotification, markAsRead, markAllAsRead, deleteNotification } from './modules/notifications/api'
 export { fetchProbations, createProbation, updateProbation, deleteProbation } from './modules/probation/api'
 export { fetchNoticePeriods, createNoticePeriod, updateNoticePeriod, deleteNoticePeriod } from './modules/notice-periods/api'
 export { fetchDelegations, createDelegation, updateDelegation, deleteDelegation } from './modules/delegations/api'
