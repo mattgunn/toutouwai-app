@@ -1,10 +1,12 @@
 import json
 import os
 import smtplib
+import urllib.request
 from datetime import datetime, timedelta, timezone
 from email.mime.text import MIMEText
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from ..db import get_connection, new_id, now_iso
 from ..deps import JWT_SECRET, JWT_ALGORITHM, get_db, get_current_user, ALL_MODULES
@@ -98,6 +100,49 @@ def verify(token: str):
     # Issue a session JWT (7 day expiry)
     session_jwt = jwt.encode({"sub": payload["sub"], "exp": datetime.now(timezone.utc) + timedelta(days=7)}, JWT_SECRET, algorithm=JWT_ALGORITHM)
     return {"jwt": session_jwt}
+
+
+@router.get("/sso-callback", response_class=HTMLResponse)
+def sso_callback(code: str = Query(...), conn=Depends(get_db)):
+    """SSO callback from Control Tower — exchange code for local JWT."""
+    try:
+        req = urllib.request.Request(
+            f"http://localhost:9000/api/sso/token?code={code}",
+            method="POST", headers={"Content-Type": "application/json"}, data=b"",
+        )
+        resp = urllib.request.urlopen(req, timeout=5)
+        data = json.loads(resp.read())
+    except Exception:
+        raise HTTPException(401, "SSO token exchange failed")
+
+    email = data.get("email", "")
+    row = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+    if not row:
+        # Auto-create user from tower SSO
+        ts = now_iso()
+        user_id = new_id()
+        name = email.split("@")[0].replace(".", " ").title()
+        is_default_admin = email == os.environ.get("DEFAULT_ADMIN_EMAIL", "")
+        user_count = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+        role = "admin" if (user_count == 0 or is_default_admin) else "member"
+        permissions = json.dumps(ALL_MODULES) if role == "admin" else json.dumps([])
+        conn.execute(
+            "INSERT INTO users (id, name, email, role, permissions, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (user_id, name, email, role, permissions, ts, ts),
+        )
+        conn.commit()
+        row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+
+    session_jwt = jwt.encode(
+        {"sub": row["id"], "exp": datetime.now(timezone.utc) + timedelta(days=7)},
+        JWT_SECRET, algorithm=JWT_ALGORITHM,
+    )
+    return HTMLResponse(
+        f"<html><body><script>"
+        f"localStorage.setItem('hris_jwt','{session_jwt}');"
+        f"window.location.href='/';"
+        f"</script></body></html>"
+    )
 
 
 @router.get("/me")

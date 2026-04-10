@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
-import { Navigate, useLocation } from 'react-router-dom'
+import { Navigate } from 'react-router-dom'
 
 const BASE = '/api'
 
@@ -108,8 +108,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth()
-  const location = useLocation()
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
@@ -119,7 +117,8 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   }
 
   if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />
+    window.location.href = '/login'
+    return null
   }
 
   return <>{children}</>
